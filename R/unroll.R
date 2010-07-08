@@ -2,11 +2,11 @@
 # returning a vector of standardized length
 # suitable for slotting
 # horizons must be in order by depth!
-unroll <- function(top, bottom, prop, max_depth, bottom_padding_value=NA)
+unroll <- function(top, bottom, prop, max_depth, bottom_padding_value=NA, strict=FALSE)
 	{
 	# are horizons in the correct order?
 	if(! all.equal(top,sort(top)))
-		stop('Error: horizons are not sorted by depth.')
+		stop('Error: horizons are not sorted by depth')
 	
 	# number of horizons
 	n.horizons <- length(top)
@@ -15,9 +15,17 @@ unroll <- function(top, bottom, prop, max_depth, bottom_padding_value=NA)
 	hz.test.bottom_hz_in_top <- bottom[-n.horizons] %in% top[-1]
 	if(length(which(hz.test.bottom_hz_in_top)) != (n.horizons - 1))
 		{
-		stop('Error: bad horizon structure')
+		
+		if(strict)
+			{
+			stop('error: bad horizon structure')
+			}
+		else
+			{
+			warning('bad horizon structure, check with strict=TRUE');
+			}
 		}
-	
+		
 	# inverse RLE, to generate repeating sequence of property, n times
 	p <- inverse.rle(list(lengths=bottom-top, values=prop))
 	
