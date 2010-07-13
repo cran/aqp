@@ -17,7 +17,7 @@ f.noise(inits, pure.patterns, sample.pattern, eps.total = 0.05)
   \item{eps.total}{precision of comparisons; currently not used}
 }
 \details{
-This is similar to the work of Chipera and Bish (2002), using the methods described in (Bish, 1994).
+This is similar to the work of Chipera and Bish (2002), using the methods described in (Bish, 1994). If the flexibility of a custom objective function is not required, the linear model framework should be sufficient for pattern fitting. GLS should be used if realistic standard errors are needed.
 }
 
 \value{the sum of absolute differences between the unkown pattern and combination of pure patterns for the current set of mixture proportions}
@@ -66,50 +66,60 @@ for(i in 2:7)
 	legend('topright', bty='n', legend=paste(names(rruff.sample)[i], ' (', w[i-1], ')', sep=''), cex=2)
 	}
 
+# fitting with lm, with lots of added noise
+rruff.sample$synthetic_pat <- apply(sweep(rruff.sample[,2:7], 2, w, '*'), 1, sum) + runif(n, min=0, max=100)
+
+l <- lm(synthetic_pat ~ nontronite + montmorillonite + clinochlore + antigorite + chamosite + hematite, data=rruff.sample)
+
+summary(l)
+
+## fitting by minimizing an objective function (not run)
+
 # SANN is a slower algorithm, sometimes gives strange results
 # default Nelder-Mead is most robust
 # CG is fastest --> 2.5 minutes max
 # component proportions (fractions), and noise component (intensity units)
 # initial guesses may affect the stability / time of the fit
 
-# synthetic pattern
-o <- optim(par=c(0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1), f.noise, 
-method='CG', pure.patterns=rruff.sample[,2:7], 
-sample.pattern=rruff.sample$synthetic_pat)
-
-
-# estimated mixture proportions
-o$par
-
-# compare with starting proportions
-rbind(o$par[1:n.components], w)
-
-# if we had an unkown pattern we were trying to match, compare fitted here
-# compute R value 0.1 - 0.2 considered good
-# sum(D^2) / sum(s) 
-# o$value / sum(rruff.sample$sample)
-
-# plot estimated mixture vs sample
-# combine pure substances
-pure.mixture <- apply(sweep(rruff.sample[, 2:7], 2, o$par[1:n.components], '*'), 1, sum)
-
-# add in noise
-noise.component <- o$par[n.components+1]
-est.pattern <- pure.mixture + noise.component
-
-
-# plot results
-par(mfcol=c(2,1), mar=c(0,3,0,0))
-plot(1:n, rruff.sample$synthetic_pat, type='l', lwd=2, lty=2, axes=FALSE, xlab='', ylab='')
-lines(1:n, est.pattern, col=2)
-lines(1:n, rep(noise.component, n), col=3)
-axis(2, cex.axis=0.75, las=2)
-legend('topright', legend=c('original','fitted','noise'), col=c(1,2,3), lty=c(2,1,1), lwd=c(2,1,1), bty='n', cex=1.25)
-
-plot(1:n, rruff.sample$synthetic_pat - est.pattern, type='l', axes=FALSE, xlab='', ylab='')
-abline(h=0, col=grey(0.5), lty=2)
-axis(2, cex.axis=0.75, las=2)
-legend('topright', legend=c('difference'), bty='n', cex=1.25)
+## this takes a while to run
+# # synthetic pattern
+# o <- optim(par=c(0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1), f.noise, 
+# method='CG', pure.patterns=rruff.sample[,2:7], 
+# sample.pattern=rruff.sample$synthetic_pat)
+# 
+# 
+# # estimated mixture proportions
+# o$par
+# 
+# # compare with starting proportions
+# rbind(o$par[1:n.components], w)
+# 
+# # if we had an unkown pattern we were trying to match, compare fitted here
+# # compute R value 0.1 - 0.2 considered good
+# # sum(D^2) / sum(s) 
+# # o$value / sum(rruff.sample$sample)
+# 
+# # plot estimated mixture vs sample
+# # combine pure substances
+# pure.mixture <- apply(sweep(rruff.sample[, 2:7], 2, o$par[1:n.components], '*'), 1, sum)
+# 
+# # add in noise
+# noise.component <- o$par[n.components+1]
+# est.pattern <- pure.mixture + noise.component
+# 
+# 
+# # plot results
+# par(mfcol=c(2,1), mar=c(0,3,0,0))
+# plot(1:n, rruff.sample$synthetic_pat, type='l', lwd=2, lty=2, axes=FALSE, xlab='', ylab='')
+# lines(1:n, est.pattern, col=2)
+# lines(1:n, rep(noise.component, n), col=3)
+# axis(2, cex.axis=0.75, las=2)
+# legend('topright', legend=c('original','fitted','noise'), col=c(1,2,3), lty=c(2,1,1), lwd=c(2,1,1), bty='n', cex=1.25)
+# 
+# plot(1:n, rruff.sample$synthetic_pat - est.pattern, type='l', axes=FALSE, xlab='', ylab='')
+# abline(h=0, col=grey(0.5), lty=2)
+# axis(2, cex.axis=0.75, las=2)
+# legend('topright', legend=c('difference'), bty='n', cex=1.25)
 
 
 }

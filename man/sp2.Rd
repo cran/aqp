@@ -52,14 +52,16 @@ profile_plot(sp2.list, plot.order=p.order, max.depth=200)
 
 
 # look at numerical distances between profiles
-d <- profile_compare(sp2, vars=c('prop','field_ph','hue','value'), max_d=100, k=0.01)
+# warning messages are harmless
+d <- profile_compare(sp2, vars=c('prop','field_ph','hue','value'), 
+max_d=100, k=0.01, sample_interval=5)
 
 # better plotting with ape package:
 require(ape)
 require(cluster)
 h <- diana(d)
 p <- as.phylo(as.hclust(h))
-plot(ladderize(p), cex=0.75, label.offset=1, no.margin=TRUE)
+plot(ladderize(p), cex=0.75, label.offset=0.5, no.margin=TRUE)
 
 # add in the dated surface type via color
 tiplabels(col=p.surface, pch=15)
