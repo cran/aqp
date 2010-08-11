@@ -27,18 +27,24 @@ conditional.sd <- function(x)
 	}
 
 
-
+## TODO: seg_vect does not work
 # input dataframe must have an id column identifing each profile
 # note: this only works with numeric variables
-soil.slot.multiple <- function(data, g, vars, strict=FALSE, user.fun=NULL, ...)
+soil.slot.multiple <- function(data, g, vars, seg_size=NA, strict=FALSE, user.fun=NULL)
 	{
 	# check for dependencies
 	if(!require(plyr) | !require(reshape))
 		stop('Please install the "plyr" and "reshape" packages.')
 
 	# currently this will only work with integer depths
-	if(!is.integer(na.omit(data$top)) | !is.integer(na.omit(data$bottom)))
+	if(any( !as.integer(data$top[data$top != 0]) == data$top[data$top != 0] ) | any( !as.integer(data$bottom) == data$bottom))
 		stop('this function can only accept integer horizon depths')
+	
+	## TODO: is there a better way to do this?
+	# capture arguments
+	ss <- seg_size
+	s <- strict
+	uf <- user.fun
 	
 	# convert into long forma
 	d.long <- melt(data, id.vars=c('id','top','bottom', g), measure.vars=vars)
@@ -46,7 +52,7 @@ soil.slot.multiple <- function(data, g, vars, strict=FALSE, user.fun=NULL, ...)
 	# apply slotting group-wise and return in long format
 	# note that we are passing in additional arguments to soil.slot 
 	# from the calling function
-	d.slotted <- ddply(d.long, .(variable), .progress='text', .fun=function(i, groups=g, ...) {
+	d.slotted <- ddply(d.long, .(variable), .progress='text', .fun=function(i, groups=g, seg_size=ss, strict=s, user.fun=uf) {
 		
 		# subset just the relevant columns
 		i.sub <- data.frame(
@@ -56,12 +62,19 @@ soil.slot.multiple <- function(data, g, vars, strict=FALSE, user.fun=NULL, ...)
 			prop=i$value,
 			groups=i[, groups]
 			)
-			
+		
+		## TODO: allow for seg_vect or seg_size	
+		## currently only one or the other is supported
 		# apply slotting according to grouping factor
-		i.slotted <- ddply(i.sub, .(groups), .fun=soil.slot, strict=strict, user.fun=user.fun, ...)
+		i.slotted <- ddply(i.sub, .(groups), .fun=soil.slot, seg_size=seg_size, strict=strict, user.fun=uf)
+		
 		return(i.slotted)
 		})
 		
+	# convert tops and bottoms to integers
+	d.slotted$top <- as.integer(d.slotted$top)
+	d.slotted$bottom <- as.integer(d.slotted$bottom)
+	
 	# done
 	return(d.slotted)
 	}	
@@ -73,9 +86,10 @@ soil.slot.multiple <- function(data, g, vars, strict=FALSE, user.fun=NULL, ...)
 
 ## this function will break when horizon boundaries do not make sense
 ## 
-# means and confidence intervals should be calculated by population defined by seg_size and n pedons
-# 
-soil.slot <- function(data, seg_size=NA, seg_vect=NA, return.raw=FALSE, use.wts=FALSE, compute.depth.prob=FALSE, strict=FALSE, user.fun=NULL)
+# TODO: sd should be calculated by population defined by seg_size and n pedons
+# TODO: re-factor how profile weights are used, consider using rq()
+# TODO: retuan the number of profiles + number of unique horizons when using custom segmenting interval
+soil.slot <- function(data, seg_size=NA, seg_vect=NA, return.raw=FALSE, use.wts=FALSE, strict=FALSE, user.fun=NULL)
 	{
 	
 # 	## this isn't usually a problem
@@ -90,7 +104,7 @@ soil.slot <- function(data, seg_size=NA, seg_vect=NA, return.raw=FALSE, use.wts=
 	## check for fatal errors
 	
 	# currently this will only work with integer depths
-	if(!is.integer(na.omit(data$top)) | !is.integer(na.omit(data$bottom)))
+	if(any( !as.integer(data$top[data$top != 0]) == data$top[data$top != 0] ) | any( !as.integer(data$bottom) == data$bottom))
 		stop('this function can only accept integer horizon depths')
 	
 	# no NA allowed in top or bottom
@@ -159,14 +173,17 @@ soil.slot <- function(data, seg_size=NA, seg_vect=NA, return.raw=FALSE, use.wts=
 		}
 	
 	# if we have a regular-interval segment size, re-group the data following the segmenting id
-	if(!missing(seg_size) | !missing(seg_vect))
+	# note that we are testing for the default value of seg_size and seg_vect
+	# must be a better way to do this..
+	if(!is.na(seg_size) | !is.na(seg_vect))
 		{
 		
-		# use a user-defined segmenting vector, starting from 0		
+		# use a user-defined segmenting vector, starting from 0
 		if(!missing(seg_vect))
 			{
 			wind.idx <- rep(seg_vect[-1], diff(seg_vect))[1:max_d]
 			}
+			
 		# using a fixed-interval segmenting vector
 		else
 			{
@@ -182,7 +199,11 @@ soil.slot <- function(data, seg_size=NA, seg_vect=NA, return.raw=FALSE, use.wts=
 		
 		
 		## warnings are being generated here
-		## it looks like values are being recycled, possibly the weights
+		## it looks like values are being recycled
+		## Warning message:
+		##   In rbind(`1` = c(13L, 13L, 7L, 7L, 7L, 7L, 7L, 7L, 7L, 7L, 1L, 1L,  :
+		##   number of columns of result is not a multiple of vector length (arg 9)
+		##   ???
 		# subset values and weights by id
 		# note that we are lumping the subset values by id into a single row of a matrix
 		x.recon <- try(do.call('rbind', by(x.recon_original, wind.idx, unlist) ))
@@ -291,14 +312,25 @@ soil.slot <- function(data, seg_size=NA, seg_vect=NA, return.raw=FALSE, use.wts=
 		}
 
 	
-	# compute row-wise summary statistics
+	
+	## compute row-wise summary statistics
+	
+	# always compute a contributing fraction
+	# this is the number of profile contributing the the slice-wise aggregate
+	contributing_fraction <- apply(x.recon, 1, function(i) length(na.omit(i)) / length(i))
+	
+	
+	# the following are computed according to user-defined parameters
 	if(prop.class %in% c('numeric','integer'))
 		{
 		# standard summary statistics
+		## this mean is the horizon-thickness weighted mean across all profiles
 		p.mean <- apply(x.recon, 1, mean, na.rm=TRUE)
+		
+		## this estimate of SD is too low when using a segment size > 1 cm
 		p.sd <- apply(x.recon, 1, conditional.sd)
 		
-		# quantiles
+		## these are the horizon-thickness weighted quantiles
 		q.probs <- c(0.05, 0.25, 0.5, 0.75, 0.95)
 		p.quantiles <- data.frame(t(apply(x.recon, 1, quantile, probs=q.probs, na.rm=TRUE)))
 		names(p.quantiles) <- paste('p.q', round(q.probs * 100), sep='')
@@ -311,17 +343,21 @@ soil.slot <- function(data, seg_size=NA, seg_vect=NA, return.raw=FALSE, use.wts=
 		}
 	
 	# todo: update this to use a different column
-	if(prop.class == 'character')
+	if(prop.class == 'factor')
 		{
 		# the results of this operation are a list,
 		# one element for each depth segment
 		
 		# get a vector of all possible categories
+		# these are the factor codes...
 		p.unique.classes <- as.vector(na.omit(unique(as.vector(x.recon))))
 		
 		# tabular frequences for complete set of possible categories
-		p.table <- apply(x.recon, 1, function(i) { table(factor(i, levels=p.unique.classes), useNA='no')  } )
-		
+		# should generalize to user-defined segmenting vectors
+		p.table <- apply(x.recon, 1, function(i) { 
+			table(factor(i, levels=p.unique.classes, labels=levels(data$prop)[p.unique.classes]), useNA='no')  
+			} 
+			)
 		
 		# convert into a dataframe
 		p.freq <- as.data.frame(t(p.table))
@@ -335,13 +371,14 @@ soil.slot <- function(data, seg_size=NA, seg_vect=NA, return.raw=FALSE, use.wts=
 # 		p.prop[which(p.prop <= 0.000001), ] <- NA
 		
 		}
-		
-	if(compute.depth.prob == TRUE)
-		{
-		p.prop <- apply(x.recon, 1, function(i) sum(i, na.rm=TRUE) / length(i))
-		}
-		
-	# no way to use weights with character vectors yet...
+	
+# 	## slice-wise probability does not work with categorical vectors, when slice size > 1
+# 	return(p.freq)
+# 	stop()
+# 	
+	
+	## NOTE: the calculation of the weighted SD is not quite right when using segments larger than 1 cm
+	# no way to use weights with factor vectors yet...
 	if(use.wts == TRUE)
 		{
 		## weighted mean calculation
@@ -385,7 +422,7 @@ soil.slot <- function(data, seg_size=NA, seg_vect=NA, return.raw=FALSE, use.wts=
 		# re-make final dataframe, note that df.top_bottom is made based on segmenting/non-segmenting
 		df.stats <- data.frame(p.mean, p.wtmean, p.sd, p.wtsd)
 		}
-	# no weithed stats needed
+	# no weighted stats needed
 	else
 		{
 		if(prop.class %in% c('numeric','integer'))
@@ -398,11 +435,7 @@ soil.slot <- function(data, seg_size=NA, seg_vect=NA, return.raw=FALSE, use.wts=
 			else
 				df.stats <- data.frame(p.mean, p.sd, p.quantiles)
 			}
-		if(prop.class == 'character')
-			{
-			df.stats <- data.frame(p.prop)
-			}
-		if(compute.depth.prob == TRUE)
+		if(prop.class == 'factor')
 			{
 			df.stats <- data.frame(p.prop)
 			}
@@ -413,7 +446,7 @@ soil.slot <- function(data, seg_size=NA, seg_vect=NA, return.raw=FALSE, use.wts=
 	# this is usually where we have problems, caused by bad horizon boundaries
 	if(nrow(df.top_bottom) == nrow(df.stats))
 		{
-		x.slotted <- data.frame(df.top_bottom, df.stats)
+		x.slotted <- data.frame(df.top_bottom, contributing_fraction, df.stats)
 		}
 	# something is wrong
 	else
@@ -421,7 +454,10 @@ soil.slot <- function(data, seg_size=NA, seg_vect=NA, return.raw=FALSE, use.wts=
 		print("ERROR!")
 		print(data)
 		}
-		
+	
+	# covert tops / bottoms to integers
+	x.slotted$top <- as.integer(x.slotted$top)
+	x.slotted$bottom <- as.integer(x.slotted$bottom)
 	# done
 	return(x.slotted)
 	}
