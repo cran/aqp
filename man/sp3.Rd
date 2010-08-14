@@ -39,7 +39,80 @@ These data were collected to support research funded by the Kearney Foundation o
 
 
 \examples{
+## this example investigates the concept of a "mean profile"
+
+# required packages
+library(ape)
 data(sp3)
-## maybe str(sp3) ; plot(sp3) ...
+
+# generate a RGB version of soil colors
+# and convert to HSV for aggregation
+sp3$h <- NA ; sp3$s <- NA ; sp3$v <- NA
+sp3.rgb <- with(sp3, munsell2rgb(hue, value, chroma, return_triplets=TRUE))
+sp3[, c('h','s','v')] <- t(with(sp3.rgb, rgb2hsv(r, g, b, maxColorValue=1)))
+
+# make a fake grouping variable, and aggregate all profiles
+sp3$group <- factor('A')
+a <- soil.slot.multiple(sp3, g='group', vars=c('clay','cec','ph','h','s','v'), seg_size=10)
+
+# convert back to wide format, note that aggregation metric affects the result
+a.wide.q25 <- cast(a, top + bottom ~ variable, value=c('p.q25'))
+a.wide.q50 <- cast(a, top + bottom ~ variable, value=c('p.q50'))
+a.wide.q75 <- cast(a, top + bottom ~ variable, value=c('p.q75'))
+
+# add a new id for the 25th, 50th, and 75th percentile pedons
+# and convert top/bottoms to integers
+a.wide.q25$id <- 'Q25'
+a.wide.q50$id <- 'Q50'
+a.wide.q75$id <- 'Q75'
+
+# combine original data with "mean profile"
+vars <- c('top','bottom','id','clay','cec','ph','h','s','v')
+sp3.grouped <- rbind(
+sp3[, vars], a.wide.q25[, vars], a.wide.q50[, vars], a.wide.q75[, vars]
+)
+
+# re-constitute the soil color from HSV triplets
+# convert HSV back to standard R colors
+sp3.grouped$soil_color <- with(sp3.grouped, hsv(h, s, v))
+
+# give each horizon a name
+sp3.grouped$name <- paste(round(sp3.grouped$clay), '/' , round(sp3.grouped$cec), '/', round(sp3.grouped$ph,1))
+
+# make SoilProfileList object for plotting
+sp3.list <- initProfileList(sp3.grouped)
+
+
+## perform comparison, and convert to phylo class object
+d <- profile_compare(sp3.grouped, vars=c('clay','cec','ph'), max_d=100, k=0.01)
+h <- agnes(d, method='ward')
+p <- ladderize(as.phylo(as.hclust(h)))
+
+
+# look at distance plot-- just the median profile
+plot_distance_graph(d, 12)
+
+# similarity relative to median profile
+round(1 - (as.matrix(d)[12, ] / max(as.matrix(d)[12, ])), 2)
+
+## make dendrogram + soil profiles
+par(mar=c(1,1,1,1))
+p.plot <- plot(p, cex=0.8, label.offset=3, direction='up', y.lim=c(80,-2), x.lim=c(1.25,sp3.list$num_profiles+1), show.tip.label=FALSE)
+
+# get the last plot geometry
+lastPP <- get("last_plot.phylo", envir = .PlotPhyloEnv)
+
+# the original labels, and new (indexed) order of pedons in dendrogram
+d.labels <- attr(d, 'Labels')
+
+new_order <- sapply(1:lastPP$Ntip,
+function(i) which(as.integer(lastPP$xx[1:lastPP$Ntip]) == i))
+
+# plot the profiles, in the ordering defined by the dendrogram
+# with a couple fudge factors to make them fit
+profile_plot(sp3.list, color="soil_color", plot.order=new_order,
+scaling.factor=0.35, width=0.1, cex.names=0.5,
+y.offset=max(lastPP$yy)+5, add=TRUE)
 }
+
 \keyword{datasets}
