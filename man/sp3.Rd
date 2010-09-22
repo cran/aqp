@@ -39,7 +39,7 @@ These data were collected to support research funded by the Kearney Foundation o
 
 
 \examples{
-## this example investigates the concept of a "mean profile"
+## this example investigates the concept of a "median profile"
 
 # required packages
 library(ape)
@@ -77,14 +77,15 @@ sp3[, vars], a.wide.q25[, vars], a.wide.q50[, vars], a.wide.q75[, vars]
 sp3.grouped$soil_color <- with(sp3.grouped, hsv(h, s, v))
 
 # give each horizon a name
-sp3.grouped$name <- paste(round(sp3.grouped$clay), '/' , round(sp3.grouped$cec), '/', round(sp3.grouped$ph,1))
+sp3.grouped$name <- paste(round(sp3.grouped$clay), '/' , 
+round(sp3.grouped$cec), '/', round(sp3.grouped$ph,1))
 
 # make SoilProfileList object for plotting
 sp3.list <- initProfileList(sp3.grouped)
 
 
 ## perform comparison, and convert to phylo class object
-d <- profile_compare(sp3.grouped, vars=c('clay','cec','ph'), max_d=100, k=0.01)
+d <- profile_compare(sp3.grouped, vars=c('clay','cec','ph'), max_d=100, k=0.01, replace_na=TRUE, add_soil_flag=TRUE)
 h <- agnes(d, method='ward')
 p <- ladderize(as.phylo(as.hclust(h)))
 
@@ -97,7 +98,8 @@ round(1 - (as.matrix(d)[12, ] / max(as.matrix(d)[12, ])), 2)
 
 ## make dendrogram + soil profiles
 par(mar=c(1,1,1,1))
-p.plot <- plot(p, cex=0.8, label.offset=3, direction='up', y.lim=c(80,-2), x.lim=c(1.25,sp3.list$num_profiles+1), show.tip.label=FALSE)
+p.plot <- plot(p, cex=0.8, label.offset=3, direction='up', y.lim=c(80,-2), 
+x.lim=c(1.25,sp3.list$num_profiles+1), show.tip.label=FALSE)
 
 # get the last plot geometry
 lastPP <- get("last_plot.phylo", envir = .PlotPhyloEnv)

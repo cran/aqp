@@ -2,6 +2,7 @@
 \Rdversion{1.1}
 \alias{soil.slot}
 \alias{conditional.sd}
+\alias{seg.summary}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
 Soil Profile Slotting
@@ -11,8 +12,7 @@ Align a single soil property to a user-defined basis, and perform slice-wise agg
 }
 \usage{
 soil.slot(data, seg_size = NA, seg_vect = NA, 
-return.raw = FALSE, use.wts = FALSE,
-strict = FALSE, user.fun = NULL)
+use.wts = FALSE, strict = FALSE, user.fun = NULL)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -29,13 +29,10 @@ A dataframe representing a 'stack' of soil profiles and having the following for
 User-degined segment size, default is 1.
 }
   \item{seg_vect}{
-User-degined segment structure
-}
-  \item{return.raw}{
-If TRUE, un-aggregated data will be returned by depth-slice. Useful for debugging, or for the generation of box and whisker plots.
+User-degined segment structure: should start from 0, and deepest boundary should be deeper than the deepest soil profile in the collection. For example, if the deepest profile in the collection is 200 cm, then the following segmenting vector would be reasonable: \code{c(0,10,20,30,60,100,150,210)}. The resulting aggregation will automatically be truncated at 200 cm. The user is responsible for supplying sensible values.
 }
   \item{use.wts}{
-If TRUE, then a column called 'wt' should be present in the source dataframe, and must make sense within the context of the data. Weighted means and standard deviations will be returned by depth-slice. Use with caution.
+If TRUE, then a column called 'wt' should be present in the source dataframe, and must make sense within the context of the data (i.e. area weights, etc.). Weighted means and standard deviations will be returned by depth-slice. Use with caution, this feature is still experimental. See examples below.
 }
 \item{strict}{should horizons be strictly checked for self-consistency? defaults to FALSE}
 \item{user.fun}{User-defined function that should accept a vector and return a scalar. This function should know how to properly deal with unexpected, NA, NULL, or Inf values and trap them accordingly.}
@@ -218,8 +215,6 @@ a <- ddply(sp1, .(group), .fun=soil.slot)
 a$upper <- with(a, p.mean+p.sd)
 a$lower <- with(a, p.mean-p.sd)
 
-
-
 # use custom plotting function for uncertainty viz.
 xyplot(
 top ~ p.mean, data=a, groups=group, subscripts=TRUE, 
@@ -227,6 +222,81 @@ lower=a$lower, upper=a$upper, ylim=c(250,-5), alpha=0.5,
 panel=panel.depth_function, 
 prepanel=prepanel.depth_function
 )
+
+
+# 
+# 3.3 use of weights
+# 
+data(sp1)
+
+# some fake weights
+wts <- data.frame(id=levels(sp1$id), wt=c(3,1,2,1,2,1,4,1,2))
+
+# merge wtih original data
+g <- merge(sp1, wts, by='id')
+
+# generate horizon mid points
+g$mid <- with(g, (bottom + top) / 2)
+
+# aggregate and add upper/lower intervals via SD
+a <- soil.slot(g, use.wts=TRUE)
+a$upper <- with(a, p.mean + p.sd)
+a$lower <- with(a, p.mean - p.sd)
+
+a$wt.upper <- with(a, p.wtmean + p.wtsd)
+a$wt.lower <- with(a, p.wtmean - p.wtsd)
+
+# check influence of weights
+plot(mid ~ prop, data=g, ylim=c(240,0), cex=sqrt(g$wt), xlim=c(-5,60))
+lines(top ~ p.mean, data=a, lwd=2)
+lines(top ~ upper, data=a, lty=2)
+lines(top ~ lower, data=a, lty=2)
+
+lines(top ~ p.wtmean, data=a, col=2, lwd=2)
+lines(top ~ wt.upper, data=a, col=2, lty=2)
+lines(top ~ wt.lower, data=a, col=2, lty=2)
+
+# annotate with explanation
+legend('bottomright', 
+legend=c('wt = 1','wt = 2','wt = 3','wt = 4','un-weighted','weighted'), 
+pch=c(1,1,1,1,NA,NA), lwd=c(1,1,1,1,2,2), lty=c(NA,NA,NA,NA,1,1), 
+pt.cex=sqrt(c(1,2,3,4,1,1)), col=c(1,1,1,1,1,2), bty='n')
+
+
+
+
+# 
+# try again with larger segment sizes 
+# 
+
+# aggregate and add upper/lower intervals via SD
+a <- soil.slot(g, use.wts=TRUE, seg_size=10)
+
+a$upper <- with(a, p.mean + p.sd)
+a$lower <- with(a, p.mean - p.sd)
+a$wt.upper <- with(a, p.wtmean + p.wtsd)
+a$wt.lower <- with(a, p.wtmean - p.wtsd)
+
+# convert to long format
+library(reshape)
+a.long <- melt(a, id.var=c('top','bottom'), measure.var=c('p.mean','p.wtmean','upper','lower','wt.upper','wt.lower'))
+
+# red lines are weighted
+# point symbols are sized proportional to their weights
+xyplot(cbind(top, bottom) ~ value, groups=variable, data=a.long, 
+ylim=c(260,-10), ylab='Depth', xlab='Property',
+par.settings=list(superpose.line=list(
+col=c('black','red','black','black','red','red'), 
+lwd=c(2,2,1,1,1,1), 
+lty=c(1,1,2,2,2,2))), 
+panel=function(...) {
+panel.points(g$prop, g$mid, cex=sqrt(g$wt), col=1)
+panel.depth_function(...)
+}
+)
+
+
+
 
 
 
