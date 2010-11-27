@@ -9,7 +9,7 @@ profile_plot <- function(...) UseMethod("profile_plot")
 	
 	
 # method for SoilProfileList class
-profile_plot.SoilProfileList <- function(d, color='soil_color', width=0.2, name='name', cex.names=0.5, cex.depth.axis=cex.names, cex.id=cex.names+(0.2*cex.names), plot.order=1:d$num_profiles, add=FALSE, scaling.factor=1, y.offset=0, max.depth=d$max_depth, shrink=FALSE, shrink.cutoff=3, ...)
+profile_plot.SoilProfileList <- function(d, color='soil_color', width=0.2, name='name', cex.names=0.5, cex.depth.axis=cex.names, cex.id=cex.names+(0.2*cex.names), plot.order=1:d$num_profiles, add=FALSE, scaling.factor=1, y.offset=0, max.depth=d$max_depth, n.depth.ticks=5, shrink=FALSE, shrink.cutoff=3, abbr=FALSE, abbr.cutoff=5, ...)
 	{	
 		
 	# check for missing / bad soil color column
@@ -29,7 +29,7 @@ profile_plot.SoilProfileList <- function(d, color='soil_color', width=0.2, name=
 	extra_y_space <- 2
 	
 	# pre-compute nice range for depth axis, also used for plot init
-	depth_axis_intervals <- pretty(seq(from=0, to=max.depth, by=10))
+	depth_axis_intervals <- pretty(seq(from=0, to=max.depth, by=1), n=n.depth.ticks)
 	
 	# set margins... consider moving outside of function
 	par(mar=c(0.5,0,0,1))
@@ -66,8 +66,14 @@ profile_plot.SoilProfileList <- function(d, color='soil_color', width=0.2, name=
 		else
 			text(i + width, mid, d$data[[profile_i]][, name], pos=4, offset=0.1, cex=cex.names)		
 		
-		# add the profile ID
-		text(i, y.offset, d$data[[profile_i]]$id, pos=3, font=2, cex=cex.id)
+		# add the profile ID, optionally abbreviate
+		if(abbr)
+			{
+			text(i, y.offset, abbreviate(as.character(d$data[[profile_i]]$id), abbr.cutoff), pos=3, font=2, cex=cex.id)
+			}
+		# no abbreviations of th ID	
+		else
+			text(i, y.offset, as.character(d$data[[profile_i]]$id), pos=3, font=2, cex=cex.id)
 		}
 	
 	# axis:

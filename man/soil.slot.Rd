@@ -1,7 +1,6 @@
 \name{soil.slot}
 \Rdversion{1.1}
 \alias{soil.slot}
-\alias{conditional.sd}
 \alias{seg.summary}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
@@ -12,7 +11,7 @@ Align a single soil property to a user-defined basis, and perform slice-wise agg
 }
 \usage{
 soil.slot(data, seg_size = NA, seg_vect = NA, 
-use.wts = FALSE, strict = FALSE, user.fun = NULL)
+use.wts = FALSE, strict = FALSE, user.fun = NULL, class_prob_mode=1)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -32,13 +31,14 @@ User-degined segment size, default is 1.
 User-degined segment structure: should start from 0, and deepest boundary should be deeper than the deepest soil profile in the collection. For example, if the deepest profile in the collection is 200 cm, then the following segmenting vector would be reasonable: \code{c(0,10,20,30,60,100,150,210)}. The resulting aggregation will automatically be truncated at 200 cm. The user is responsible for supplying sensible values.
 }
   \item{use.wts}{
-If TRUE, then a column called 'wt' should be present in the source dataframe, and must make sense within the context of the data (i.e. area weights, etc.). Weighted means and standard deviations will be returned by depth-slice. Use with caution, this feature is still experimental. See examples below.
+If TRUE, then a column called 'wt' should be present in the source dataframe, and must make sense within the context of the data (i.e. area weights, etc.). Weighted means, standard deviations, quantiles, and optionally proportions will be returned by depth-slice. See detailes and examples below.
 }
 \item{strict}{should horizons be strictly checked for self-consistency? defaults to FALSE}
 \item{user.fun}{User-defined function that should accept a vector and return a scalar. This function should know how to properly deal with unexpected, NA, NULL, or Inf values and trap them accordingly.}
+\item{class_prob_mode}{Strategy for normalizing slice-wise probabilities, dividing by either: number of profiles with data at the current slice (class_prob_mode=1), or by the number of profiles in the collection (class_prob_mode=2). Mode 2 values will always sum to the contributing fraction, while mode 1 values will always sum to 1. Mode 2 is likely the best way to communicate horizon probability near the lower range in soil depth within a collection of soil profiles.}
 }
 \details{
-The \code{conditional.sd} function is a wrapper to \code{sd}, that replicates the pre-R 2.8 behavior of \code{sd}. See the sample dataset 'sp1' documentation for further examples on how to used \code{soil.slot}. Basic error checking is performed to make sure that bottom and top horizon boundaries make sense. Note that the horizons should be sorted according to depth before using this function.
+Unweighted and weighted summary stats are computed with the Hmisc functions \code{wtd.mean}, \code{wtd.var}, and \code{wtd.quantile}. Weighted probabilities (proportions) will be implemented in a future release. See the sample dataset 'sp1' documentation for further examples on how to used \code{soil.slot}. Basic error checking is performed to make sure that bottom and top horizon boundaries make sense. Note that the horizons should be sorted according to depth before using this function.
 
 Data are returned according to the following:
 A dataframe with slice-wise aggregation. When \code{prop} is numeric a dataframe is returned in the following format:
@@ -46,13 +46,13 @@ A dataframe with slice-wise aggregation. When \code{prop} is numeric a dataframe
 		\item{top}{The slice top boundary.}
 		\item{bottom}{The slice bottom boundary.}
 		\item{contributing_fraction}{The fraction of profiles contributing to the aggregate value, ranges from 1/n_profiles to 1.}
-		\item{p.mean}{The horizon-thickness weighted mean.}
-		\item{p.sd}{An approximation of the horizon-thickness weighted mean: use with caution, may be too low.}
-		\item{p.q5}{The horizon-thickness weighted 5th percentile.}
-		\item{p.q25}{The horizon-thickness weighted 25th percentile}
-		\item{p.q50}{The horizon-thickness weighted 50th percentile (median)}
-		\item{p.q75}{The horizon-thickness weighted 75th percentile}
-		\item{p.q95}{The horizon-thickness weighted 95th percentile}
+		\item{p.mean}{The slice-wise (optionally weighted) mean.}
+		\item{p.sd}{An slice-wise (optionally weighted) standard deviation.}
+		\item{p.q5}{The slice-wise 5th percentile.}
+		\item{p.q25}{The slice-wise 25th percentile}
+		\item{p.q50}{The slice-wise 50th percentile (median)}
+		\item{p.q75}{The slice-wise 75th percentile}
+		\item{p.q95}{The slice-wise 95th percentile}
 	}
 
 When \code{prop} is a factor variable, slice-wise probabilities for each level of \code{prop}:
@@ -68,7 +68,7 @@ When \code{prop} is a factor variable, slice-wise probabilities for each level o
 
 }
 
-\note{The calculation of standard deviation is correct when computing along 1 unit slices. When a user-defined segmenting vector is supplied, the resulting standard deviation is lower than it should be because we are inflating our sample size. When in doubt, use quantiles instead as these are properly weighted by horizon thickness.}
+\note{If a user-defined function (\code{user.fun}) is specified, care must be taken if sample size is used within the calculation _and_ slice sizes are > 1 depth unit.}
 
 \value{See Details section above.}
 
@@ -161,8 +161,9 @@ y$prop <- factor(y$prop)
 # fix factor levels
 y$id <- factor(y$id)
 
-# default slotting-- 1cm intervals
-a <- soil.slot(y)
+# default slotting-- 1cm intervals, 
+# adjusting slice-wise probability with contributing fraction
+a <- soil.slot(y, class_prob_mode=1)
 
 # reshape into long format for plotting
 a.long <- melt(a, id.var=c('top','bottom'))
@@ -174,6 +175,40 @@ xyplot(top ~ value | variable, data=a.long, subset=value > 0,
 ylim=c(150, -5), type=c('S','g'), horizontal=TRUE, layout=c(4,1), col=1 )
 
 
+## ajust probability to size of collection
+a.1 <- soil.slot(y, class_prob_mode=2)
+
+# reshape into long format for plotting
+a.1.long <- melt(a.1, id.var=c('top','bottom'))
+
+# group mode 1 and mode 2 data
+g <- make.groups(mode_1=a.long, mode_2=a.1.long)
+g$variable <- factor(g$variable, levels=c('O','A','B','C','R'))
+
+# plot horizon type proportions
+xyplot(top ~ value | variable, groups=which, data=g, subset=value > 0,
+ylim=c(150, -5), type=c('S','g'), horizontal=TRUE, layout=c(4,1), 
+auto.key=list(lines=TRUE, points=FALSE, columns=2),
+par.settings=list(superpose.line=list(col=c(1,2))))
+
+
+## compare class probability values when changing segment size
+a.5 <- soil.slot(y, class_prob_mode=2, seg_size=5)
+
+# reshape into long format for plotting
+a.5.long <- melt(a.5, id.var=c('top','bottom'))
+
+# group 1cm and 5cm slices
+g <- make.groups(s1cm=a.1.long, s5cm=a.5.long)
+g$variable <- factor(g$variable, levels=c('O','A','B','C','R'))
+
+xyplot(top ~ value | variable, groups=which, data=g, subset=value > 0,
+ylim=c(150, -5), type=c('S','g'), horizontal=TRUE, layout=c(4,1), 
+auto.key=list(lines=TRUE, points=FALSE, columns=2),
+par.settings=list(superpose.line=list(col=c(1,2))))
+
+
+
 #
 # 2. depth probability via contributing fraction
 # note that this assumes that we are not missing data in 'prop'
@@ -182,7 +217,8 @@ ylim=c(150, -5), type=c('S','g'), horizontal=TRUE, layout=c(4,1), col=1 )
 # sp1$prop <- 1
 #
 a <- soil.slot(sp1)
-xyplot(top ~ contributing_fraction, data=a, ylim=c(250, -5), type='S', horizontal=TRUE, asp=4)
+xyplot(top ~ contributing_fraction, data=a, 
+ylim=c(250, -5), type='S', horizontal=TRUE, asp=4)
 
 
 #
@@ -279,7 +315,8 @@ a$wt.lower <- with(a, p.wtmean - p.wtsd)
 
 # convert to long format
 library(reshape)
-a.long <- melt(a, id.var=c('top','bottom'), measure.var=c('p.mean','p.wtmean','upper','lower','wt.upper','wt.lower'))
+a.long <- melt(a, id.var=c('top','bottom'), 
+measure.var=c('p.mean','p.wtmean','upper','lower','wt.upper','wt.lower'))
 
 # red lines are weighted
 # point symbols are sized proportional to their weights

@@ -1,48 +1,49 @@
-\name{sp3}
-\Rdversion{1.1}
-\alias{sp3}
-\docType{data}
-\title{
-Soil Profile Data Example 3
-}
-\description{
-Soil samples from 10 soil profiles, taken from the Sierra Foothill Region of California.
-}
-\usage{data(sp3)}
-\format{
-  A data frame with 46 observations on the following 15 variables.
-  \describe{
-    \item{\code{id}}{soil id}
-    \item{\code{top}}{horizon upper boundary (cm)} 
-    \item{\code{bottom}}{horizon lower boundary (cm)}
-    \item{\code{clay}}{clay content}
-    \item{\code{cec}}{CEC by amonium acetate at pH 7}
-    \item{\code{ph}}{pH in 1:1 water-soil mixture}
-    \item{\code{tc}}{total carbon percent}
-    \item{\code{hue}}{Munsell hue (dry)}
-    \item{\code{value}}{Munsell value (dry)}
-    \item{\code{chroma}}{Munsell chroma (dry)}
-    \item{\code{mid}}{horizon midpoint (cm)}
-    \item{\code{ln_tc}}{natural log of total carbon percent}
-    \item{\code{L}}{color: l-coordinate, CIE-LAB colorspace (dry)}
-    \item{\code{A}}{color: a-coordinate, CIE-LAB colorspace (dry)}
-    \item{\code{B}}{color: b-coordinate, CIE-LAB colorspace (dry)}
-    \item{name}{horizon name}
-    \item{soil_color}{horizon color}
-  }
-}
-\details{
-These data were collected to support research funded by the Kearney Foundation of Soil Science.
-}
-
-\references{http://casoilresource.lawr.ucdavis.edu/}
-
-
-\examples{
-## this example investigates the concept of a "median profile"
+##
+## main demo for AQP package-- a work in progress, largely just material from help files
+##
 
 # required packages
-library(ape)
+require(aqp) ; require(ape) ; require(lattice)
+
+
+# 
+# 1. basic profile aggregation and plotting
+# 
+data(sp1)
+# slot all profiles into 1,5,10,20 cm depth slices
+s1 <- soil.slot(data=sp1)
+# 5cm
+s5 <- soil.slot(data=sp1, seg_size=5)
+# 10cm segments:
+s10 <- soil.slot(data=sp1, seg_size=10)
+# 20cm
+s20 <- soil.slot(data=sp1, seg_size=20)
+
+# variation in segment-weighted mean property: very little
+sapply(
+list(s1,s5,s10,s20), 
+function(i) {
+	with(i, sum((bottom - top) * p.mean) / sum(bottom - top)) 
+	}
+)
+
+# combined viz
+g2 <- make.groups("1cm interval"=s1, "5cm interval"=s5, 
+"10cm interval"=s10, "20cm interval"=s20)
+
+# note special syntax for plotting step function
+xyplot(cbind(top,bottom) ~ p.mean, groups=which, data=g2, 
+panel=panel.depth_function, ylim=c(250,-10), 
+scales=list(y=list(tick.number=10)), xlab='Property', 
+ylab='Depth (cm)', main='Soil Profile Averaging by Slotting',
+auto.key=list(columns=2, points=FALSE, lines=TRUE)
+)
+
+
+
+# 
+# 2. investigate the concept of a median 
+# 
 data(sp3)
 
 # generate a RGB version of soil colors
@@ -116,6 +117,4 @@ function(i) which(as.integer(lastPP$xx[1:lastPP$Ntip]) == i))
 profile_plot(sp3.list, color="soil_color", plot.order=new_order,
 scaling.factor=0.35, width=0.1, cex.names=0.5,
 y.offset=max(lastPP$yy)+5, add=TRUE)
-}
 
-\keyword{datasets}
