@@ -3,34 +3,10 @@
 ##############################################################
 
 
-
-
-#
-# as of R 2.7 calling var() or anything that calls var()
-# results in an error when there are not enough values
-# previously NA was returned
-#
-conditional.sd <- function(x)
-	{
-	
-	l <- length(na.omit(x))
-	if(l >= 3)
-		{
-		x.sd <- sd(x, na.rm=TRUE)
-		}
-	else
-		{
-		x.sd <- NA	
-		}
-	
-	return(x.sd)
-	}
-
-
 ## TODO: seg_vect does not work
 # input dataframe must have an id column identifing each profile
 # note: this only works with numeric variables
-soil.slot.multiple <- function(data, g, vars, seg_size=NA, strict=FALSE, user.fun=NULL)
+soil.slot.multiple <- function(data, g, vars, seg_size=1, strict=FALSE, user.fun=NULL)
 	{
 	# check for dependencies
 	if(!require(plyr) | !require(reshape))
@@ -90,13 +66,14 @@ soil.slot.multiple <- function(data, g, vars, seg_size=NA, strict=FALSE, user.fu
 ## 
 ## calculation of segment-wise summary statistics
 ## 
-seg.summary <- function(l.recon, prop.class, use.wts, user.fun, l.recon.wts=NA, prop.levels=NA)
+##TODO: figure out how to do weighted tables
+seg.summary <- function(l.recon, prop.class, use.wts, user.fun, l.recon.wts=NA, prop.levels=NA, class_prob_mode=1)
 	{
 	
 	# this is the number of slices contributing the the slice-wise aggregate
 	contributing_fraction <- sapply(l.recon, function(i) length(na.omit(i)) / length(i))
 	
-	# sequence for iterating over lists
+	# sequence for iterating over multiple lists
 	l.seq <-1:length(l.recon)
 	
 	# numeric variables
@@ -107,56 +84,27 @@ seg.summary <- function(l.recon, prop.class, use.wts, user.fun, l.recon.wts=NA, 
 		p.mean <- sapply(l.recon, mean, na.rm=TRUE)
 		
 		# this estimate of SD is too low when using a segment size > 1 cm
-		p.sd <- sapply(l.recon, conditional.sd)
+		p.sd <- sqrt(sapply(l.recon, wtd.var, na.rm=TRUE))
 		
 		# these are the horizon-thickness weighted quantiles
 		q.probs <- c(0.05, 0.25, 0.5, 0.75, 0.95)
-		p.quantiles <- data.frame(t(sapply(l.recon, quantile, probs=q.probs, na.rm=TRUE)))
+		p.quantiles <- data.frame(t(sapply(l.recon, wtd.quantile, probs=q.probs, na.rm=TRUE)))
 		names(p.quantiles) <- paste('p.q', round(q.probs * 100), sep='')
 		
 		
-		# weighted mean and SD
-		# need to adapt this for lists
+		# profile-weighted statistics
 		if(use.wts == TRUE)
-			{
-						
-			## weighted mean calculation: reduces to standard mean, when weights are equal
-			# compute sum of (wt * x) by row
-			sum_wx <- sapply(l.seq, function(i) sum(l.recon.wts[[i]] * l.recon[[i]], na.rm=TRUE))
-			# compute sum of wt by row
-			sum_w <- sapply(l.seq, function(i) sum(l.recon.wts[[i]], na.rm=TRUE))
+			{			
+			# weighted mean calculation: reduces to standard mean, when weights are equal
+			p.wtmean <- sapply(l.seq, function(i) wtd.mean(l.recon[[i]], weights=l.recon.wts[[i]], na.rm=TRUE)) 
 			
-			# compute wt. mean = sum (wt * x) / sum (wt)
-			p.wtmean <- sum_wx / sum_w	
+			# weighted standard deviation: reduces to regular SD when weights are equal
+			p.wtsd <- sqrt(sapply(l.seq, function(i) wtd.var(l.recon[[i]], weights=l.recon.wts[[i]], normwt=TRUE, na.rm=TRUE)))
 			
-			
-			## row-wise weighted sd calculations: only if there are 3 or more obs
-			if(length(l.recon) >= 3)
-				{
-				d1 <- sapply(l.seq, function(i) sum(l.recon.wts[[i]] * l.recon[[i]]^2, na.rm=TRUE))
-				d2 <- sapply(l.seq, function(i) sum(l.recon.wts[[i]], na.rm=TRUE))
-				d3 <- sapply(l.seq, function(i) sum(l.recon[[i]] * l.recon.wts[[i]], na.rm=TRUE)^2)
-				
-				n1 <- sapply(l.seq, function(i) sum(l.recon.wts[[i]], na.rm=TRUE)^2)
-				n2 <- sapply(l.seq, function(i) sum(l.recon.wts[[i]]^2, na.rm=TRUE))
-			
-				# weighted variance
-				var.wt <- (d1 * d2 - d3) / (n1 - n2)
-				
-				# weighted sd: id wt. variances less than 0 -- these were probably computed by too few observations
-				var.wt[var.wt < 0] <- NA
-				p.wtsd <- sqrt(var.wt)
-				
-				# if any SD values are NA, the wt. SD should also be NA
-				p.wtsd[is.na(p.sd)] <- NA
-				
-				}
-			else # not enough obs to compute SD
-				{
-				p.wtsd <- NA
-				}
-				
-			} # end processing weighted mean and SD
+			# weighted quantiles: reduces to standard quantiles when weights are equal
+			p.wtquantiles <- data.frame(t(sapply(l.seq, function(i) wtd.quantile(l.recon[[i]], weights=l.recon.wts[[i]], probs=q.probs, normwt=TRUE, na.rm=TRUE))))
+			names(p.wtquantiles) <- paste('p.wtq', round(q.probs * 100), sep='')
+			} # end processing weighted mean, SD, quantiles
 		
 		
 		# try user defined function
@@ -164,13 +112,17 @@ seg.summary <- function(l.recon, prop.class, use.wts, user.fun, l.recon.wts=NA, 
 		if(!is.null(user.fun))
 			{
 			p.user <- try( sapply(l.recon, user.fun) )
-			df.stats <- data.frame(contributing_fraction, p.mean, p.sd, p.quantiles, p.user)
+			
+			if(use.wts)
+				df.stats <- data.frame(contributing_fraction, p.mean, p.wtmean, p.sd, p.wtsd, p.quantiles, p.wtquantiles, p.user)
+			else
+				df.stats <- data.frame(contributing_fraction, p.mean, p.sd, p.quantiles, p.user)
 			}
 		# no user function	
 		else
 			{
 			if(use.wts)
-				df.stats <- data.frame(contributing_fraction, p.mean, p.wtmean, p.sd, p.wtsd, p.quantiles)
+				df.stats <- data.frame(contributing_fraction, p.mean, p.wtmean, p.sd, p.wtsd, p.quantiles, p.wtquantiles)
 			else
 				df.stats <- data.frame(contributing_fraction, p.mean, p.sd, p.quantiles)
 			}
@@ -178,20 +130,42 @@ seg.summary <- function(l.recon, prop.class, use.wts, user.fun, l.recon.wts=NA, 
 		} # end processing numeric variables
 	
 	
-	## TODO: figure out how to apply this to segments > 1 unit
+	## TODO: wtd.table() does not return objects similar to table()... can't use it right now
+	## xtabs() is another approach, but it drops the count of NA
+	## xtabs(wts ~ obs, data=data.frame(wts=wts, obs=tf))
 	# categorical variables
 	if(prop.class == 'factor')
 		{
 		# get a vector of all possible categories
-		# these are the factor codes...
+		# note that l.recon contains factor codes
 		p.unique.classes <- as.vector(na.omit(unique(unlist(l.recon))))
 		
 		# tabular frequences for complete set of possible categories
-		# TODO: generalize to user-defined segmenting vectors
-		p.table <- sapply(l.seq, function(i) { 
-			prop.table(table(factor(l.recon[[i]], levels=p.unique.classes, labels=prop.levels[p.unique.classes]), useNA='no'))  
+		p.table <- sapply(l.seq, function(i, cpm=class_prob_mode, wts=l.recon.wts) 
+			{
+			tf <- factor(l.recon[[i]], levels=p.unique.classes, labels=prop.levels[p.unique.classes])
+			
+			# probabilities are relative to number of contributing profiles
+			if(cpm == 1)
+			  {
+			  tb <- table(tf, useNA='no')
+			  # convert to proportions
+			  pt <- prop.table(tb)
+			  }
+			
+			# probabilities are relative to total number of profiles
+			else if(cpm == 2)
+			  {
+			  tb <- table(tf, useNA='always')
+			  # convert to proportions, 
+			  # the last column will be named 'NA', and contains the tally of NAs --> remove it
+			  pt <- prop.table(tb)
+			  pt <- pt[-length(pt)]
+			  }
+			  
+			return(pt)
 			} 
-			)
+		)
 		
 		# convert into a dataframe, and combine with contr. fract.
 		p.prop <- as.data.frame(t(p.table))
@@ -209,13 +183,9 @@ seg.summary <- function(l.recon, prop.class, use.wts, user.fun, l.recon.wts=NA, 
 ## this function will break when horizon boundaries do not make sense
 ## 
 # TODO: we only need x.recon for 1cm aggregation, otherwise l.recon is used
-# TODO: check weighted computations.... probably not quite correct
-# TODO: optionally compute probability by dividing by number of profiles, not just profiles eith data to a given depth
-# TODO: slice-wise probability does not work with categorical vectors, when slice size > 1
-# TODO: re-factor how profile weights are used, consider using rq()
 # TODO: return the number of profiles + number of unique horizons when using custom segmenting interval
 # TODO: replace by() with equivilant plyr functions
-soil.slot <- function(data, seg_size=NA, seg_vect=NA, use.wts=FALSE, strict=FALSE, user.fun=NULL)
+soil.slot <- function(data, seg_size=NA, seg_vect=NA, use.wts=FALSE, strict=FALSE, user.fun=NULL, class_prob_mode=1)
 	{
 	
 	#################################################################################
@@ -264,11 +234,8 @@ soil.slot <- function(data, seg_size=NA, seg_vect=NA, use.wts=FALSE, strict=FALS
 		{
 		# save the levels of our categorical variable
 		prop.levels <- levels(data$prop) 
-		 
-		 # test for use of categorical variable and >1 seg vect
-		 if( !missing(seg_size) | !missing(seg_vect) )
-			stop('Sorry, aggregation of categorical variables by segments sizes >1 is not yet supported')
 		}
+	
 	# for numerical variables, set this to NA
 	else
 		prop.levels <- NA
@@ -344,10 +311,7 @@ soil.slot <- function(data, seg_size=NA, seg_vect=NA, use.wts=FALSE, strict=FALS
 	# must be a better way to do this..
 	if(!missing(seg_size) | !missing(seg_vect))
 		{
-		
-		# give a warning about weights and SD
-		cat('notice: calculation of SD with a user-defined segment size may be unrealiable\n')
-		
+				
 		# use a user-defined segmenting vector, starting from 0
 		if(!missing(seg_vect))
 			{
@@ -365,12 +329,6 @@ soil.slot <- function(data, seg_size=NA, seg_vect=NA, use.wts=FALSE, strict=FALS
 			wind.idx <- rep(segment_label, each=seg_size)[1:max_d]
 			}
 		
-		
-	
-		
-		##############################################################################
-		#### segment sizes > 1 will result in inflated 'n' for SD calculation       ##
-		##############################################################################
 		
 		# generate a list, where each entry is a vector corresponding to the collection of 
 		# values from all profiles, for those depths defined by each slice
@@ -447,7 +405,7 @@ soil.slot <- function(data, seg_size=NA, seg_vect=NA, use.wts=FALSE, strict=FALS
 			}
 		
 		# compute segment-wise summary statistics
-		df.stats <- seg.summary(l.recon, prop.class, use.wts, user.fun, l.recon.wts)
+		df.stats <- seg.summary(l.recon, prop.class, use.wts, user.fun, l.recon.wts, prop.levels, class_prob_mode)
 		
 		} # done with segmenting
 	
@@ -462,7 +420,7 @@ soil.slot <- function(data, seg_size=NA, seg_vect=NA, use.wts=FALSE, strict=FALS
 		df.top_bottom <- data.frame(top=0:(max_d-1), bottom=1:max_d)
 		
 		# compute row-wise summary statistics
-		df.stats <- seg.summary(l.recon, prop.class, use.wts, user.fun, l.recon.wts, prop.levels)
+		df.stats <- seg.summary(l.recon, prop.class, use.wts, user.fun, l.recon.wts, prop.levels, class_prob_mode)
 		
 		} # done with 1-unit interval aggregation
 

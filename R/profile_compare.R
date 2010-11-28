@@ -14,7 +14,7 @@
 # function requires at least two attributes
 # hard coded reference to s$id
 # set k to 0 for no depth weighting 
-profile_compare <- function(s, vars, max_d, k, sample_interval=NA, replace_na=FALSE, add_soil_flag=FALSE, return_depth_distances=FALSE, strict_hz_eval=FALSE)
+profile_compare <- function(s, vars, max_d, k, sample_interval=NA, replace_na=TRUE, add_soil_flag=TRUE, return_depth_distances=FALSE, strict_hz_eval=FALSE)
 	{
 	
 	# currently this will only work with integer depths
@@ -58,7 +58,7 @@ profile_compare <- function(s, vars, max_d, k, sample_interval=NA, replace_na=FA
 	## unroll each named soil property, for each soil profile
 	## the result is a list matricies with dimensions: depth, num_properties 
 	# this approach requires a named list of soil properties
-	cat(paste("Unrolling ", length(levels(s$id)), " Profiles\n", sep=""))
+	cat(paste("Unrolling ", n.profiles, " Profiles\n", sep=""))
 	s.unrolled <- dlply(s, .(id), .progress='text', .fun=function(di, p=vars, d=max_d, strict=strict_hz_eval) 
 		{
 		
@@ -106,8 +106,15 @@ profile_compare <- function(s, vars, max_d, k, sample_interval=NA, replace_na=FA
 			soil.matrix[, s.i] <- c(rep(TRUE, s.slices_of_soil[s.i]), rep(FALSE, s.slices_of_non_soil[s.i]))
 		
 		
-		# debugging: plot a diagnostic image
-		image(1:n.profiles, 1:max_d, t(soil.matrix), col=c('white','grey'), ylim=c(max_d, 1), xlab='ID', ylab='Depth', main='Soil/Non-Soil Matrix')
+		# debugging: plot a diagnostic image, but only when reasonable to do so (< 100 profiles)
+		if(n.profiles <= 100)
+		  {
+		  labs <- levels(s$id)
+		  image(1:n.profiles, 1:max_d, t(soil.matrix), col=c(NA,'grey'), ylim=c(max_d, 1), xlab='ID', ylab='Slice Number (usually eq. to depth)', main='Soil / Non-Soil Matrix', axes=FALSE)
+		  abline(v=seq(1, n.profiles)+0.5, lty=2)
+		  axis(side=2, at=pretty(c(0, depth_slice_seq)), las=1)
+		  axis(side=1, at=1:n.profiles, labels=labs, las=2, cex=0.5)
+		  }
 		}
 		
 	
@@ -133,34 +140,10 @@ profile_compare <- function(s, vars, max_d, k, sample_interval=NA, replace_na=FA
 		# distance metric has large effect on results
 		# Gower's distance gives the best looking results, and automatically standardizes variables
 		
-		# compute the proportion of cases where NA occurs
-		proportion_non_NA <- 1 - (length(which(is.na(sp))) / (n.profiles * n.vars))
-		
-		# use some criteria for deciding when to keep the dissimilarities for this slice
-		if(proportion_non_NA >= 0.5)
-			{
-			## this is where we run into memory-size limitations
-			## an ff object would help here... however it can not preserve all of the information 
-			## that a list can... we would need to store these data as raw matrices
-			d[[i]] <- daisy(sp, metric='gower')
-			}
-		
-		# otherwise contribute no dissimilarity to the total
-		else
-			{
-			print(paste(round(proportion_non_NA, 2), 'non-missing in slice', depth_slice_seq[i]))
-			
-			# generate an appropriately formatted dissimilarity matrix, full of NA
-			m.ref <- lower.tri(matrix(ncol=n.profiles,nrow=n.profiles), diag=FALSE)
-			m.ref[which(m.ref == FALSE)] <- NA
-			
-			## this is where we run into memory-size limitations
-			# assign to this slice
-			d[[i]] <- as.dist(m.ref)
-			
-			# clean-up
-			rm(m.ref)
-			}
+		## this is where we run into memory-size limitations
+		## an ff object would help here... however it can not preserve all of the information 
+		## that a list can... we would need to store these data as raw matrices
+		d[[i]] <- daisy(sp, metric='gower')
 			
 		# cleanup: not sure if this helps... seems to
 		gc()
@@ -170,7 +153,7 @@ profile_compare <- function(s, vars, max_d, k, sample_interval=NA, replace_na=FA
 		
 		
 		# debugging information on memory consumption
-		cat(paste(" [size of D:", round(object.size(d) / 1024^2, 1), "Mb] "))
+		# cat(paste(" [size of D:", round(object.size(d) / 1024^2, 1), "Mb] "))
 		
 		}
 	# done creating list of slice-wise dissimilarties
