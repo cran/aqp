@@ -2,24 +2,32 @@
 \docType{methods}
 \alias{profileApply}
 \alias{profileApply,SoilProfileCollection-method}
+\alias{splitProfiles}
+\alias{splitProfiles,SoilProfileCollection-method}
+
 \title{Apply a function to soil profiles within a SoilProfileCollection object.}
-\description{Apply a function to soil profiles within a SoilProfileCollection object.}
+\description{Apply a function to soil profiles within a SoilProfileCollection object. Note that each iteration has access to a SoilProfileCollection object.}
 \section{Methods}{
 \describe{
 
 \item{\code{signature(object = "SoilProfileCollection")}}{}
 }}
 
-\value{A vector of length \code{nrow(horizons(object))} (horizon data) or of length \code{length(object)} (site data).}
+\value{A vector of length \code{nrow(object)} (horizon data) or of length \code{length(object)} (site data).}
 
 \examples{
 data(sp1)
 depths(sp1) <- id ~ top + bottom
 
+# split a SPC into a list of single-profile SPC objects
+# used internally by profileApply()
+str(splitProfiles(sp1), 1)
+
 # scale properties within each profile
 # scaled = (x - mean(x)) / sd(x)
 sp1$d <- profileApply(sp1, FUN=function(x) round(scale(x$prop), 2))
 plot(sp1, name='d')
+
 
 # compute depth-wise differencing by profile
 # note that our function expects that the column 'prop' exists
@@ -56,20 +64,22 @@ plot(s)
 site(s) <- ~ group
 
 # eval dupes with digest, save md5 hash into @site
+# note that we are only working with horizon data
+# note that we are removing the 1st column, as it contains the profile ID
 if(require(digest)) {
-s$md5 <- profileApply(s, function(x) digest(unlist(x[, -1])))
+	s$md5 <- profileApply(s, function(x) digest(unlist(horizons(x)[, -1])))
 
-# get unique hashes
-u.md5 <- unique(s$md5)
+	# get unique hashes
+	u.md5 <- unique(s$md5)
 
-# list profile idx by hash:
-profiles.by.hash <- sapply(u.md5, function(i) which(s$md5 == i), simplify=FALSE)
+	# list profile idx by hash:
+	profiles.by.hash <- sapply(u.md5, function(i) which(s$md5 == i), simplify=FALSE)
 
-# get an index of the first copy of each profile
-u.profiles <- sapply(profiles.by.hash, function(x) x[1])
+	# get an index of the first copy of each profile
+	u.profiles <- sapply(profiles.by.hash, function(x) x[1])
 
-# check: OK
-plot(s[u.profiles, ])
+	# check: OK
+	plot(s[u.profiles, ])
 }
 
 
