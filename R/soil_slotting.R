@@ -12,11 +12,6 @@ soil.slot.multiple <- function(data, g, vars, seg_size=1, strict=FALSE, user.fun
 	if(!require(plyr) | !require(reshape))
 		stop('Please install the "plyr" and "reshape" packages.')
 		
-	## this is still experimental
-	# check for ability to use parallel computations:
-	# parallel <- checkMC()
-		
-		
 	# currently this will only work with integer depths
 	if(any( !as.integer(data$top[data$top != 0]) == data$top[data$top != 0] ) | any( !as.integer(data$bottom) == data$bottom))
 		stop('This function can only accept integer horizon depths')
@@ -44,10 +39,14 @@ soil.slot.multiple <- function(data, g, vars, seg_size=1, strict=FALSE, user.fun
 			groups=i[, groups]
 			)
 		
+		## this is still experimental -- check for ability to use parallel computations:
+		parallel_flag <- checkMC()
+			
+		
 		## TODO: allow for seg_vect or seg_size	
 		## currently only one or the other is supported
 		# apply slotting according to grouping factor
-		i.slotted <- ddply(i.sub, .(groups), .fun=soil.slot, seg_size=seg_size, strict=strict, user.fun=uf)
+		i.slotted <- ddply(i.sub, .(groups), .fun=soil.slot, seg_size=seg_size, strict=strict, user.fun=uf, .parallel=parallel_flag)
 		
 		return(i.slotted)
 		})
@@ -167,8 +166,21 @@ seg.summary <- function(l.recon, prop.class, use.wts, user.fun, l.recon.wts=NA, 
 			} 
 		)
 		
-		# convert into a dataframe, and combine with contr. fract.
-		p.prop <- as.data.frame(t(p.table))
+		# convert into a dataframe: if there are > 1 classes, 
+		# then we must transpose p.table when converting to a data.frame
+		if(length(p.unique.classes) > 1)
+			p.prop <- data.frame(t(p.table))
+			
+		# when there is only 1 class, things are more complicated:
+		# 1. no need to transpose p.table
+		# 2. need to manually add the class name
+		else
+			{
+			p.prop <- data.frame(p.table)
+			names(p.prop) <- prop.levels[p.unique.classes]
+			}
+		
+		# combine with contributing fraction
 		df.stats <- data.frame(contributing_fraction, p.prop)
 		}
 	
