@@ -1,3 +1,5 @@
+## see the convertColor() function from grDevices
+
 
 # convert munsell Hue, Value, Chroma into RGB
 # user can adjust how rgb() function will return an R-friendly color
@@ -62,6 +64,3 @@ munsell2rgb <- function(the_hue, the_value, the_chroma, alpha=1, maxColorValue=1
 		
 	return(s.df$soil_color)
 	}
-	
-	
-	

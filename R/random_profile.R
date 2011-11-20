@@ -1,56 +1,105 @@
+.lpp <- function(x, a, b, u, d, e) {
+  # the exponential term
+  f.exp <- exp((x + d * log(e) - u) / d)
+  # first part
+  f1 <- (b/u) * (1 + f.exp)^((-e - 1) / e)
+  # second part
+  f2 <- f.exp * (e + 1)^((e+1) / e)
+  # combine pieces
+  res <- a + f1 * f2
+  return(res)
+  }
 
-random_profile <- function(
-id,
-n=c(3,4,5,6), 
-min_thick=5, 
-max_thick=30, 
-n_prop=5,
-exact=FALSE
-)
-{
 
-# sanity check
-if(missing(id))
-	stop('must specify an id')
+random_profile <- function(id, n=c(3,4,5,6), min_thick=5, max_thick=30, n_prop=5, exact=FALSE, method='random_walk', ...) {
 
-if(max_thick < min_thick)
-	stop('illogical horizon thickness constraints')
+  # sanity check
+  if(missing(id))
+	  stop('must specify an id')
 
-# if requested, give back the exact number of horizons
-if(length(n) == 1 & exact)
-	n_hz <- n
+  if(max_thick < min_thick)
+	  stop('illogical horizon thickness constraints')
 
-# otherwise randomly choose from suggestions
-else
-	n_hz <- sample(n, 1)
+  if(! method %in% c('random_walk', 'LPP'))
+	stop('invalid method')
 
-# generate hz top bnd
-tops <- integer(n_hz-1)
-for(i in 1:(n_hz-1))
-	tops[i] <- sample(min_thick:max_thick, 1)
+  # get extra arguments
+  dots <- list(...)
 
-# add 0, then generate bottom bnd
-tops <- as.integer(c(0, tops))
-bottoms <- as.integer(c(tops[-1], sample(min_thick:max_thick, 1)))
+  # if requested, give back the exact number of horizons
+  if(length(n) == 1 & exact)
+	  n_hz <- n
 
-# combine into a df
-d <- data.frame(id=id, top=cumsum(tops), bottom=cumsum(bottoms), name=paste('H',1:n_hz,sep=''))
+  # otherwise randomly choose from suggestions
+  else
+	  n_hz <- sample(n, 1)
 
-# generate several properties
-# with different means / sd
-for(i in 1:n_prop)
-	{
-	p <- numeric(n_hz)
-	p[1] <- rnorm(1)
-	for(j in 2:n_hz)
-		p[j] <- p[j-1] + rnorm(1, mean=runif(n=1, min=-10, max=10), sd=runif(n=1, min=1, max=10))
+  # generate hz top bnd
+  tops <- integer(n_hz-1)
+  for(i in 1:(n_hz-1))
+	  tops[i] <- sample(min_thick:max_thick, 1)
 
-	# add properties
-	new_col <- paste('p',i, sep='')
-	d[,new_col] <- p
-	}
+  # add 0, then generate bottom bnd
+  tops <- as.integer(c(0, tops))
+  bottoms <- as.integer(c(tops[-1], sample(min_thick:max_thick, 1)))
 
-# all done
-return(d)
+  # combine into a df
+  d <- data.frame(id=id, top=cumsum(tops), bottom=cumsum(bottoms), name=paste('H',1:n_hz,sep=''))
+
+  # generate several properties
+  # with different means / sd
+  for(i in 1:n_prop)
+	  {
+	# init storage
+	  p <- numeric(n_hz)
+	
+	if(method == 'random_walk') {
+		p[1] <- rnorm(1)
+		for(j in 2:n_hz)
+			p[j] <- p[j-1] + rnorm(1, mean=runif(n=1, min=-10, max=10), sd=runif(n=1, min=1, max=10))
+	  }
+	
+	if(method == 'LPP') {
+	  # generate synthetic values at horizon mid-points
+	  mids <- with(d, (top + bottom)/2)
+	  
+	  # generate LPP parameters from uniform dist if not given as arguments
+	  if(is.null(dots[['lpp.a']]))
+		lpp.a <- runif(n=1, min=5, max=25)
+	  else
+		lpp.a <- dots[['lpp.a']]
+	  
+	  if(is.null(dots[['lpp.b']]))
+		lpp.b <- runif(n=1, min=20, max=60)
+	  else
+		lpp.b <- dots[['lpp.b']]
+	  
+	  if(is.null(dots[['lpp.u']]))
+		lpp.u <- runif(n=1, min=10, max=90)
+	  else
+		lpp.u <- dots[['lpp.u']]
+	  
+	  if(is.null(dots[['lpp.d']]))
+		lpp.d <- runif(n=1, min=1, max=10)
+	  else
+		lpp.d <- dots[['lpp.d']]
+	  
+	  if(is.null(dots[['lpp.e']]))
+		lpp.e <- runif(n=1, min=5, max=20)
+	  else
+		lpp.e <- dots[['lpp.e']]
+	  
+	  # generate vector of synthetic values based on LPP
+	  p <- .lpp(mids, a=lpp.a, b=lpp.b, u=lpp.u, d=lpp.d, e=lpp.e)
+	  }
+	
+	  # add generated depth profile to horizons
+	  new_col <- paste('p',i, sep='')
+	  d[,new_col] <- p
+	  }
+
+  # all done
+  return(d)
 }
+
 

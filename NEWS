@@ -1,3 +1,28 @@
+-------------------------- aqp 0.99-8.47 (2011-11-20) --------------------------
+* started VERY basic AQP Introduction vignette... still experimental
+* adding coercion methods for common objects and sp-class objects
+* matrix-style subsetting almost works:
+  - s[i, j] ---> i is the profile index, and j is the horizon/slice index
+* added a 'slice' method for SoilProfileCollection objects
+  - returns selected variables along depth slice(s) (i.e. no aggregation)
+* added NAMESPACE file for R >= 2.14 compatibility
+* stabilized S4 class, working on S4-izing all related functions
+* preliminary documentation on the new S4 classes/methods
+* logistic power peak (LPP) can now be used to generate synthetic depth functions
+* added contributing fraction annotation in panel.depth_function()
+
+-------------------------- aqp 0.99-8.4 (2011-10-04) --------------------------
+* minor bug fixes and enhancements in PedonPC function
+* S4 interface to soil.slot.multiple()
+
+-------------------------- aqp 0.99-8.2 (2011-09-21) --------------------------
+* added S4 class/methods for `SoilProfileCollection`
+  - this supercedes the (now removed) S3 `SoilProfileList` classes
+  - basic accessors/settors are in place, subject to change
+* profile_plot() now uses the `SoilProfileCollection` class
+! initSoilProfileList() is no longer supported; see depths() for similar functionality
+! expect some tumultous times ahead in the API... should be ironed out by 1.0 release
+
 -------------------------- aqp 0.99-8 (2011-09-14) --------------------------
 * soil.slot() will now accept boundaries defining a 'slab' over which aggregates are computed
 * soil.slot.multiple() now cleanly wraps soil.slot(), accepting all arguments
