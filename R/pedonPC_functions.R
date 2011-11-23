@@ -1,3 +1,5 @@
+# TODO: allow user to specify set of IDs for subsetting
+
 
 # mixes colors whene there are multiple values per / horizon
 # TODO: this is only used by pedonPC functions, and could be generalized
@@ -20,11 +22,6 @@ mix_and_clean_colors <- function(x)
   else
     df <- x[, c('r','g','b')]
   
-  # fill missing colors with white
-  df$r[is.na(df$r)] <- 1
-  df$g[is.na(df$g)] <- 1
-  df$b[is.na(df$b)] <- 1
-  
   # done
   return(df)
   }
@@ -35,8 +32,8 @@ mix_and_clean_colors <- function(x)
 get_site_data_from_pedon_db <- function(dsn)
   {
   q <- "SELECT site.usiteid as site_id, pedon.upedonid as pedon_id, 
-  latdegrees + IIF(IsNull(latminutes), 0, latminutes/ 60.0) + IIF(IsNULL(latseconds), 0, latseconds / 60.0 / 60.0) as y,
-  -(longdegrees + IIF(IsNull(longminutes), 0, longminutes / 60.0) + IIF(IsNull(longseconds), 0, longseconds / 60.0 / 60.0)) as x,
+  latdegrees + IIF(IsNull(latminutes), 0.0, latminutes/ 60.0) + IIF(IsNULL(latseconds), 0.0, latseconds / 60.0 / 60.0) as y,
+  -(longdegrees + IIF(IsNull(longminutes), 0.0, longminutes / 60.0) + IIF(IsNull(longseconds), 0.0, longseconds / 60.0 / 60.0)) as x,
   dm.choice as datum,
   elev, slope, aspect, plantassocnm,
   bedrckdepth, br.choice_label as bedrock_kind,
@@ -78,6 +75,7 @@ get_site_data_from_pedon_db <- function(dsn)
   }
 
 
+# note that missing rock fragment data are converted to 0%
 get_hz_data_from_pedon_db <- function(dsn)
   {
   require(RODBC)
@@ -86,11 +84,17 @@ get_hz_data_from_pedon_db <- function(dsn)
   # RF calculation should be done in  a sub-query
   q <- "SELECT pedon.upedonid as pedon_id, phorizon.phiid as hz_id,
   phorizon.hzname, phorizon.hzdept, phorizon.hzdepb,
-  phorizon.claytotest as clay, phorizon.silttotest as silt, phorizon.sandtotest as sand, phfield,
-  Sum(phfrags.fragvol)  AS total_frags_pct
-FROM (pedon INNER JOIN phorizon ON (pedon.pedbsidref = phorizon.pedbsidref) AND (pedon.peiid = phorizon.peiidref)) LEFT OUTER JOIN phfrags ON (phorizon.pedbsidref = phfrags.pedbsidref) AND (phorizon.phiid = phfrags.phiidref)
-GROUP BY pedon.upedonid, phorizon.phiid, phorizon.hzname, phorizon.hzdept, phorizon.hzdepb, phorizon.claytotest, phorizon.silttotest, phorizon.sandtotest, phfield
-ORDER BY pedon.upedonid, phorizon.hzdept ASC ;"
+  phorizon.claytotest as clay, phorizon.silttotest as silt, phorizon.sandtotest as sand, phfield, 
+  IIF(IsNULL(f.total_frags_pct), 0, f.total_frags_pct) AS total_frags_pct
+  FROM (
+  (pedon INNER JOIN phorizon ON pedon.peiid = phorizon.peiidref) 
+  LEFT OUTER JOIN (
+    SELECT phiidref, SUM(fragvol) as total_frags_pct 
+    FROM phfrags
+    GROUP BY phiidref
+    ) as f on phorizon.phiid = f.phiidref
+  )
+  ORDER BY pedon.upedonid, phorizon.hzdept ASC ;"
   
   # setup connection to our pedon database
   channel <- odbcConnectAccess(dsn, readOnlyOptimize=TRUE)
@@ -124,8 +128,7 @@ get_colors_from_pedon_db <- function(dsn)
 FROM (
 (pedon INNER JOIN phorizon ON pedon.peiid = phorizon.peiidref)
 INNER JOIN phcolor ON phorizon.phiid = phcolor.phiidref)
-INNER JOIN metadata_domain_detail AS mh ON phcolor.colorhue = mh.choice_id
-WHERE mh.domain_id = 1242
+LEFT OUTER JOIN (SELECT * FROM metadata_domain_detail WHERE domain_id = 1242) AS mh ON phcolor.colorhue = mh.choice_id
 ORDER BY pedon.upedonid, phiidref, colormoistst;"
   
   # setup connection to our pedon database
@@ -155,8 +158,8 @@ ORDER BY pedon.upedonid, phiidref, colormoistst;"
   
   # mix and clean colors
   cat('mixing and cleaning colors ...\n')
-  dry.colors.final <- ddply(dry.colors, .(pedon_id, hz_id), mix_and_clean_colors, .progress='text')
-  moist.colors.final <- ddply(dry.colors, .(pedon_id, hz_id), mix_and_clean_colors, .progress='text')
+  dry.colors.final <- ddply(dry.colors, c('pedon_id', 'hz_id'), mix_and_clean_colors, .progress='text')
+  moist.colors.final <- ddply(moist.colors, c('pedon_id', 'hz_id'), mix_and_clean_colors, .progress='text')
 
   # rename columns
   names(dry.colors.final) <- c('pedon_id','hz_id','d_r','d_g','d_b')
@@ -169,6 +172,43 @@ ORDER BY pedon.upedonid, phiidref, colormoistst;"
   rm(d, d.rgb, dry.colors, moist.colors, dry.colors.final, moist.colors.final)
   gc()
   
+  
+  ## probably not a good idea
+  # fill missing color with white
+#   d.final$d_r[is.na(d.final$d_r)] <- NA
+#   d.final$d_g[is.na(d.final$d_g)] <- NA
+#   d.final$d_b[is.na(d.final$d_b)] <- NA
+#   
+#   d.final$m_r[is.na(d.final$m_r)] <- NA
+#   d.final$m_g[is.na(d.final$m_g)] <- NA
+#   d.final$m_b[is.na(d.final$m_b)] <- NA
+  
   # done
   return(d.final)
   }
+
+
+get_veg_from_AK_Site <- function(dsn)
+  {
+  # basic query
+  q <- "SELECT VegStop.usiteid as site_id, localplant.lplantsym as plantsym, localplant.lplantname as plantname, vegetation.COVER as pct_cover
+  FROM 
+  (VegStop INNER JOIN vegetation ON VegStop.vegstopdbid = vegetation.vegstodbiidref)
+  INNER JOIN localplant ON vegetation.lplantsym = localplant.lplantuid
+  ORDER BY VegStop.usiteid ASC;"
+  
+  # setup connection to our pedon database
+  channel <- odbcConnectAccess(dsn, readOnlyOptimize=TRUE)
+
+  # exec query
+  cat(paste('fetching from', dsn, '...\n'))
+  d <- sqlQuery(channel, q)
+
+  # close connection
+  odbcClose(channel)
+  
+  # done
+  return(d)
+  }
+
+

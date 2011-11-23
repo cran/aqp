@@ -1,27 +1,36 @@
-\name{profile_plot.default}
-\Rdversion{1.1}
-\alias{profile_plot}
-\alias{profile_plot.default}
-\alias{profile_plot.SoilProfileList}
-%- Also NEED an '\alias' for EACH other topic documented here.
+\name{SoilProfileCollection-plotting-methods}
+\docType{methods}
+\alias{plotSPC}
+\alias{plot,SoilProfileCollection-method}
+
+
 \title{
 Profile Plot
 }
 \description{
 Generate a simple diagram of a soil profile, with annotated horizon names.
 }
-\usage{
 
-\method{profile_plot}{SoilProfileList}(d, color='soil_color', width=0.2, name='name', 
-cex.names=0.5, cex.depth.axis=cex.names, cex.id=cex.names+(0.2*cex.names), 
-print.id=TRUE, id.style='top', plot.order=1:d$num_profiles, add=FALSE, scaling.factor=1, y.offset=0, 
-max.depth=d$max_depth, n.depth.ticks=5, shrink=FALSE, shrink.cutoff=3,
-abbr=FALSE, abbr.cutoff=5, \dots)
+\section{Methods}{
+\describe{
+
+\item{\code{signature(x = "SoilProfileCollection")}}{
 
 }
+}}
+
+\usage{
+plotSPC(x, color='soil_color', width=0.2, name='name', 
+cex.names=0.5, cex.depth.axis=cex.names, cex.id=cex.names+(0.2*cex.names), print.id=TRUE, 
+id.style='top', plot.order=1:length(x), add=FALSE, scaling.factor=1, y.offset=0, 
+max.depth=max(x), n.depth.ticks=5, shrink=FALSE, shrink.cutoff=3, abbr=FALSE, 
+abbr.cutoff=5, \dots)
+}
+
+
 %- maybe also 'usage' for other objects documented here.
 \arguments{
-  \item{d}{a SoilProfileList object}
+  \item{x}{a SoilProfileCollection object}
   \item{color}{the name of the column containing R-compatible color descriptions}
   \item{width}{scaling of profile widths}
   \item{name}{the name of the column containing the horizon designation}
@@ -43,17 +52,18 @@ abbr=FALSE, abbr.cutoff=5, \dots)
   \item{\dots}{other arguments passed into lower level plotting functions}
 }
 \details{
-This function sets the margins before plotting, so previous calls to \code{par(mar=...)} will be overridden. Depth limits (max.depth) and number of depth ticks (n.depth.ticks) are *suggestions* to the \code{pretty()} function. You may have to tinker with both parameters to get what you want. The 'side' \code{id.style} is useful when plotting a large collection of profiles, and/or, when profile IDs are long.
+Depth limits (max.depth) and number of depth ticks (n.depth.ticks) are *suggestions* to the \code{pretty()} function. You may have to tinker with both parameters to get what you want. The 'side' \code{id.style} is useful when plotting a large collection of profiles, and/or, when profile IDs are long.
 }
 \value{
 A new plot of soil profiles is generated, or optionally added to an existing plot.
 }
 
+
 \references{http://casoilresource.lawr.ucdavis.edu/}
 \author{Dylan E. Beaudette}
 
 \seealso{
-\code{\link{initProfileList}, \link{pretty}}
+\code{\link{SoilProfileCollection-class}, \link{pretty}}
 }
 \examples{
 library(aqp)
@@ -62,17 +72,32 @@ data(sp1)
 # add color vector
 sp1$soil_color <- with(sp1, munsell2rgb(hue, value, chroma))
 
-# convert to SoilPofileList class object
-sp1.list <- initProfileList(sp1)
+# promote to SoilProfileCollection
+depths(sp1) <- id ~ top + bottom
 
 # plot profiles
-profile_plot(sp1.list)
+plot(sp1)
 
 # plot profiles, using alternate profile ID label style
-profile_plot(sp1.list, id.style='side')
+plot(sp1, id.style='side')
+
+
+# plot horizon color according to some property
+# RColorBrewer helps with nice colors
+if(require(RColorBrewer)) {
+  data(sp3)
+  
+  # setup colors
+  cols <- rev(brewer.pal(8, 'Spectral'))
+  cr <- colorRamp(cols)
+  
+  # assign color based on clay content, rescaled to {0,1}
+  sp3$soil_color <- rgb(cr(rescaler(sp3$clay, type='range')), max=255)
+  depths(sp3) <- id ~ top + bottom
+  plot(sp3)
+}
+
+
 
 }
-% Add one or more standard keywords, see file 'KEYWORDS' in the
-% R documentation directory.
-\keyword{hplot}
 

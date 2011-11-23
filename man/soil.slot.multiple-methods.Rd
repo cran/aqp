@@ -1,26 +1,36 @@
-\name{soil.slot.multiple}
-\Rdversion{1.1}
+\name{soil.slot.multiple-methods}
+\docType{methods}
 \alias{soil.slot.multiple}
+\alias{soil.slot.multiple,data.frame-method}
+\alias{soil.slot.multiple,SoilProfileCollection-method}
+
 \title{
 Multivariate Soil Profile Slotting
 }
 \description{
 Align several soil properties to a user-defined basis, with data returned in long format.
 }
-\usage{
-soil.slot.multiple(data, fm, ...)
-}
+
+
+\section{Methods}{
+\describe{
+\item{data = "SoilProfileCollection"}{ see \link{SoilProfileCollection} }
+\item{data = "data.frame"}{ see \link{soil.slot} }
+}}
+
 \arguments{
-  \item{data}{an input dataframe with 'id' column defining soil profiles, horizon depths must be integers}
-  \item{fm}{a formula in the form: groups ~ var1 + var2 + var3 + ...}
+  \item{data}{a dataframe with columns ('id', 'top', 'bottom')}
+  \item{fm}{a formula in the form: groups ~ var1 + var2 + var3 + ... OR ~ var1 + var2 + var3 + ...}
   \item{...}{further arguments passed onto \code{\link{soil.slot}}}
 }
+
 \details{
 This function is a wrapper to \code{\link{soil.slot}}, that makes it simpler to "slice" several soil properties at once. The results are in long format; see examples for further processing steps that may be required.
 }
 \value{
-A dataframe similar to the output from \code{\link{soil.slot}}, but with depth-slice information repeated for each requested input variable and group.
+A dataframe similar to the output from \code{\link{soil.slot}}, but with depth-slice information repeated for each requested input variable and group. If a grouping variable is not given, then all of the profiles in the collection are aggregated into a single representative profile.
 }
+
 \references{http://casoilresource.lawr.ucdavis.edu/}
 \author{Dylan E Beaudette}
 \note{
@@ -59,6 +69,7 @@ panel=panel.depth_function,
 prepanel=prepanel.depth_function
 )
 
+
 # convert mean value for each variable into long format
 a.wide <- cast(a, group + top + bottom ~ variable, value=c('p.mean'))
 
@@ -72,6 +83,12 @@ a <- soil.slot.multiple(sp3, fm=group ~ L + A + B, seg_vect=c(40,60))
 ## this time, compute the weighted mean of selected properties, by profile ID
 a <- soil.slot.multiple(sp3, fm=id ~ L + A + B, seg_vect=c(40,60))
 (a.wide <- cast(a, id + top + bottom ~ variable, value=c('p.mean')))
+
+
+## aggregate the entire collection: 
+## note the missing left-hand side of the formula
+a <- soil.slot.multiple(sp3, fm= ~ L + A + B)
+
 
 
 ## this will work in the next version of plyr
@@ -91,6 +108,6 @@ a <- soil.slot.multiple(sp3, fm=group ~ L + A + B, seg_size=5)
 stopWorkers(w)
 }
 }
-% Add one or more standard keywords, see file 'KEYWORDS' in the
-% R documentation directory.
+
+\keyword{methods}
 \keyword{manip}

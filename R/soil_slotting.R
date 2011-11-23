@@ -2,9 +2,41 @@
 ## slotting functions ##
 ##############################################################
 
-# input dataframe must have an id column identifing each profile
-soil.slot.multiple <- function(data, fm, ...)
-	{
+# setup generic function
+if (!isGeneric("soil.slot.multiple"))
+  setGeneric("soil.slot.multiple", function(data, fm, ...) standardGeneric("soil.slot.multiple"))
+
+# temp interface to SPC class objects
+setMethod(f='soil.slot.multiple', signature='SoilProfileCollection',
+  function(data, fm, ...){
+  
+  # extract horizons and site 
+  h <- horizons(data)
+  s <- site(data)
+  
+  # if there is site data, join together
+  if(nrow(s) > 0)
+    h <- join(h, s, type='left')
+          
+  # add old-style, hard-coded {id, top, bottom} column names        
+  h$id <- h[[idname(data)]]
+  hzDepthCols <- horizonDepths(data)
+  h$top <- h[[hzDepthCols[1]]]
+  h$bottom <- h[[hzDepthCols[2]]]
+  
+  res <- soil.slot.multiple(h, fm, ...)
+  
+  # currently sends back a DF,
+  # we should send back an SPC object with original format...
+  return(res)
+  }
+)
+
+
+# current interface to data.frame objects
+setMethod(f='soil.slot.multiple', signature='data.frame',
+definition=function(data, fm, ...) {
+  
 	# sanity check:
 	if(! inherits(fm, "formula"))
 		stop('must provide a valid formula: groups ~ var1 + var2 + ...')
@@ -14,7 +46,7 @@ soil.slot.multiple <- function(data, fm, ...)
 	vars <- all.vars(update(fm, 0~.)) # right-hand side
 	
 	# check for bogus left/right side problems with the formula
-	if(g == '.' | any(g %in% names(data)) == FALSE) # missing group on left-hand side
+	if(any(g %in% names(data)) == FALSE & g != '.') # bogus grouping column
 		stop('group name either missing from formula, or does match any columns in dataframe')
 	
 	if(any(vars %in% names(data)) == FALSE) # bogus column names in right-hand side
@@ -24,6 +56,12 @@ soil.slot.multiple <- function(data, fm, ...)
 	if(any( !as.integer(data$top[data$top != 0]) == data$top[data$top != 0] ) | any( !as.integer(data$bottom) == data$bottom))
 		stop('This function can only accept integer horizon depths')
 	
+  # if there is no left-hand component in the formula, we are aggregating all data in the collection
+  if(g == '.') { 
+    g <- 'all.profiles' # add new grouping variable to horizons
+    data[, g] <- 1
+  }
+  
 	# convert into long format
 	d.long <- melt(data, id.vars=c('id','top','bottom', g), measure.vars=vars)
 	
@@ -42,9 +80,7 @@ soil.slot.multiple <- function(data, fm, ...)
 	# done
 	return(d.slotted)
 	}	
-
-
-
+)
 
 ## 
 ## calculation of segment-wise summary statistics
@@ -222,7 +258,7 @@ soil.slot <- function(data, seg_size=NA, seg_vect=NA, use.wts=FALSE, strict=FALS
 	# if we have a character, then convert to factor
 	if(prop.class == 'character')
 		{
-		cat('notice: converting to categorical variable to factor \n')
+		message('Note: converting to categorical variable to factor.')
 		data$prop <- factor(data$prop)
 		}
 	
@@ -274,7 +310,7 @@ soil.slot <- function(data, seg_size=NA, seg_vect=NA, use.wts=FALSE, strict=FALS
 	# weights
 	if(use.wts == TRUE)
 		{
-		cat('notice: profile weights are still experimental, use with caution!\n')
+		message('Note: profile weights are still experimental, use with caution!')
 		
 		# unroll a weight vector for each pedon
 		x.unrolled.wts <- by(data, data$id, function(i, m=max_d) unroll(top=i$top, bottom=i$bottom, prop=i$wt, max_depth=m))
@@ -380,7 +416,7 @@ soil.slot <- function(data, seg_size=NA, seg_vect=NA, use.wts=FALSE, strict=FALS
 				{
 				seg_vect_legal_idx <- which( (seg_vect - max_d) <= 0)
 				sv_clean <- c(seg_vect[seg_vect_legal_idx], max_d)
-				cat(paste('notice: truncating requested lower segment (', max.seg_vect, ') to max profile depth (', max_d, ')\n', sep=''))
+				cat(paste('Note: truncating requested lower segment (', max.seg_vect, ') to max profile depth (', max_d, '). \n', sep=''))
 				}
 				
 			# the actual depth may be more than, or equal to, the deepest requested segment
@@ -465,3 +501,4 @@ soil.slot <- function(data, seg_size=NA, seg_vect=NA, use.wts=FALSE, strict=FALS
 	# done
 	return(x.slotted)
 	}
+
