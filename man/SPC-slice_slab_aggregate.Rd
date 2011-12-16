@@ -14,5 +14,7 @@
 %%  ~~describe this method here~~
 }
 }}
+\examples{
+}
 \keyword{methods}
 \keyword{ ~~ other possible keyword(s) ~~ }
