@@ -1,3 +1,59 @@
+# this should be further documented
+test_hz_logic <- function(i, topcol, bottomcol, test.NA=TRUE, strict=FALSE)
+  {
+  
+  # test for na
+  if(test.NA) { 
+    if(any(c(is.na(i[[topcol]])), is.na(i[[bottomcol]]))) {
+      res <- FALSE
+      names(res) <- 'hz_logic_pass'
+      return(res)
+    }
+  }
+  
+  # test for illogical horizon boundaries
+  # note that this will fail with non-contiguous slices!
+  if(strict) {
+    n <- nrow(i)
+    res <- all.equal(i[[topcol]][-1], i[[bottomcol]][-n])
+    if(res != TRUE)
+      res <- FALSE
+    names(res) <- 'hz_logic_pass'
+    return(res)
+  }
+  
+  # PASSES for now
+  else {
+    res <- TRUE
+    names(res) <- 'hz_logic_pass'
+    return(res)
+  }
+}
+
+
+.SoilProfileCollectionValidity <- function(object) {
+  
+    # 1. test for bad horizon logic
+    id <- idname(object)
+    h <- horizons(object)
+    dc <- horizonDepths(object)
+    top <- dc[1]
+    bottom <- dc[2]
+    
+    # perform test
+    obj.test <- ddply(h, id, test_hz_logic, topcol=top, bottomcol=bottom)
+    
+    # let the user know which profile IDs aren't going to work
+    if(any(obj.test$hz_logic_pass == FALSE)) {
+      bad.ids <- obj.test[[id]][obj.test$hz_logic_pass == FALSE]
+      msg <- paste('\n\nNOTICE: invalid horizon logic in:', paste(bad.ids, collapse=','), '\n')
+      return(msg)
+    }
+      
+    # if all was well
+    return(TRUE)
+  }
+
 setClass(
   Class='SoilProfileCollection', 
   representation=representation(
@@ -12,41 +68,12 @@ setClass(
     idcol='id',
     depthcols=c('top','bottom'),
     metadata=data.frame(stringsAsFactors=FALSE), # default units are unkown
-    horizons=data.frame(),
-    site=data.frame(),
+    horizons=data.frame(stringsAsFactors=FALSE),
+    site=data.frame(stringsAsFactors=FALSE),
     sp=new('SpatialPoints')
   ),
-  validity=function(object) {
-
-#     # number of ids and number of profiles must match
-#     if (length(which(!is.na(object@ids))) != length(object@profiles))
-#       stop('number of ids and number of profiles must match')
-#     # if there is some site data
-#     if (length(object@site) > 0) {
-#       # number of ids and number of sites must match
-#       if (length(which(!is.na(object@ids))) != nrow(object@site))
-# 		 stop('number of ids and number of sites must match')
-# 	}
-#
-    return(TRUE)
-  }
+  validity=.SoilProfileCollectionValidity
 )
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

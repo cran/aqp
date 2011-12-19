@@ -1,4 +1,20 @@
--------------------------- aqp 0.99-8.47 (2011-11-20) --------------------------
+-------------------------- aqp 0.99-8.56 (2011-12-16) --------------------------
+* added `strict` argument to many functions, to gracefully account for bad horizon data
+  - enforce quality control with strict=TRUE
+* munsell2rgb() is now 100x faster thanks to plyr::join()
+  - note that factors cannot be used in the conversion, see: https://github.com/hadley/plyr/issues/43
+    + there is a check and conversion within the function that should prevent segfaults
+* documentation updates, demo(aqp) updates, more examples
+* bug fix in slice(), now works with numeric OR categorical vars, but NOT both...
+* matrix-style subsetting functional:
+  - s[i, j] ---> i is the profile index, and j is the horizon/slice index
+  - s[i, ] returns a SoilProfileCollection
+  - s[, j] returns a SpatialPointsDataFrame when a single slice is used
+* spatial_subset() can be used to extract members of a SoilProfileCollection with a geometry (uses rgeos)
+* smarter $<- methods so that site/horizon data slots are auto-selected
+
+-------------------------- aqp 0.99-8.50 (2011-11-29) --------------------------
+* added "site(SoilProfileCollection) <-" method for data.frame
 * started VERY basic AQP Introduction vignette... still experimental
 * adding coercion methods for common objects and sp-class objects
 * matrix-style subsetting almost works:

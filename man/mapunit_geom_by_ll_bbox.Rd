@@ -13,7 +13,7 @@ mapunit_geom_by_ll_bbox(bbox, source = 'sda')
 \value{A SpatialPolygonsDataFrame of map unit polygons, in WGS84 (long,lat) coordinates.}
 \references{http://casoilresource.lawr.ucdavis.edu/}
 \author{Dylan E Beaudette}
-\note{It appears that SDA does not actually return the spatial intersecion of map unit polygons and bounding box. Rather, just those polygons that are completely within the bounding box / overlap with the bbox.}
+\note{It appears that SDA does not actually return the spatial intersecion of map unit polygons and bounding box. Rather, just those polygons that are completely within the bounding box / overlap with the bbox. This function requires the `rgdal` (\url{http://cran.r-project.org/web/packages/rgdal/index.html}) package.}
 \seealso{}
 \examples{
 # fetch map unit geometry from a bounding-box:
@@ -31,7 +31,7 @@ plot(x)
 
 # get map unit data for matching map unit keys
 in.statement <- format_SQL_in_statement(unique(x$MUKEY))
-q <- paste("SELECT mukey, muname FROM mapunit WHERE mukey IN ", in.statment, sep="")
+q <- paste("SELECT mukey, muname FROM mapunit WHERE mukey IN ", in.statement, sep="")
 res <- SDA_query(q)
 }
 }

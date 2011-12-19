@@ -113,40 +113,44 @@ setReplaceMethod("site", "SoilProfileCollection",
       nm <- names(mf)
       mf <- data.frame(ids, mf, stringsAsFactors=FALSE) # don't automatically make strings into factors
       names(mf) <- c(idname(object), nm)
-      res <- .createSiteFromHorizon(object, mf)
-      # is this the best approach?
-      object <- res
+      object <- .createSiteFromHorizon(object, mf)
     }
-#     else {
-#       if (inherits(value, "character")) {
-# 	i <- which(names(horizons(object)) %in% value)
-# 	mf <- horizons(object)[, i]
-# 	if (!is.data.frame(mf)) {
-# 	  mf <- data.frame(mf)
-# 	  names(mf) <- names(horizons(object))[i]
-# 	}
-# 	nm <- names(mf)
-# 	mf <- data.frame(ids, mf)
-# 	names(mf) <- c(idname(object), nm)
-# 	res <- .createSiteFromHorizon(object, mf)
-# 	object <- SoilProfileCollection(profiles=res$profiles_list, site=res$site_data)
-#       }
-#   # creation of site data from external data
-#       else {
-# 	if (inherits(value, "data.frame")) {
-# 	# check for a valid site_id
-# 	if(is.na(match(object@site_id, names(value)))) {
-# 	  warning(paste('there is no column in the site table matching the current site id (', object@site_id, ')', sep=''))
-# 	  warning('this is still experimental, use with caution!')
-# 	  # stop('please assign a different site id, or add one to the site table')
-# 	  }
-# 	# if this is a data.frame we are actually adding data
-# 	object <- SoilProfileCollection(profiles=as.list(profiles(object)), site=value)
-# 	}
-# 	else stop('not implemented yet')
-#       }
-#     }
-    object
+    
+    # creation of site data from an external data.frame (nrow = num. profiles)
+    if (inherits(value, "data.frame")) {
+      # check to make sure there is no overlap in site + hz variable names
+      ns <- names(value)
+      nh <- names(object)
+      
+      # existing site data (may be absent == 0-row data.frame)
+      s <- site(object)
+      
+      if(any(ns %in% nh))
+        stop('duplicate names in site/horizon data not allowed')
+      
+      # check (nrow = num. profiles)
+      if(nrow(value) != length(object))
+        stop('number of rows in candidate site data != number of profiles')
+      
+      # passed checks, should be fine, assuming ordering matches ordering of profile IDs !!!
+      # if there is no site data, then assign what we have
+      if(nrow(s) == 0)
+        object@site <- value
+      
+      # otherwise we have existing data
+      else {
+        # check for variable name conflicts
+        if(any(ns %in% names(s)))
+          stop('duplicate names in candidate site and existing site data')
+        
+        # merge-in assuming correct ordering !
+        s <- cbind(s, value)
+        object@site <- s
+      }
+	  }
+  
+    # done
+    return(object)
   }
 )
 
@@ -222,51 +226,4 @@ setReplaceMethod("horizons", "SoilProfileCollection",
 
 
 
-##
-## initialize spatial data
-##
-setReplaceMethod("coordinates", "SoilProfileCollection",
-  function(object, value) {
-
-  # basic sanity check... needs work
-  if(! inherits(value, "formula"))
-  	stop('invalid formula')
-
-  # extract coordinates as matrix
-  mf <- data.matrix(model.frame(value, site(object), na.action=na.pass))
-
-  # test for missing coordinates
-  mf.missing <- apply(mf, 2, is.na)
-
-  if(any(mf.missing))
-	  stop('cannot initialize a SpatialPoints object with missing coordinates')
-
-  # assign to sp slot
-  # note that this will clobber any existing spatial data
-  object@sp <- SpatialPoints(coords=mf)
-  
-  # remove coordinates from source data
-  # note that mf is a matrix, so we need to access the colnames differently
-  coord_names <- dimnames(mf)[[2]]
-  idx <- match(coord_names, names(site(object)))
-  
-  # remove the named site data from site_data
-  # TODO we should use a proper setter!
-  object@site <- site(object)[, -idx]
-  
-  # done
-  return(object)
-  }
-)
-
-
-##
-## proj4string setting
-##
-setReplaceMethod("proj4string", "SoilProfileCollection",
-  function(obj, value) {
-  proj4string(obj@sp) <- value
-  obj
-  }
-)
 

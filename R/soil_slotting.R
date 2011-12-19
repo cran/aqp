@@ -36,7 +36,10 @@ setMethod(f='soil.slot.multiple', signature='SoilProfileCollection',
 # current interface to data.frame objects
 setMethod(f='soil.slot.multiple', signature='data.frame',
 definition=function(data, fm, ...) {
-  
+    
+    ## important: change the default behavior of data.frame and melt
+    opt.original <- options(stringsAsFactors = FALSE)
+    
 	# sanity check:
 	if(! inherits(fm, "formula"))
 		stop('must provide a valid formula: groups ~ var1 + var2 + ...')
@@ -76,6 +79,9 @@ definition=function(data, fm, ...) {
 	# convert tops and bottoms to integers
 	d.slotted$top <- as.integer(d.slotted$top)
 	d.slotted$bottom <- as.integer(d.slotted$bottom)
+	
+	# reset options:
+    options(opt.original)
 	
 	# done
 	return(d.slotted)
@@ -258,7 +264,7 @@ soil.slot <- function(data, seg_size=NA, seg_vect=NA, use.wts=FALSE, strict=FALS
 	# if we have a character, then convert to factor
 	if(prop.class == 'character')
 		{
-		message('Note: converting to categorical variable to factor.')
+		message('Note: converting categorical variable to factor.')
 		data$prop <- factor(data$prop)
 		}
 	

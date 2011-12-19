@@ -14,14 +14,14 @@
 \value{A dataframe containing the results.}
 \references{http://casoilresource.lawr.ucdavis.edu/}
 \author{Dylan E. Beaudette}
-\note{This function requires the `SSOAP` package.}
+\note{This function requires the `SSOAP` (\url{http://www.omegahat.org/SSOAP/}), `RCurl` (\url{http://www.omegahat.org/RCurl/}) and `XML` (\url{http://www.omegahat.org/RSXML/}) packages.}
 
 \seealso{\code{\link{MUKEYS_by_ll_bbox}}, \code{\link{mapunit_geom_by_ll_bbox}}}
 \examples{
 # NASIS export metadata:
 \dontrun{
 res <- SDA_query('select areasymbol, exportcertdate from distlegendmd order by areasymbol')
-res$exportcertdate <- as.Date(as.POSIXct(res$exportcertdate, format='%m/%d/%Y %H:%M:%S'))
+res$exportcertdate <- as.Date(as.POSIXct(res$exportcertdate, format='\%m/\%d/\%Y \%H:\%M:\%S'))
 recently_updated <- res$areasymbol[res$exportcertdate > as.Date('2011-01-01')]
 }
 
@@ -39,7 +39,7 @@ in.statement <- format_SQL_in_statement(m)
 # format query:
 q <- paste("SELECT component.cokey, compname, comppct_r, hzdept_r, hzdepb_r, hzname, sandtotal_r, silttotal_r, claytotal_r
 FROM component JOIN chorizon ON component.cokey = chorizon.cokey
-WHERE majcompflag = 'Yes' AND mukey IN ", in.statment, "ORDER BY cokey, comppct_r DESC, hzdept_r ASC", sep="")
+WHERE majcompflag = 'Yes' AND mukey IN ", in.statement, "ORDER BY cokey, comppct_r DESC, hzdept_r ASC", sep="")
 # now get component and horizon-level data for these map unit keys
 res <- SDA_query(q)
 }
