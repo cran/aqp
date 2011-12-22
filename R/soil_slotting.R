@@ -3,11 +3,11 @@
 ##############################################################
 
 # setup generic function
-if (!isGeneric("soil.slot.multiple"))
-  setGeneric("soil.slot.multiple", function(data, fm, ...) standardGeneric("soil.slot.multiple"))
+if (!isGeneric("slab"))
+  setGeneric("slab", function(data, fm, ...) standardGeneric("slab"))
 
 # temp interface to SPC class objects
-setMethod(f='soil.slot.multiple', signature='SoilProfileCollection',
+setMethod(f='slab', signature='SoilProfileCollection',
   function(data, fm, ...){
   
   # extract horizons and site 
@@ -16,7 +16,7 @@ setMethod(f='soil.slot.multiple', signature='SoilProfileCollection',
   
   # if there is site data, join together
   if(nrow(s) > 0)
-    h <- join(h, s, type='left')
+    h <- join(h, s, type='left', by=idname(data))
           
   # add old-style, hard-coded {id, top, bottom} column names        
   h$id <- h[[idname(data)]]
@@ -24,17 +24,23 @@ setMethod(f='soil.slot.multiple', signature='SoilProfileCollection',
   h$top <- h[[hzDepthCols[1]]]
   h$bottom <- h[[hzDepthCols[2]]]
   
-  res <- soil.slot.multiple(h, fm, ...)
+  # perform aggregation, using data.frame method
+  res <- slab(h, fm, ...)
   
-  # currently sends back a DF,
-  # we should send back an SPC object with original format...
+  ## TODO: there is no simple way to get back an SPC object, as there are several vars / slab returned
+  
+  # result is a data.frame
+  cat("result is a data.frame\n")
   return(res)
   }
 )
 
 
+##
+## TODO: update to current standards, see slice()
+##
 # current interface to data.frame objects
-setMethod(f='soil.slot.multiple', signature='data.frame',
+setMethod(f='slab', signature='data.frame',
 definition=function(data, fm, ...) {
     
     ## important: change the default behavior of data.frame and melt
@@ -444,7 +450,7 @@ soil.slot <- function(data, seg_size=NA, seg_vect=NA, use.wts=FALSE, strict=FALS
 			if(TRUE %in% bad_hz_list_TF)
 				{
 				bad_hz_list_idx <- which(bad_hz_list_TF)
-				cat(paste('notice: removing horizon with 0 thickness (hz ', bad_hz_list_idx, ')\n', sep=''))
+				cat(paste('removing horizon with 0 thickness (hz ', bad_hz_list_idx, ')\n', sep=''))
 				df.top_bottom <- df.top_bottom[-bad_hz_list_idx, ]
 				}
 						
