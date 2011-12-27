@@ -209,11 +209,14 @@ setReplaceMethod("horizons", "SoilProfileCollection",
   function(object, value) {
   # testing the class of the horizon data to add to the object
   if (!inherits(value, "data.frame"))
-	stop("value must be a data.frame")
-
+	  stop("value must be a data.frame")
+  
+  ## 
+  ## not sure if this test is important... as sometimes we want to delete horizons
+  ##
   # testing the number of rows of the horizon data
-  if (nrow(value) != nrow(horizons(object)))
-	stop("inconsistent number of rows")
+  # if (nrow(value) != nrow(horizons(object)))
+	  # stop("inconsistent number of rows")
 
   # basic test of ids:
   if(!idname(object) %in% names(value)) # is there a matching ID column in the replacement?
@@ -231,6 +234,31 @@ setReplaceMethod("horizons", "SoilProfileCollection",
   }
 )
 
-
-
-
+##
+## intit diagnotic horizon data
+##
+# if (!isGeneric('diagnostic_hz<-'))
+#   setGeneric('diagnostic_hz<-', function(object, value) standardGeneric('diagnostic_hz<-'))
+# 
+# setReplaceMethod("diagnostic_hz", "SoilProfileCollection",
+#   function(object, value) {
+#   
+#   # testing the class of the new data
+#   if (!inherits(value, "data.frame"))
+#     stop("diagnostic horizon data must be a data.frame")
+# 
+#   # testing the structure of the data
+#   if (ncol(value) != 3)
+# 	  stop("diagnostic horizon data should have 3 columns: top, bottom, type")
+#   
+#   # structure is fixed
+#   if(any(! n %in% c('top','botom','type')))
+#     stop('diagnostic horizon data should have 3 columns: top, bottom, type')
+#   
+#   # re-order by depth
+#   object@diagnostic <- value[order(value$top), ]
+# 
+#   # done
+#   return(object)
+#   }
+# )
