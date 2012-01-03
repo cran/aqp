@@ -5,16 +5,13 @@
 # behavior not defined for horizons with an indefinate lower boundary
 
 ## basic function
-plotSPC <- function(x, color='soil_color', width=0.2, name='name', cex.names=0.5, cex.depth.axis=cex.names, cex.id=cex.names+(0.2*cex.names), print.id=TRUE, id.style='top', plot.order=1:length(x), add=FALSE, scaling.factor=1, y.offset=0, max.depth=max(x), n.depth.ticks=5, shrink=FALSE, shrink.cutoff=3, abbr=FALSE, abbr.cutoff=5, ...) {
+plotSPC <- function(x, color='soil_color', width=0.2, name='name', cex.names=0.5, cex.depth.axis=cex.names, cex.id=cex.names+(0.2*cex.names), print.id=TRUE, id.style='side', plot.order=1:length(x), add=FALSE, scaling.factor=1, y.offset=0, n=length(x), max.depth=max(x), n.depth.ticks=5, shrink=FALSE, shrink.cutoff=3, abbr=FALSE, abbr.cutoff=5, divide.hz=TRUE, ...) {
   
   # get horizons
   h <- horizons(x)
   
   # get column names from horizon dataframe
   nm <- names(h)
-  
-  # get number of profiles
-  n <- length(x)
   
   # get top/bottom column names
   IDcol <- idname(x)
@@ -33,10 +30,10 @@ plotSPC <- function(x, color='soil_color', width=0.2, name='name', cex.names=0.5
   depth_axis_intervals <- pretty(seq(from=0, to=max.depth, by=1), n=n.depth.ticks)
   
   # init plotting region, unless we are appending to an existing plot
-  if(!add)
-	{
-  par(mar=c(0.5,1,0,1))
-	  plot(0, 0, type='n', xlim=c(1, n+extra_x_space), ylim=c(max(depth_axis_intervals), -4), axes=FALSE)
+  # note that we are using some fudge-factors to get the plotting region just right
+  if(!add) {
+    par(mar=c(0.5,1,0,1))
+	  plot(0, 0, type='n', xlim=c(1-(extra_x_space/20), n+extra_x_space), ylim=c(max(depth_axis_intervals), -4), axes=FALSE)
 	}
   
   
@@ -70,9 +67,21 @@ plotSPC <- function(x, color='soil_color', width=0.2, name='name', cex.names=0.5
 	  y0 <- (this_profile_data[, bcol] * scaling.factor) + y.offset
 	  y1 <- (this_profile_data[, tcol] * scaling.factor) + y.offset
 	  
-	  # make rectangles (horizons)
-	  rect(i-width, y0, i + width, y1, col=this_profile_colors)
-  
+	  # create horizons + colors
+    # default are filled rectangles
+    if(divide.hz)
+	    rect(i-width, y0, i + width, y1, col=this_profile_colors, border=NULL)
+    
+    # otherwise, we only draw the left, top, right borders, and then fill
+    else {
+      rect(i-width, y0, i + width, y1, col=this_profile_colors, border=NA)
+      segments(i-width, y0, i-width, y1) # left-hand side
+      segments(i+width, y0, i+width, y1) # right-rand side
+      segments(i-width, min(y1), i+width, min(y1)) # profile top
+      segments(i-width, max(y0), i+width, max(y0)) # profile bottom
+    }
+      
+    
 	  # annotate with names
 	  # first get the horizon mid-point
 	  mid <- ( y1 + y0 )/2
