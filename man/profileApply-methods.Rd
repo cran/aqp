@@ -6,7 +6,7 @@
 \alias{splitProfiles,SoilProfileCollection-method}
 
 \title{Apply a function to soil profiles within a SoilProfileCollection object.}
-\description{Apply a function to soil profiles within a SoilProfileCollection object. Note that each iteration has access to a SoilProfileCollection object.}
+\description{Apply a function to soil profiles within a SoilProfileCollection object, each iteration has access to a SoilProfileCollection object.}
 \section{Methods}{
 \describe{
 
@@ -36,7 +36,7 @@ sp1$d <- profileApply(sp1, FUN=f)
 plot(sp1, name='d')
 
 # compute depth-wise cumulative sum by profile
-# note the use of an anonymous function function
+# note the use of an anonymous function
 sp1$d <- profileApply(sp1, FUN=function(x) cumsum(x$prop))
 plot(sp1, name='d')
 
@@ -82,6 +82,74 @@ if(require(digest)) {
 	plot(s[u.profiles, ])
 }
 
+
+##
+## helper functions: these must be modified to suit your own data
+##
+
+# compute the weighted-mean of some property within a given diagnostic horizon
+# note that this requires conditional eval of data that may contain NA
+# see ?slab and ?soil.slot for details on the syntax
+# note that function expects certain columns within 'x'
+f.diag.wt.prop <- function(x, d.hz, prop) {
+	# extract diagnostic horizon data
+	d <- diagnostic_hz(x)
+	# subset to the requested diagnostic hz
+	d <- d[d$diag_kind == d.hz, ]
+	# if missing return NA
+	if(nrow(d) == 0)
+		return(NA)
+	
+	# extract depths and check for missing
+	sv <- c(d$featdept, d$featdepb)
+	if(any(is.na(sv)))
+		return(NA)
+	
+	# create formula from named property
+	fm <- as.formula(paste('~', prop))
+	# return just the (weighted) mean, accessed from @horizons
+	s <- slab(x, fm, seg_vect=sv)$p.mean
+	return(s)
+}
+
+
+# conditional eval of thickness of some diagnostic feature or horizon
+# will return a vector of length(x), you can save to @site
+f.diag.thickness <- function(x, d.hz) {
+	# extract diagnostic horizon data
+	d <- diagnostic_hz(x)
+	# subset to the requested diagnostic hz
+	d <- d[d$diag_kind == d.hz, ]
+	# if missing return NA
+	if(nrow(d) == 0)
+		return(NA)
+	
+	# compute thickness
+	thick <- d$featdepb - d$featdept
+	return(thick)
+}
+
+
+# conditional eval of property within particle size control section
+# makes assumptions about the SPC that is passed-in
+f.psc.prop <- function(x, prop) {
+  # these are accessed from @site
+  sv <- c(x$psctopdepth, x$pscbotdepth)
+  # test for missing PCS data
+  if(any(is.na(sv)))
+    return(NA) 
+	
+	# this should never happen... unless someone made a mistake
+	# check to make sure that the lower PSC boundary is shallower than the depth
+	if(sv[2] > max(x))
+		return(NA)
+	
+  # create formula from named property
+  fm <- as.formula(paste('~', prop))
+  # return just the (weighted) mean, accessed from @horizons
+  s <- slab(x, fm, seg_vect=sv)$p.mean
+  return(s)
+}
 
 }
 \keyword{methods}

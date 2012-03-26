@@ -23,7 +23,7 @@ setReplaceMethod("coordinates", "SoilProfileCollection",
 
   # basic sanity check... needs work
   if(! inherits(value, "formula"))
-    stop('invalid formula')
+    stop('invalid formula', call.=FALSE)
 
   # extract coordinates as matrix
   mf <- data.matrix(model.frame(value, site(object), na.action=na.pass))
@@ -32,7 +32,7 @@ setReplaceMethod("coordinates", "SoilProfileCollection",
   mf.missing <- apply(mf, 2, is.na)
 
   if(any(mf.missing))
-	  stop('cannot initialize a SpatialPoints object with missing coordinates')
+	  stop('cannot initialize a SpatialPoints object with missing coordinates', call.=FALSE)
 
   # assign to sp slot
   # note that this will clobber any existing spatial data
@@ -76,20 +76,23 @@ setMethod(f='spatial_subset', signature='SoilProfileCollection',
 	# extract relevant info
 	s <- site(object)
 	h <- horizons(object)
-	
-	# get indexes to valid site, hz data
-      valid_ids <- s[ids, object@idcol]
-      valid_horizons <- which(h[, object@idcol] %in% valid_ids)
-      valid_sites <- which(s[, object@idcol] %in% valid_ids)
+	d <- diagnostic_hz(object)
+  
+	# get indexes to valid site, hz, diagnostic data
+  valid_ids <- s[ids, idname(object)]
+  valid_horizons <- which(h[, idname(object)] %in% valid_ids)
+  valid_sites <- which(s[, idname(object)] %in% valid_ids)
+  valid_diagnostic <- which(d[, idname(object)] %in% valid_ids)
 	
 	# create a new SPC with subset data
   ## TODO: copy over diagnostic horizon data
 	## TODO: use integer profile index to simplify this process
 	## TODO: @sp bbox may need to be re-computed
-      SoilProfileCollection(idcol = object@idcol, depthcols = object@depthcols, metadata = object@metadata, horizons = horizons(object)[valid_horizons, ], site = site(object)[valid_sites, ], sp = object@sp[ids,])
+  ## TODO: check diagnostic subset
+      SoilProfileCollection(idcol = object@idcol, depthcols = object@depthcols, metadata = metadata(object), horizons = h[valid_horizons, ], site = s[valid_sites, ], sp = object@sp[ids,], diagnostic = d[valid_diagnostic, ])
     }
     else { # no rgeos, return original
-      stop('Spatial subsetting not performed, please install the `rgeos` package.')
+      stop('Spatial subsetting not performed, please install the `rgeos` package.', call.=FALSE)
     }
   }
 )

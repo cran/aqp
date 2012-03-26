@@ -2,7 +2,7 @@
 \Rdversion{1.1}
 \alias{soil.slot}
 \alias{seg.summary}
-%- Also NEED an '\alias' for EACH other topic documented here.
+
 \title{Slice-Wise Aggregation of Soil Properties}
 \description{Align a single soil property to a user-defined basis, and perform slice-wise aggregation.}
 \usage{
@@ -144,14 +144,9 @@ layout=c(2,1), scales=list(x=list(alternating=1))
 #
 
 # normalize horizon names:
-sp1$name[grep('O', sp1$name)] <- 'O'
-sp1$name[grep('A[0-9]', sp1$name)] <- 'A'
-sp1$name[grep('AB', sp1$name, ignore.case=TRUE)] <- 'A'
-sp1$name[grep('BA', sp1$name)] <- 'B'
-sp1$name[grep('Bt', sp1$name)] <- 'B'
-sp1$name[grep('Bw', sp1$name)] <- 'B'
-sp1$name[grep('C', sp1$name)] <- 'C'
-sp1$name[grep('R', sp1$name)] <- 'R'
+sp1$name <- generalize.hz(sp1$name, 
+new=c('O','A','B','C','R'), 
+pat=c('O', '^A','^B','C','R'))
 
 # generate new data for testing soil.slot()
 y <- with(sp1, data.frame(id=id, top=top, bottom=bottom, prop=name))
