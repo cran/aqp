@@ -18,24 +18,29 @@ diagnostic=data.frame(stringsAsFactors=FALSE)
 setMethod(
   f='show',
   signature='SoilProfileCollection',
-  definition=function(object){
+  definition=function(object) {
+  	n.profiles <- length(object)
+  	
     cat("Object of class ", class(object), "\n", sep = "")
-    cat("Number of profiles: ", length(object), "\n", sep="")
-	cat("Depth range: ", min(object), "-", max(object), " ", depth_units(object), "\n", sep="")
-	cat("\nHorizon attributes:\n")
-	print(head(horizons(object)))
+    cat("Number of profiles: ", n.profiles, "\n", sep="")
+  	
+  	if(n.profiles > 1)
+			cat("Depth range: ", min(object), "-", max(object), " ", depth_units(object), "\n", sep="")
+		
+  	cat("\nHorizon attributes:\n")
+  	print(head(horizons(object)))
 
-	# in the presence of site data
+		# in the presence of site data
     if (nrow(site(object)) > 0) {
       cat("\nSampling site attributes:\n")
       print(head(site(object)))
     }
 
     # presence of spatial data
-    if(nrow(coordinates(object)) == length(object)) {
-    cat('\nSpatial Data:\n')
-    show(object@sp@bbox)
-    show(object@sp@proj4string)
+    if(nrow(coordinates(object)) == n.profiles) {
+    	cat('\nSpatial Data:\n')
+    	show(object@sp@bbox)
+    	show(object@sp@proj4string)
     }
 
   }
@@ -101,16 +106,15 @@ setMethod("site", "SoilProfileCollection",
   }
 )
 
-## diagnostic horizons
-# returns a data.frame diagnostic horizon data
-# if (!isGeneric("diagnostic_hz"))
-#   setGeneric("diagnostic_hz", function(object, ...) standardGeneric("diagnostic_hz"))
-# 
-# setMethod(f='diagnostic_hz', signature='SoilProfileCollection',
-#   function(object){
-#   return(object@diagnostic)
-#   }
-# )
+## diagnostic horizons: stored as a DF, same order as profile_ids, however, some IDs may be missing
+if (!isGeneric("diagnostic_hz"))
+  setGeneric("diagnostic_hz", function(object, ...) standardGeneric("diagnostic_hz"))
+
+setMethod(f='diagnostic_hz', signature='SoilProfileCollection',
+  function(object){
+  return(object@diagnostic)
+  }
+)
 
 
 ## horizon data
@@ -217,7 +221,7 @@ setMethod("$", "SoilProfileCollection",
 	# when site data are initialized from an external DF, it is possible that
 	# there will be duplicate column names
 	if(name %in% h.names & name %in% s.names)
-		warning('column name is present in horizon and site data, extracting from horizon data only')
+		warning('column name is present in horizon and site data, extracting from horizon data only', call.=FALSE)
 
 	# get column from horizon data
     if (name %in% h.names)
@@ -288,12 +292,17 @@ setReplaceMethod("$", "SoilProfileCollection",
 
 
 
+
+
 ### NOTE: this DOES NOT re-order data, only subsets!
 ##
 ## matrix / DF style access: only to horizon data
 ##
 ## i = profile index
 ## j = horizon / slice index
+##
+## TODO: check for SPC[i] .... this is an error
+##
 setMethod("[", "SoilProfileCollection",
   function(x, i, j, ...) {
 
@@ -301,7 +310,7 @@ setMethod("[", "SoilProfileCollection",
     if(!missing(i)) {
       i <- as.integer(i)
       if(any(is.na(i)))
-        stop('NA not permitted in profile index')
+        stop('NA not permitted in profile index', call.=FALSE)
     }
     else # if no index is provided, the user wants all profiles
       i <- 1:length(x)
@@ -310,7 +319,7 @@ setMethod("[", "SoilProfileCollection",
     if(!missing(j)) {
       j <- as.integer(j)
       if(any(is.na(j)))
-      stop('NA not permitted in horizon/slice index')
+      stop('NA not permitted in horizon/slice index', call.=FALSE)
     }
 
     # extract requested profile IDs
@@ -324,8 +333,8 @@ setMethod("[", "SoilProfileCollection",
     
     # site data, with conditional subsetting
     s.all <- site(x)
-    s.i <- s.all[[idname(x)]] %in% p.ids
-    
+    s.i <- which(s.all[[idname(x)]] %in% p.ids)
+  	  
     ## this assumes that ordering is correct
     ## NOTE:  s[i, ] with a 1-column DF results in a vector
     if(ncol(s.all) < 2) {
@@ -337,12 +346,18 @@ setMethod("[", "SoilProfileCollection",
       s <- s.all[s.i, ]
     }
     
-	  
     # subset spatial data if exists
     if(nrow(coordinates(x)) == length(x))
       sp <- x@sp[i]
     else
       sp <- x@sp
+    
+    # subset diagnostic data, but only if it exists
+    # note that not all profiles have diagnostic hz data
+    d <- diagnostic_hz(x)
+    if(length(d) > 0) # some data
+    	d <- d[which(d[[idname(x)]] %in% p.ids), ]
+    
     
     # subset horizons/slices based on j --> only when j is given
     if(!missing(j))
@@ -365,7 +380,7 @@ setMethod("[", "SoilProfileCollection",
 
     # in this case there may be missing coordinates, or we have more than 1 slice of hz data
     else {
-      SoilProfileCollection(idcol=x@idcol, depthcols=x@depthcols, metadata=x@metadata, horizons=h, site=s, sp=sp)
+      SoilProfileCollection(idcol=x@idcol, depthcols=x@depthcols, metadata=x@metadata, horizons=h, site=s, sp=sp, diagnostic=d)
     }
     
   # done

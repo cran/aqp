@@ -1,7 +1,7 @@
 
 ## TODO: iterate over profile IDs instead of groups
 # TODO: document this
-make.segments <- function(df)
+.make.segments <- function(df)
 	{
 	require(lattice)
 	
@@ -41,7 +41,7 @@ make.segments <- function(df)
 		
 	else
 		{
-		print(paste('only 1 horizon, skipping!', df$groups[1]))
+		message(paste('only 1 horizon, skipping!', df$groups[1]))
 		}
 	
 	}

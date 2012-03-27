@@ -23,6 +23,11 @@
 \alias{metadata,SoilProfileCollection-method}
 \alias{metadata<-,SoilProfileCollection-method}
 
+\alias{diagnostic_hz}
+\alias{diagnostic_hz<-}
+\alias{diagnostic_hz,SoilProfileCollection-method}
+\alias{diagnostic_hz<-,SoilProfileCollection-method}
+
 \alias{horizonDepths}
 \alias{horizonDepths,SoilProfileCollection-method}
 
@@ -41,6 +46,9 @@
 %%  ~~describe this method here~~
 }
 }}
+
+\references{http://casoilresource.lawr.ucdavis.edu/}
+\author{Dylan E. Beaudette}
 
 
 \examples{

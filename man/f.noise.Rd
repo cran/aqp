@@ -30,9 +30,7 @@ patterns.  J. Applied Crystallography, 35, 744-749.
 Bish, D. 1994. Quantitative Methods in Soil Mineralogy, in Quantitative X-Ray Diffraction Analysis of Soil. Amonette, J. & Zelazny, L. (ed.) Soil Science Society of America, pp 267-295.
 }
 \author{Dylan E. Beaudette}
-\note{
-%%  ~~further notes~~
-}
+
 
 \seealso{\code{\link{resample.twotheta}}}
 \examples{
@@ -60,7 +58,7 @@ rruff.sample$synthetic_pat <- rruff.sample$synthetic_pat +
 
 # try adding some nasty noise
 # rruff.sample$synthetic_pat <- apply(sweep(rruff.sample[,2:7], 2, w, '*'), 1, sum) + 
-runif(n, min=0, max=100)
+# runif(n, min=0, max=100)
 
 
 # look at components and combined pattern
