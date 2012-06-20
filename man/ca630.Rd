@@ -42,11 +42,17 @@ $lab : A data frame containing horizon information.
 \details{These data were extracted from the NSSL database. `ca630` is a list composed of site and lab data, each stored as dataframes. These data are modeled by a 1:many (site:lab) relation, with the `pedon_id` acting as the primary key in the `site` table and as the foreign key in the `lab` table.}
 \source{\url{http://ssldata.nrcs.usda.gov/}}
 \examples{
+library(plyr)
+library(lattice)
+library(Hmisc)
+library(sp)
+
 data(ca630)
 str(ca630)
 
 # 2. promote to SoilProfileCollection
 # combine site+horizon data into single DF
+
 ca <- join(ca630$lab, ca630$site, type='inner')
 
 # promote to SoilProfileCollection
@@ -78,9 +84,11 @@ par.settings=list(superpose.line=list(col='black', lwd=2))
 # 4. aggregate \%BS at pH 8.2 for all profiles by MLRA, along 1 cm slices
 # note that mlra is stored in @site
 a <- slab(ca, mlra ~ bs_8.2)
+# keep only MLRA 18 and 22
+a <- subset(a, subset=mlra \%in\% c('18', '22'))
 
 xyplot(
-top ~ p.q50, groups=factor(mlra, levels=c('18','22')) , data=a, lower=a$p.q25, upper=a$p.q75, 
+top ~ p.q50, groups=mlra , data=a, lower=a$p.q25, upper=a$p.q75, 
 ylim=c(160,-5), alpha=0.5, scales=list(y=list(tick.num=7, alternating=3), x=list(alternating=1)),
 panel=panel.depth_function, prepanel=prepanel.depth_function,
 ylab='Depth (cm)', xlab='Base Saturation at pH 8.2', 

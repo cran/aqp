@@ -10,8 +10,7 @@ superpose.line <- trellis.par.get("superpose.line")
 
 # TODO: add uncertainty viz.
 # when the length of 'y' is > 'x', we are plotting a step function
-if(length(y) > length(x))
-	{
+if(length(y) > length(x)) {
 	if(missing(id))
 		stop('must provide a profile id')
 		
@@ -27,32 +26,28 @@ if(length(y) > length(x))
 	
 	# add line segments that form step-function
 	## TODO: iterate over profile IDs instead of groups
-	by(d, d$id, .make.segments, ...)	
+	by(d, d$id, make.segments, ...)	
 	}
 
 # normal plot -- not a step function
-else
-	{
+else {
 	message('plotting lines...')
 	
 	# if we have an upper and lower bound defined, plot them
-	if(!missing(upper) & !missing(lower))
-		{
+	if(!missing(upper) & !missing(lower)) {
 		# working with grouped data and paneled data
-		if(!missing(groups) & !missing(subscripts))
-			{
+		if(!missing(groups) & !missing(subscripts)) {
 			d <- data.frame(yhat=x, top=y, upper=upper[subscripts], lower=lower[subscripts], groups=groups[subscripts])
 			# levels in the groups, for color matching
-			ll <- levels(d$groups)
+			ll <- unique(d$groups)
 			n_groups <- length(ll)
 			}
 		
 		# no grouping, add a fake group for compatiblity
-		if(missing(groups))
-			{
+		if(missing(groups)) {
 			d <- data.frame(yhat=x, top=y, upper=upper[subscripts], lower=lower[subscripts], groups=factor(1))
 			# levels in the groups, for color matching
-			ll <- levels(d$groups)
+			ll <- unique(d$groups)
 			n_groups <- length(ll)
 			}
 		
@@ -63,8 +58,7 @@ else
       region.col <- rep(grey(0.7), length.out=n_groups)
       
 		# add conf. intervals / aggregation uncertainty
-		by(d, d$groups, function(d_i) 
-			{
+		by(d, d$groups, function(d_i) {
       # lookup color
   	  m <- match(unique(d_i$group), ll)
       
@@ -76,8 +70,7 @@ else
 			})
 		}
 	# no upper, lower bounds
-	else
-		{
+	else {
 		d <- data.frame(yhat=x, top=y, groups=groups[subscripts])
 		# levels in the groups, for color matching
 		ll <- levels(d$groups)	
@@ -93,40 +86,40 @@ else
 	line.lwd <- rep(superpose.line$lwd, length.out=n_groups)
 	
 	# add main lines
-	by(d, d$groups, function(d_i) 
-		{
+	by(d, d$groups, function(d_i){
 		# lookup color
 		m <- match(unique(d_i$group), ll)
 		
 		# add line
 		panel.lines(d_i$yhat, d_i$top, lwd=line.lwd[m], col=line.col[m], lty=line.lty[m])
 		})
-	
 	}
 
   # annotate with contributing fraction
   if(! is.null(cf)) {
     # test for groups: CF labeling with grouped data isn't yet defined
     if(!missing(groups))
-      warning('contributing fraction annotation with grouped data is not yet supported')
+      warning('contributing fraction annotation with grouped data is not yet supported', call.=FALSE)
     else {
-      # get relevant contributing fraction values
+      # get contributing fraction values for this panel
       cf.i <- cf[subscripts]
       
-      ## TODO: smarter positioning would help
-      # generate annotated depths
-      y.q <- quantile(y, probs=c(0.95), na.rm=TRUE)
-      a.seq <- seq(from=5, to=y.q, by=20)
+      # make a function for linear interpolation of CF values based on depth
+      cf.approx.fun <- approxfun(y, cf.i, method='linear')
       
-      # extract CF at annotated depths
-      a.text <- paste(round(cf.i[a.seq] * 100), '%')
+      # generate annotated depths: 5 cm to 95th percentile of max depth
+      y.q95 <- quantile(y, probs=c(0.95), na.rm=TRUE)
+      a.seq <- seq(from=5, to=y.q95, by=20)
+      
+      # interpolate CF at annotated depths
+      a.CF <- cf.approx.fun(a.seq)
+      a.text <- paste(round(a.CF * 100), '%')
+      
       # add to right-hand side of the panel
+      unit <- gpar <- NULL
       grid.text(a.text, x=unit(0.99, 'npc'), y=unit(a.seq, 'native'), just='right', gp=gpar(font=3, cex=0.8))  
       }
-    
-    
     }
-
 
 }
 
