@@ -1,3 +1,34 @@
+-------------------------- aqp 1.2-4 (2012-06-19) --------------------------
+* fixed minor bug in NAMESPACE
+* minor bug fix in unroll(), was not previously respecting the max depth argument
+* minor speed-bump and simplification of profile_compare()
+* documentation updates
+* added helper message related to profile_compare() stopping when any profile contains insufficient data
+* profile_compare() now issues a notice when _some_ data are missing, leading to biased results
+* slice() now computes the fraction of variables within a slice that are missing data
+! bug introduced into slab() when use.wts=TRUE [should have a fix soon]
+
+-------------------------- aqp 1.1 (2012-04-18) --------------------------
+* merged documentation for soil.slot() and slab()
+  - slab() should be used in all places where soil.slot() was used
+  - soil.slot() will dissapear from the package NAMESPACE eventually, so don't use it directly!
+* minor bug fix in panel.depth_function()
+* cleanup of documentation and examples
+* added horizon boundary distinctness code conversions and plotting functionality
+  - see ?sp1 and ?random_profile for new examples
+
+-------------------------- aqp 1.0-2 (2012-03-29) --------------------------
+* More NAMESPACE cleaning
+
+-------------------------- aqp 1.0-1 (2012-03-28) --------------------------
+* Cleaned NAMESPACE and DESCRIPTION
+* removed un-necessary dependencies
+* join added to the plyr imports
+* added scales to the Imports as well, and removed rescaler() in the code, repaced by scales::rescale
+* hack in munsell2rgb to avoid the 'no visible binding for global variable 'munsell' at package R CMD check and make the whole thing more robust (using load and system.file rather than data(...)
+* Dylan is now the only maintainer, as per Uwe request
+* when using plyr **ply function, switched from using the .(foo) interface to "foo" - seems more foolproof
+
 -------------------------- aqp 1.0 (2012-03-26) --------------------------
 * 1.0 release, still missing condensed vignettes- should be ready soon
 * see http://casoilresource.lawr.ucdavis.edu/drupal/taxonomy/term/56 for samples

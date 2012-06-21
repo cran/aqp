@@ -1,6 +1,7 @@
 \name{profile_compare-methods}
 \docType{methods}
 \alias{pc}
+\alias{pc.SPC}
 \alias{profile_compare}
 \alias{profile_compare,SoilProfileCollection-method}
 \alias{profile_compare,data.frame-method}
@@ -15,12 +16,13 @@ Performs a numerical comparison of soil profiles using named properties, based o
 pc(s, vars, max_d, k, sample_interval=NA, 
 replace_na=TRUE, add_soil_flag=TRUE, 
 return_depth_distances=FALSE, strict_hz_eval=FALSE,
-progress='none', plot.depth.matrix=FALSE, rescale.result=FALSE)
+progress='none', plot.depth.matrix=FALSE, rescale.result=FALSE,
+verbose=FALSE)
 }
 
 
 \section{Methods}{
-\describe{
+\itemize{
 \item{data = "SoilProfileCollection"}{ see \code{\link{SoilProfileCollection}} }
 \item{data = "data.frame"}{ see \link{profile_compare} }
 }}
@@ -39,6 +41,7 @@ progress='none', plot.depth.matrix=FALSE, rescale.result=FALSE)
   \item{progress}{'none' (default): argument passed to \code{ddply} and related functions, see \code{\link{create_progress_bar}} for all possible options; 'text' is usually fine.}
   \item{plot.depth.matrix}{should a plot of the 'soil'/'non-soil' matrix be returned (FALSE)}
   \item{rescale.result}{should the result be rescaled to [0,1] (FALSE)}
+  \item{verbose}{extra debug output (FALSE)}
 }
 
 \details{
@@ -47,19 +50,24 @@ Variability in soil depth can interfere significantly with the calculation of be
 This alternative calculation of dissimilarities between soil and non-soil slices solves the problem of comparing shallow profiles with deeper profiles. However, it can result in a new problem: distances calculated between two shallow profiles will be erroneously inflated beyond the extent of either profile's depth. Our algorithm has an additional option (setting add_soil_flag=TRUE) that will preserve NULL distances between slices when both slices represent non-soil material. With this option enabled, shallow profiles will only accumulate mutual dissimilarity to the depth of the deeper profile.
 
 Note that when the \code{add_soil_flag} option is enabled (default), slices are classified as 'soil' down to the maximum depth to which at least one of variables used in the dissimilarity calculation is not NA. This will cause problems when profiles within a collection contain all NAs within the columns used to determine dissimilarity. An approach for identifying and removing these kind of profiles is presented in the examples section below.
+
+A notice is issued if there are any NA values within the matrix used for distance calculations, as thes values are optionally replaced by the max dissimilarity.
+
+Our approach builds on the work of (Moore, 1972) and the previously mentioned depth-slicing algorithm.
 }
 
-\value{
-A dissimilarity matrix object of class 'dist', optionally scaled to [0, 1].
+\value{A dissimilarity matrix object of class 'dissimilarity, dist', optionally scaled to [0, 1].}
+
+\references{
+\describe{
+\item{1.}{http://casoilresource.lawr.ucdavis.edu/}
+\item{2.}{Moore, A.; Russell, J. & Ward, W. Numerical analysis of soils: A comparison of three soil profile models with field classification. Journal of Soil Science, 1972, 23, 194-209.}
 }
-\references{http://casoilresource.lawr.ucdavis.edu/}
+}
 \author{Dylan E. Beaudette}
-\note{
-... based on the work of .... 
-}
-\seealso{\code{\link{unroll}}, \code{\link{soil.slot}}}
-\examples{
 
+\seealso{\code{\link{slice}}, \code{\link{daisy}}}
+\examples{
 ## 1. check out the influence depth-weight coef:
 require(lattice)
 z <- rep(1:100,4)
@@ -78,16 +86,106 @@ panel=function(...) {
 ## 2. basic implementation, requires at least two properties
 # implementation for a data.frame class object
 data(sp1)
-d <- profile_compare(sp1, vars=c('prop','group'), max_d=100, k=0.01)
+d <- profile_compare(sp1, vars=c('prop','group'), max_d=100, k=0.01, 
+plot.depth.matrix=TRUE)
 
-# better plotting with ape package:
+# upgrade to SoilProfileCollection
+depths(sp1) <- id ~ top + bottom
+op <- par(mfrow=c(1,2))
+# perform comparison on SoilProfileCollection object
+# compare soil/non-soil matrix plot
+d <- profile_compare(sp1, vars=c('prop','group'), max_d=100, k=0.01, 
+plot.depth.matrix=TRUE)
+# plot profile collection
+plot(sp1)
+# annotate max depth of profile comparison
+abline(h=100, col='red', lty=2)
+par(op)
+
+
+# more soil properties
+data(sp2)
+d.1 <- profile_compare(sp2, vars=c('prop','field_ph','hue','value'), 
+max_d=100, k=0.01, plot.depth.matrix=TRUE)
+
+# add some missing data: 
+sp2$prop[1:2] <- NA
+d.2 <- profile_compare(sp2, vars=c('prop','field_ph','hue','value'), 
+max_d=100, k=0.01, plot.depth.matrix=TRUE)
+
+# note small changes in D:
+cor(d.1, d.2)
+
+## 3. identify profiles within a collection that contain all NAs
+require(plyr)
+s <- ldply(1:10, random_profile)
+depths(s) <- id ~ top + bottom
+
+# replace first profile's data with NA
+na.required <- nrow(s[1, ])
+s$p1[1:na.required] <- NA
+s$p2[1:na.required] <- NA
+
+# attempt profile comparison: this won't work, throws an error
+# d <- profile_compare(s, vars=c('p1','p2'), max_d=100, k=0)
+
+# check for soils that are missing all clay / total RF data
+f.check.NA <- function(i) length(which(is.na(i$p1) | is.na(i$p2))) / nrow(i) == 1
+missing.too.much.data.idx <- which(profileApply(s, f.check.NA))
+
+# remove bad profiles and try again: works
+s.no.na <- profile_compare(s[-missing.too.much.data.idx, ], vars=c('p1','p2'), 
+max_d=100, k=0, plot.depth.matrix=TRUE)
+
+
+## alternate approach for visualizing missing data
+# 10 random profiles
+s <- ldply(paste('soil', 1:10), random_profile)
+
+# randomly sprinkle some missing data
+s[sample(nrow(s), 5), 'p1'] <- NA
+s[sample(nrow(s), 5), 'p2'] <- NA
+s[sample(nrow(s), 5), 'p3'] <- NA
+
+# set all p4 and p5 attributes of `soil 1' to NA
+s[which(s$id == 'soil 1'), 'p5'] <- NA
+s[which(s$id == 'soil 1'), 'p4'] <- NA
+
+# upgrade to SPC
+depths(s) <- id ~ top + bottom
+
+# slice into regular segments
+# note: this will compute slice-wise missing data
+s.sliced <- slice(s, 0:100 ~ .)
+
+# however, when all data are missing, then NA is retured
+# convert these into 1
+s.sliced$.pctMissing[is.na(s.sliced$.pctMissing)] <- 1
+
+
+# symbolize missing data fraction
+if(require(RColorBrewer)) {
+  cols <- rev(brewer.pal(8, 'Spectral'))
+  cr <- colorRamp(cols)
+  # assign color based on fraction of data NOT missing
+  s.sliced$soil_color <- rgb(cr(s.sliced$.pctMissing), max=255)
+  # leave out horizon (slice boundaries)
+  plot(s.sliced, divide.hz=FALSE)
+  # legend
+  legend.divs <- c(0, .25, .50, .75, 1)
+  legend('bottom', legend=legend.divs, pt.bg=rgb(cr(legend.divs), max=255), horiz=TRUE, pt.cex=2, pch=22, bg='white', title='Percent Missing')
+}
+
+
+## 4. better plotting of dendrograms with ape package:
 require(ape)
+require(cluster)
 h <- diana(d)
 p <- as.phylo(as.hclust(h))
-plot(ladderize(p), cex=0.75, label.offset=1, no.margin=TRUE)
+plot(ladderize(p), cex=0.75, label.offset=1)
 tiplabels(col=cutree(h, 3), pch=15)
 
-## 3. other uses of the dissimilarity matrix
+## 5. other uses of the dissimilarity matrix
 require(MASS)
 # Sammon Mapping: doesn't like '0' values in dissimilarity matrix
 d.sam <- sammon(d)
@@ -99,7 +197,7 @@ text(d.sam$points, labels=row.names(as.data.frame(d.sam$points)),
 cex=0.75, col=cutree(h, 3))
 
 
-## 4. try out the 'sample_interval' argument
+## 6. try out the 'sample_interval' argument
 # compute using sucessively larger sampling intervals
 data(sp3)
 d <- profile_compare(sp3, vars=c('clay','cec','ph'), 
@@ -118,24 +216,6 @@ plot(as.dendrogram(hclust(d.2)), horiz=TRUE, main='Every 2nd Depth Slice')
 plot(as.dendrogram(hclust(d.10)), horiz=TRUE, main='Every 10th Depth Slice')
 plot(as.dendrogram(hclust(d.20)), horiz=TRUE, main='Every 20th Depth Slice')
 par(oldpar)
-
-## 5. identify profiles within a collection that contain all NAs
-d <- ldply(1:10, random_profile)
-depths(d) <- id ~ top + bottom
-
-# replace first profile's data with NA
-na.required <- nrow(d[1, ])
-d$p1[1:na.required] <- NA
-d$p2[1:na.required] <- NA
-
-# attempt profile comparison: this won't work, throws an error
-# dd <- profile_compare(d, vars=c('p1','p2'), max_d=100, k=0)
-
-# check for soils that are missing all clay / total RF data
-missing.too.much.data.idx <- which(profileApply(d, function(i) length(which(is.na(i$p1) | is.na(i$p2))) / nrow(i)) == 1)
-
-# remove bad profiles and try again: works
-dd <- profile_compare(d[-missing.too.much.data.idx, ], vars=c('p1','p2'), max_d=100, k=0)
 }
 
 
