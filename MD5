@@ -1,6 +1,6 @@
-b6cd0eddac8b2e6f20bcbf9a7edea703 *DESCRIPTION
+a341663fb1b4fb1a9ca88a8ebf696dbc *DESCRIPTION
 f22014bd094e0c9f06d4741f0cdd6a4c *NAMESPACE
-7676017751ac842feae0ab5081cf3c10 *NEWS
+ff76cc821c9c730387845c482690bea1 *NEWS
 d0e1ca440921fccffe80f3a513bc515e *R/Class-SoilProfileCollection.R
 df7272ea1a929d20ca13d5370c3cb684 *R/SoilProfileCollection-coercion.R
 1acc606c13c348bfe2823deebc46207b *R/SoilProfileCollection-iterators.R
@@ -11,11 +11,11 @@ b4c8d8db2bcca493872085d5a29a7832 *R/SoilProfileCollection-slice-methods.R
 add9fd8fb24e4574705b6c6990fdc16f *R/generalize.hz.R
 781d4fce75ce2afa21181c6cb950f599 *R/make.segments.R
 8b36039493d0ab0724d78e69fb9b17f0 *R/munsell2rgb.R
-bdd72b643025c09c5d85bec50ac3c34d *R/panel.depth_function.R
+0a2769ae7e34f66c0df5304e1de81fb5 *R/panel.depth_function.R
 40770c620a8db8804a10faaa375ba3e9 *R/plot_distance_graph.R
 4b78e797fd1adcde7dbd07ed01c07d00 *R/prepanel.depth_function.R
 335f6a56536d9d13ac02963f5f5b39b5 *R/profile_compare.R
-2cb997d035c5c778467414739f56a56d *R/profile_plot.R
+49774cc1f73de4c67bb289e37a8fc135 *R/profile_plot.R
 55a225941328129b2176437477af922c *R/random_profile.R
 7a8322ad7131343f76f4ace8424e3f08 *R/resample.twotheta.R
 ca1a0e8a9cfc20345fe49c17c8b94bf5 *R/setters.R
@@ -32,8 +32,9 @@ c3bdf4e421558414d47a0a2f62c24a40 *data/ca630.rda
 4ea76cd661980d32ed32551ac3ea4dd6 *data/sp3.rda
 75d37d8ef1ad90148c175f4eb133ff2d *data/sp4.rda
 81194c37b25607057fb82777a010b2da *data/sp5.rda
-25e5f65f2a730f85041f0cd79eda7bf0 *demo/00Index
+a1c82adc5d6319fc414cb5b535e13dae *demo/00Index
 c8d6d4fecc6e0b7a0acefbeaa035d500 *demo/aqp.R
+5398f9d2cc1f316181d88263d437ffc2 *demo/slope_effect_hz_thickness.R
 6c3ef502bfe15d33c08f9c1bfd0caea5 *inst/CITATION
 4ef2656392f2af623a278735b43329b2 *man/SPC-plotting.Rd
 fc41e122b655f06744bb0b0165291abb *man/SPC-slab-methods.Rd
@@ -41,7 +42,7 @@ fc41e122b655f06744bb0b0165291abb *man/SPC-slab-methods.Rd
 1d172169353648c0f52baad8b5a01572 *man/SPC-spatial-methods.Rd
 676529b7f2a85d61a96e895081c739bf *man/SPC-utils.Rd
 459e09a7a1e2ed0e2cd935e5f7fa5e53 *man/SoilProfileCollection-class.Rd
-05d089ebd8c60f26830ffc8620e01e42 *man/aqp-package.Rd
+979e0c974a182fe73a0ad7e515b1b9f7 *man/aqp-package.Rd
 ec4a1ef2b223dc668f0968b7afe12689 *man/ca630.Rd
 0e0bcabaefca4ccfe01e8585bca69175 *man/f.noise.Rd
 86a4390e9d2f646fb04de58ee045dcad *man/generalize.hz.Rd
