@@ -1,3 +1,4 @@
+
 .lpp <- function(x, a, b, u, d, e) {
   # the exponential term
   f.exp <- exp((x + d * log(e) - u) / d)
@@ -48,8 +49,7 @@ random_profile <- function(id, n=c(3,4,5,6), min_thick=5, max_thick=30, n_prop=5
 
   # generate several properties
   # with different means / sd
-  for(i in 1:n_prop)
-	  {
+  for(i in 1:n_prop) {
 	# init storage
 	  p <- numeric(n_hz)
 	

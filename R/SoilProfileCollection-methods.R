@@ -386,6 +386,56 @@ setReplaceMethod("$", "SoilProfileCollection",
 
 
 
+## subset method for SoilProfileCollection objects
+## s: site-level subsetting criteria (properly quoted)
+## h: horizon-level subsetting criteria (properly quoted)
+## result: SoilProfileCollection with all profiles that match _either_ criteria- i.e. greedy matching
+if (!isGeneric("subsetProfiles"))
+  setGeneric("subsetProfiles", function(object, s, h, ...) standardGeneric("subsetProfiles"))
+  
+setMethod("subsetProfiles", "SoilProfileCollection",
+  function(object, s, h, ...) {
+  	
+  	# sanity checks
+  	if(missing(s) & missing(h))
+  		stop('must provide either, site or horizon level subsetting criteria', call.=FALSE)
+  	
+  	# extract parts
+  	s.d <- site(object)
+  	h.d <- horizons(object)
+  	id.col <- idname(object)
+  	object.ids <- profile_id(object)
+  	
+  	# subset using conventional data.frame methods
+  	if(!missing(s))
+  		s.d.sub.IDs <- subset(s.d, select=id.col, subset=eval(parse(text=s)))[, 1] # convert to vector
+  	else
+  		s.d.sub.IDs <- NA
+  	
+  	if(!missing(h))
+  		h.d.sub.IDs <- subset(h.d, select=id.col, subset=eval(parse(text=h)))[, 1] # convert to vector
+  	else
+  		h.d.sub.IDs <- NA
+  	
+    # intersect IDs if s and h were used
+    if(!missing(h) & !missing(s))
+      matching.IDs <- intersect(s.d.sub.IDs, h.d.sub.IDs)
+    
+  	# if only h, or only s were used, then 
+    else
+  	  matching.IDs <- unique(na.omit(c(s.d.sub.IDs, h.d.sub.IDs)))
+  	
+  	# convert IDs into a numerical profile index
+  	# note: no matches results in idx == 0
+  	idx <- match(matching.IDs, object.ids)
+  	
+  	# subset SoilProfileCollection
+  	return(object[idx, ])
+  	}
+)
+
+
+
 
 ### NOTE: this DOES NOT re-order data, only subsets!
 ##
@@ -394,11 +444,13 @@ setReplaceMethod("$", "SoilProfileCollection",
 ## i = profile index
 ## j = horizon / slice index
 ##
-## TODO: check for SPC[i] .... this is an error
-##
 setMethod("[", "SoilProfileCollection",
   function(x, i, j, ...) {
-
+		
+  	# check for missing i and j
+  	if(missing(i) & missing(j))
+  		stop('must provide either a profile index or horizon/slice index, or both', call.=FALSE)
+  	
     # convert to integer
     if(!missing(i)) {
       i <- as.integer(i)
@@ -459,7 +511,8 @@ setMethod("[", "SoilProfileCollection",
     # if there is REAL data in @sp, and we only have 1 row of hz per coordinate- return SPDF
     # for now test for our custom dummy SP obj: number of coordinates == number of profiles
     # also need to test that there is only 1 horizon/slice per location
-    if(nrow(coordinates(x)) == length(x) & length(p.ids) == nrow(h)) {
+  	# only produces a SPDF when j index is present
+    if(nrow(coordinates(x)) == length(x) & length(p.ids) == nrow(h) & !missing(j)) {
       # combine with coordinates
       cat('result is a SpatialPointsDataFrame object\n')
       # note that we are filtering based on 'i' - an index of selected profiles
@@ -470,10 +523,13 @@ setMethod("[", "SoilProfileCollection",
       # values-- often the case when subsetting has been performed
       
       # if site data, join hz+site
-      if(nrow(s) > 0)
-      	return(SpatialPointsDataFrame(coordinates(x)[i, ], data=join(h, s, by=idname(x)), match.ID=FALSE))
-      else # no site data
-      	return(SpatialPointsDataFrame(coordinates(x)[i, ], data=h, match.ID=FALSE))	
+      if(nrow(s) > 0) {
+      	return(SpatialPointsDataFrame(as(x, 'SpatialPoints')[i, ], data=join(h, s, by=idname(x)), match.ID=FALSE))
+      }
+      # no site data
+      else {
+      	return(SpatialPointsDataFrame(as(x, 'SpatialPoints')[i, ], data=h, match.ID=FALSE))	
+      }
     }
 
     # in this case there may be missing coordinates, or we have more than 1 slice of hz data

@@ -25,7 +25,8 @@ importFrom(plyr,
   llply,
   ldply,
   dlply,
-  join
+  join,
+	summarise
 )
 
 importFrom(reshape, 
@@ -97,8 +98,7 @@ exportMethods(
   "site<-",
   slab,
   slice,
-  spatial_subset,
-  splitProfiles
+  spatial_subset
 )
 
 exportPattern("^[^\\.]")
