@@ -1,5 +1,29 @@
+-------------------------- aqp 1.5 (2013-01-24) --------------------------
+* profileApply() can now return arbitrary objects = new subsetting/transformation possibilities
+  - see ?profileApply for examples
+* panel.depth_function() can now display contributing fraction values with grouped data
+  - see multi-variate example in ?slab
+
+-------------------------- aqp 1.4-7 (2013-01-24) --------------------------
+* HTML version of all documentation (including images) auto-generated via knitr and available on the r-forge website
+* new function: texture.triangle.low.rv.high() plots texture data with low-high range defined by quantiles
+
+-------------------------- aqp 1.4-6 (2013-01-03) --------------------------
+* updated documentation and SoilProfileCollection tutorial here:
+  - https://r-forge.r-project.org/scm/viewvc.php/*checkout*/docs/aqp/aqp-intro.html?root=aqp
+* plans laid for parallel processing in slab() and profileApply() via 'parallel' package
+* plotSPC() gets a 'density' argument for shaded coloring of horizons
+
+-------------------------- aqp 1.4-5 (2012-12-29) --------------------------
+* slab() re-written from scratch, resulting in reduced memory footprint and quicker running time
+  ! older code based on slab() is likely to now broken- sorry, it won't happen again
+  - the new code is much slimmer and based on aggregate() rather than ddply
+  - function arguments have changed so be sure to check the manual page
+  - user-supplied functions are now much simpler to write and rely on vectors rather than data.frames (= faster)
+  - the next major release will contain additional examples of how to use the new features
+
 -------------------------- aqp 1.4 (2012-12-18) --------------------------
-* new function simulate.SoilProfileCollection() for simulation based on a template soil profile, proper documentation pending...
+* new function sim() for simulation based on a template soil profile, proper documentation pending...
 
 -------------------------- aqp 1.3-3 (2012-12-06) --------------------------
 * new function subsetProfiles() for simpler subsetting of SoilProfileCollection objects via site or horizon-level attributes
