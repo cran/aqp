@@ -1,4 +1,26 @@
--------------------------- aqp 1.5 (2013-01-24) --------------------------
+-------------------------- aqp 1.5-2 (2013-04-09) --------------------------
+* panel.depth_function() now prints "contributing fraction" values in the same color as corresponding depth-function lines and shaded areas
+* panel.depth_function() gains an argument 'cf.col' for manually specifying the CF color
+* panel.depth_function() gains an argument 'cf.interva;' for manually specifying printed CF depths
+* prepanel.depth_function() now extends x-lim by 5% in either direction for cleaner-looking plots
+* added some details to slab() documentation
+* fixed minor bug in min() and max() methods for SoilProfileCollection objects in the presence of missing data
+* min() and max() methods for SoilProfileCollection objects now have a second argument for checking depth based on the presence of data in that column
+
+-------------------------- aqp 1.5-1 (2013-03-07) --------------------------
+* removed excessive checking in SoilProfileCollection init code, this may speed things up
+  - previously identified horizonation errors may no longer result in ERRORS; be sure to test
+* test_hz_logic() now more useful:
+  - always checks for NA and overlapping horizons
+  - no longer called with initialization of SoilProfileCollection objects
+  - note that default behavior has changed since version 1.5
+  - moved related documentation to test_hz_logic manual page
+* new mini-vignette on dealing with bad data (dealing-with-bad-data.html)
+* better documentation for slice()
+* new warnings related to missing data in the grouping variable passed to slab()
+
+
+-------------------------- aqp 1.5 (2013-02-24) --------------------------
 * profileApply() can now return arbitrary objects = new subsetting/transformation possibilities
   - see ?profileApply for examples
 * panel.depth_function() can now display contributing fraction values with grouped data
