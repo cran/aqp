@@ -1,7 +1,7 @@
 ## this scales fairly well:
 ## n = (100, 1000, 10000) --> (0.53, 4.21, 38) seconds
 
-## slice(SPC, ...)
+## TODO: this function cannot deal with overlapping horizons (usually an error):  > 1 row / slice
 
 # this function is run on the horizon data, once for each depth slice
 get.slice <- function(h, id, top, bottom, vars, z, include='top', strict=TRUE) {
@@ -192,7 +192,7 @@ slice.fast <- function(object, fm, top.down=TRUE, just.the.data=FALSE, strict=TR
 
 ## slice:
 if (!isGeneric("slice"))
-  setGeneric("slice", function(object, ...) standardGeneric("slice"))
+  setGeneric("slice", function(object, fm, top.down=TRUE, just.the.data=FALSE, strict=TRUE) standardGeneric("slice"))
 
 
 ## TODO: allow the use of site data (PSC etc.) to determine the z-slice

@@ -1,7 +1,7 @@
 Package: aqp
-Version: 1.5
-Date: 2013-02-25
-Packaged: 2013-02-26 03:15:08 UTC; rforge
+Version: 1.5-2
+Date: 2013-04-08
+Packaged: 2013-04-12 02:15:52 UTC; rforge
 Title: Algorithms for Quantitative Pedology
 Author: Dylan Beaudette <debeaudette@ucdavis.edu>, Pierre Roudier
         <roudierp@landcareresearch.co.nz>
@@ -18,7 +18,7 @@ License: GPL (>= 2)
 Repository: CRAN
 URL: http://aqp.r-forge.r-project.org/
 Repository/R-Forge/Project: aqp
-Repository/R-Forge/Revision: 664
-Repository/R-Forge/DateTimeStamp: 2013-02-26 00:44:24
-Date/Publication: 2013-02-26 22:10:34
+Repository/R-Forge/Revision: 701
+Repository/R-Forge/DateTimeStamp: 2013-04-12 00:49:40
+Date/Publication: 2013-04-18 21:19:08
 NeedsCompilation: no
