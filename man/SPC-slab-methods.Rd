@@ -10,7 +10,8 @@
 
 \usage{
 # method for SoilProfileCollection objects
-slab(object, fm, slab.structure=1, strict=FALSE, slab.fun=.slab.fun.numeric.default, cpm=1, weights=NULL, ...)
+slab(object, fm, slab.structure=1, strict=FALSE, 
+slab.fun=.slab.fun.numeric.default, cpm=1, weights=NULL, ...)
 }
 
 \arguments{
@@ -236,7 +237,8 @@ xyplot(
 	panel=panel.depth_function, 
 	prepanel=prepanel.depth_function,
 	sync.colors=TRUE, alpha=0.25,
-	par.settings=list(superpose.line=list(col=c('orange', 'royalblue', 'black'), lwd=2, lty=c(1,1,2))),
+	par.settings=list(superpose.line=list(col=c('orange', 'royalblue', 'black'), 
+  lwd=2, lty=c(1,1,2))),
 	auto.key=list(columns=3, lines=TRUE, points=FALSE)
 )
 
@@ -251,7 +253,8 @@ a.wide <- cast(a, group + top + bottom ~ variable, value=c('mean'))
 ## again, this time for a user-defined slab from 40-60 cm
 a <- slab(sp3, fm=group ~ L + A + B, slab.structure=c(40,60), slab.fun=mean.and.sd)
 
-# now we have weighted average properties (within the defined slab) for each variable, and each group
+# now we have weighted average properties (within the defined slab)
+# for each variable, and each group
 (a.wide <- cast(a, group + top + bottom ~ variable, value=c('mean')))
 
 ## this time, compute the weighted mean of selected properties, by profile ID

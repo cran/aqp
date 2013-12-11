@@ -21,12 +21,16 @@ Generate a simple diagram of a soil profile, with annotated horizon names.
 }}
 
 \usage{
-plotSPC(x, color='soil_color', width=0.2, name='name', alt.label=NULL,
-cex.names=0.5, cex.depth.axis=cex.names, cex.id=cex.names+(0.2*cex.names), print.id=TRUE, 
-id.style='auto', plot.order=1:length(x), add=FALSE, scaling.factor=1, y.offset=0, n=length(x),
-max.depth=max(x), n.depth.ticks=5, shrink=FALSE, shrink.cutoff=3, abbr=FALSE, 
-abbr.cutoff=5, divide.hz=TRUE, hz.distinctness.offset=NULL, hz.distinctness.offset.col='black', 
-hz.distinctness.offset.lty=2, axis.line.offset=-2.5, density=NULL, \dots)
+plotSPC(x, color='soil_color', width=0.2, name='name', 
+alt.label=NULL, cex.names=0.5, cex.depth.axis=cex.names, 
+cex.id=cex.names+(0.2*cex.names), print.id=TRUE, 
+id.style='auto', plot.order=1:length(x), add=FALSE, 
+scaling.factor=1, y.offset=0, n=length(x),
+max.depth=max(x), n.depth.ticks=5, shrink=FALSE, 
+shrink.cutoff=3, abbr=FALSE, abbr.cutoff=5, divide.hz=TRUE, 
+hz.distinctness.offset=NULL, hz.distinctness.offset.col='black', 
+hz.distinctness.offset.lty=2, axis.line.offset=-2.5, 
+density=NULL, lwd=1, lty=1, \dots)
 }
 
 
@@ -59,6 +63,8 @@ hz.distinctness.offset.lty=2, axis.line.offset=-2.5, density=NULL, \dots)
   \item{hz.distinctness.offset.lty}{line style used to encode horizon distinctness (default is 2)}
   \item{axis.line.offset}{horizonatal offset applied to depth axis (default is -2.5)}
   \item{density}{fill density used for horizon color shading, either a single integer or a column name containing integer values (default is NULL, no shading)}
+  \item{lwd}{single numeric value: line width multiplier}
+  \item{lty}{single integert: line style}
   \item{\dots}{other arguments passed into lower level plotting functions}
 }
 \details{
@@ -73,7 +79,7 @@ A new plot of soil profiles is generated, or optionally added to an existing plo
 \author{Dylan E. Beaudette}
 
 \seealso{
-\code{\link{SoilProfileCollection-class}, \link{pretty}, \link{hzDistinctnessCodeToOffset}}
+\code{\link{SoilProfileCollection-class}, \link{pretty}, \link{hzDistinctnessCodeToOffset}, \link{addBracket}}
 }
 \examples{
 data(sp1)
@@ -115,8 +121,6 @@ if(require(RColorBrewer)) {
   depths(sp3) <- id ~ top + bottom
   plot(sp3)
 }
-
-
 
 }
 
