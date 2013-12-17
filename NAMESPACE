@@ -1,3 +1,18 @@
+importFrom(methods,
+  setClass,
+  representation,
+  prototype,
+  new,
+  isGeneric,
+  setGeneric,
+  setReplaceMethod,
+  setMethod
+)
+
+
+importFrom(RColorBrewer,
+  brewer.pal
+)
 
 importFrom(grid,
   gpar,
@@ -6,9 +21,13 @@ importFrom(grid,
 )
 
 importFrom(lattice,
+  levelplot,
   trellis.par.get,
+  panel.levelplot,
+  panel.abline,
   panel.lines,
   panel.polygon,
+  panel.segments,
   panel.grid
 )
 
