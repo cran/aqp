@@ -1,7 +1,28 @@
+-------------------------- aqp 1.7 (2014-04-23) --------------------------
+* new function estimateSoilDepth()
+* new function getSoilDepthClass()
+
+-------------------------- aqp 1.6-4 (2014-02-14) --------------------------
+* When applied to a single categorical variable, the results from slab() now contain an attribute 'original.levels'
+  that contains the original factor levels. This is important because when casting from long->wide format, illegal
+  column names are scrubbed by make.names(). This process would convert horizon designations like '2Bt' into 'X2Bt'.
+  You can recover the original horizon names via attr(x, 'original.levels').
+
+-------------------------- aqp 1.6-3 (2014-02-04) --------------------------
+* plotSPC() has a new argument: `label`, used to set site-level attribute containing profile labels
+
+-------------------------- aqp 1.6-2 (2014-01-10) --------------------------
+* plotSPC() now registers plotting parameters in the environment aqp.env
+* new function addVolumeFraction() for annotating profile plots with volumetric information (e.g. rock fragment volume)
+
+-------------------------- aqp 1.6-1 (2013-12-31) --------------------------
+* plotSPC() attempts to guess which column contains horizon designations
+* plotSPC() can now color horizons based on continuous soil properties (e.g. clay content)
+
 -------------------------- aqp 1.6 (2013-12-11) --------------------------
 * rbind.SoilProfileCollection() now re-orders data according to the new set of profile IDs
   - this fixes several probles associated with assumptions in profile_compare()
-* profile_compare() will ne re-written soon to work natively with SPC objects
+* profile_compare() will be re-written soon to work natively with SPC objects
 
 -------------------------- aqp 1.5-6 (2013-11-25) --------------------------
 * new function addBracket() for annotating profile sketches with depth-brackets; useful for plotting diagnostic features

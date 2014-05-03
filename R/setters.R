@@ -160,7 +160,7 @@ setReplaceMethod("site", "SoilProfileCollection",
       
       # sanity check: site + new data should have same number of rows as original
       if(nrow(s) != nrow(site.new)) {
-      	cat(paste('original data (', nrow(s), ' rows) new data (', nrow(site.new), ' rows)', sep=''))
+      	message(paste('original data (', nrow(s), ' rows) new data (', nrow(site.new), ' rows)', sep=''))
         stop('invalid join condition, site data not changed', call.=FALSE)
       }
             
@@ -289,11 +289,13 @@ setReplaceMethod("diagnostic_hz", "SoilProfileCollection",
   
   # test to make sure that at least one of the IDS in candidate data are present within SPC
   if(all( ! unique(value[[idn]]) %in% pIDs) )
-  	stop('candidate data have no matching IDs in target object!', call.=FALSE)
+  	stop('candidate diagnostic horizon data have no matching IDs in target object!', call.=FALSE)
   
   # warn user if some of the IDs in the candidate data are missing
-  if(any( ! unique(value[[idn]]) %in% pIDs) )
-  	warning('some records in candidate data have no matching IDs in target object', call.=FALSE)
+  if(any( ! unique(value[[idn]]) %in% pIDs) ) {
+  	warning('some records in candidate diagnostic horizon data have no matching IDs in target object', call.=FALSE)
+    # print(value[value$peiid == unique(value[[idn]])[which(! unique(value[[idn]]) %in% pIDs)], ])
+  }
   
   # if data are already present, warn the user
   if(nrow(d) > 0)

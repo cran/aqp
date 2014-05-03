@@ -3,6 +3,15 @@
 # annotate elements from @diagnostic with brackets 
 # mostly a helper function for addBracket()
 addDiagnosticBracket <- function(s, kind, id=idname(s), top='featdept', bottom='featdepb', ...) {
+	
+  # get plotting details from aqp environment
+  lsp <- get('last_spc_plot', envir=aqp.env)
+    
+  ## TODO: integrate these
+  y.offset <- lsp$y.offset
+  scaling.factor <- lsp$scaling.factor
+  plot.order <- lsp$plot.order
+  
   # extract diagnostic horizon information
   d <- diagnostic_hz(s)
   d <- d[which(d$diag_kind == kind), ]
@@ -11,35 +20,55 @@ addDiagnosticBracket <- function(s, kind, id=idname(s), top='featdept', bottom='
   key <- match(d[[id]], profile_id(s))
   
   # add backets
-  addBracket(key, d[[top]], d[[bottom]], ...)
+  addBracket(top=d[[top]], bottom=d[[bottom]], idx=key, ...)
 }
 
 ## TODO: add proper documentation
 ## NOTE: this function is vectorized
 # internal function for plotting a bracket (usually defines a diagnostic feature or similar)
-# idx: profile index
+# idx: (optional) integer index to profile
 # top: top depth
 # bottom: bottom depth
 # tick.length: bracket tick length
 # offset: left-hand offset from profile center
-addBracket <- function(idx, top, bottom, tick.length=0.05, arrow.length=0.05, offset=-0.3, missing.bottom.depth=25, ...) {
+addBracket <- function(top, bottom, idx=NULL, tick.length=0.05, arrow.length=0.05, offset=-0.3, missing.bottom.depth=25, ...) {
 	
+  # get plotting details from aqp environment
+  lsp <- get('last_spc_plot', envir=aqp.env)
+  
+  # if missing an specific index, assume plotting order
+  if(is.null(idx))
+    plot.order <- lsp$plot.order
+  else
+    plot.order <- idx
+  
+  ## TODO: integrate these
+  y.offset <- lsp$y.offset
+  scaling.factor <- lsp$scaling.factor
+  w <- lsp$width
+  
 	# normal case: both top and bottom defined
 	if(!missing(top) & !missing(bottom)) {
+    # x-positions
+    x.1 <- plot.order + offset
+    x.2 <- x.1 + tick.length
 		# top tick
-		segments(idx+offset, top, idx+offset+tick.length, top, lend=2, ...)
+		segments(x.1, top, x.2, top, lend=2, ...)
 		# bottom tick
-		segments(idx+offset, bottom, idx+offset+tick.length, bottom, lend=2, ...)
+		segments(x.1, bottom, x.2, bottom, lend=2, ...)
 		# vertical bar
-		segments(idx+offset, top, idx+offset, bottom, lend=2, ...)
+		segments(x.1, top, x.1, bottom, lend=2, ...)
 	}
 	
 	# missing bottom: replace bottom tick with arrow head
 	if(!missing(top) & missing(bottom)) {
+	  # x-positions
+	  x.1 <- plot.order + offset
+	  x.2 <- x.1 + tick.length
 		# top tick
-		segments(idx+offset, top, idx+offset+tick.length, top, lend=2, ...)
+		segments(x.1, top, x.2, top, lend=2, ...)
 		# vertical bar is now an arrow
-		arrows(idx+offset, top, idx+offset, top+missing.bottom.depth, length=arrow.length, lend=2, ...)
+		arrows(x.1, top, x.1, top+missing.bottom.depth, length=arrow.length, lend=2, ...)
 	}
 	
 }
@@ -56,22 +85,62 @@ hzDistinctnessCodeToOffset <- function(x, codes=c('A','C','G','D'), offset=c(0.5
 }
 
 
-# generate a soil profile figure, from a generic dataframe
-# using top and bottom boundaries, annotating with name
-# optionally color with vector that is the same length as number of horizons
 
-# behavior not defined for horizons with an indefinate lower boundary
 
+
+# TODO: behavior not defined for horizons with an indefinate lower boundary
 # TODO: save important elements of geometry from last plot to aqp.env
+# TODO: allow color to be set via formula interface
+# TODO: move some of the processing outside of the main loop: column names, etc.
 
 ## basic function
-plotSPC <- function(x, color='soil_color', width=0.2, name='name', alt.label=NULL, cex.names=0.5, cex.depth.axis=cex.names, cex.id=cex.names+(0.2*cex.names), print.id=TRUE, id.style='auto', plot.order=1:length(x), add=FALSE, scaling.factor=1, y.offset=0, n=length(x), max.depth=max(x), n.depth.ticks=5, shrink=FALSE, shrink.cutoff=3, abbr=FALSE, abbr.cutoff=5, divide.hz=TRUE, hz.distinctness.offset=NULL, hz.distinctness.offset.col='black', hz.distinctness.offset.lty=2, axis.line.offset=-2.5, density=NULL, lwd=1, lty=1, ...) {
-	
+plotSPC <- function(x, color='soil_color', width=0.2, name=NULL, label=idname(x), alt.label=NULL, alt.label.col='black', cex.names=0.5, cex.depth.axis=cex.names, cex.id=cex.names+(0.2*cex.names), print.id=TRUE, id.style='auto', plot.order=1:length(x), add=FALSE, scaling.factor=1, y.offset=0, n=length(x), max.depth=max(x), n.depth.ticks=5, shrink=FALSE, shrink.cutoff=3, abbr=FALSE, abbr.cutoff=5, divide.hz=TRUE, hz.distinctness.offset=NULL, hz.distinctness.offset.col='black', hz.distinctness.offset.lty=2, axis.line.offset=-2.5, density=NULL, lwd=1, lty=1, ...) {
+  
+  # save arguments to aqp env
+  lsp <- list('width'=width, 'plot.order'=plot.order, 'y.offset'=y.offset, 'scaling.factor'=scaling.factor)
+  assign('last_spc_plot', lsp, envir=aqp.env)
+  
   # get horizons
   h <- horizons(x)
   
   # get column names from horizon dataframe
   nm <- names(h)
+  
+  # if the user has not specified a column containing horizon designations,
+  # attempt to guess
+  if(missing(name)) {
+    possible.name <- nm[grep('name', nm, ignore.case=TRUE)]
+    # use the first valid guess
+    if(length(possible.name) > 0) {
+      possible.name <- possible.name[1]
+      name <- possible.name
+      message(paste('guessing horizon designations are stored in `', name, '`', sep=''))
+    }
+    else {
+      message('unable to guess column containing horizon designations')
+      name <- NA # set column name to NA, details handled farther down in the function
+    }
+  }
+  
+  # setup horizon colors:
+  # 1. numeric vector, rescale and apply color ramp
+  if(is.numeric(h[[color]])) {
+    col.palette <- rev(brewer.pal(10, 'Spectral'))
+    cr <- colorRamp(col.palette)
+    # note that this may contain NAs
+    c.rgb <- cr(rescale(h[[color]]))
+    cc <- which(complete.cases(c.rgb))
+    h$.color <- NA
+    # convert non-NA values into colors
+    h$.color[cc] <- rgb(c.rgb[cc, ], maxColorValue=254)
+    # generate range / colors for legend
+    pretty.vals <- pretty(h[[color]])
+    color.legend.data <- list(legend=pretty.vals, col=rgb(cr(rescale(pretty.vals)), maxColorValue=254))
+  }
+  # 2. character vector, assume these are valid colors
+  if(is.character(h[[color]])) {
+    h$.color <- h[[color]]
+  }
   
   # get top/bottom column names
   IDcol <- idname(x)
@@ -82,9 +151,12 @@ plotSPC <- function(x, color='soil_color', width=0.2, name='name', alt.label=NUL
   # get profile IDs
   pIDs <- profile_id(x)
   
+  # get profile labels from @site
+  pLabels <- site(x)[[label]]
+  
   # if profile style is auto, determin style based on font metrics
   if(id.style == 'auto') {
-  	sum.ID.str.width <- sum(sapply(pIDs, strwidth, units='inches', cex=cex.id, font=2))
+  	sum.ID.str.width <- sum(sapply(pLabels, strwidth, units='inches', cex=cex.id, font=2))
   	plot.width <- par('pin')[1]
   	ID.width.ratio <- sum.ID.str.width  / plot.width
 #   	print(ID.width.ratio)
@@ -117,14 +189,17 @@ plotSPC <- function(x, color='soil_color', width=0.2, name='name', alt.label=NUL
 	  profile_i <- plot.order[i]
 	  
 	  # extract the current profile's horizon data
+    this_profile_label <- pLabels[profile_i]
 	  this_profile_id <- pIDs[profile_i]
 	  this_profile_data <- h[h[IDcol] == this_profile_id, ]
 	  
-    ## TODO: allow color to be set via formula interface
+    # extract column names
+    cn <- names(this_profile_data)
+    
     # extract / generate horizon color
-    m <- match(color, names(this_profile_data))
+    m <- match(color, cn)
     if(! is.na(m))
-      this_profile_colors <- this_profile_data[[m]]
+      this_profile_colors <- this_profile_data$.color
     else # no user-defined color column, or it is missing
       this_profile_colors <- 'white'
     
@@ -135,22 +210,24 @@ plotSPC <- function(x, color='soil_color', width=0.2, name='name', alt.label=NUL
 	  		this_profile_density <- density
 	  	# otherwise we have a column name
 	  	else {
-	  		m <- match(density, names(this_profile_data))
+	  		m <- match(density, cn)
 	  		if(! is.na(m))
 		  		this_profile_density <- this_profile_data[[m]]
 		  	else # user-defined column is missing
 			  	this_profile_density <- NULL
 	  	}
 	  }
-	  else # no user-defined color column
+	  else # no user-defined density column
 	  	this_profile_density <- NULL
 	  
     # extract / generate horizon name
-    m <- match(name, names(this_profile_data))
+    m <- match(name, cn)
     if(! is.na(m))
       this_profile_names <- this_profile_data[[m]]
-    else # no user-defined horizon name column, or it is missing
+      # otherwise use an empty string
+    else
       this_profile_names <- ''
+    
 	  
 	  # generate rectangle geometry
 	  # get vectors of horizon boundaries, and scale
@@ -206,11 +283,11 @@ plotSPC <- function(x, color='soil_color', width=0.2, name='name', alt.label=NUL
 	  if(print.id) {
 			# optionally abbreviate
 			if(abbr)
-		  	id.text <- abbreviate(as.character(this_profile_id), abbr.cutoff)
+		  	id.text <- abbreviate(as.character(this_profile_label), abbr.cutoff)
 	
 			# no abbreviations of th ID
 			else
-	  		id.text <- as.character(this_profile_id)
+	  		id.text <- as.character(this_profile_label)
 		
 			# add the text: according to style
 			if(id.style == 'top')
@@ -230,9 +307,14 @@ plotSPC <- function(x, color='soil_color', width=0.2, name='name', alt.label=NUL
   if(!missing(alt.label)) {
   	al <- site(x)[[alt.label]]
   	al <- al[plot.order]
-  	text(1:length(x), y.offset+3, al, srt=90, adj=c(1, 0.5), font=2, cex=cex.id * 1.5)
+  	text(1:length(x), y.offset+3, al, srt=90, adj=c(1, 0.5), font=2, cex=cex.id * 1.5, col=alt.label.col)
   }
   
+  ## experimental color legend
+  if(exists('color.legend.data')) {
+    mtext(side=3, text=color, font=2, line=1.6)
+    legend('bottom', legend=color.legend.data$legend, col=color.legend.data$col, bty='n', pch=15, horiz=TRUE, xpd=TRUE, inset=c(0, 0.99))
+  }
   }
 
 
