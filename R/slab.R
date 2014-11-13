@@ -8,6 +8,9 @@
 ## missing horizons:
 ## slab will run out of memory when trying to aggregate profiles that are missing horizons-- why?
 
+## ideas for parallel code:
+## http://stackoverflow.com/questions/6780091/simple-working-example-of-ddply-in-parallel-on-windows
+
 ## groups is a factor and contains NAs:
 ## with large data sets join() will run out of memory
 
@@ -304,6 +307,9 @@
 	if(class(d.slabbed$value) == 'matrix')
 		d.slabbed <- cbind(d.slabbed[, 1:3], d.slabbed$value)
 	
+  # ensure that the names returned from slab.fun are legal
+  names(d.slabbed) <- make.names(names(d.slabbed))
+
 	# convert the slab.label column into top/bottom as integers
 	slab.depths <- strsplit(as.character(d.slabbed$seg.label), '-')
 	d.slabbed$top <- as.integer(lapply(slab.depths, function(i) i[1]))
