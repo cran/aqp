@@ -1,3 +1,16 @@
+-------------------------- aqp 1.7-11 (2015-01-30) --------------------------
+* fixed bugs in addBrackets(), panel.depth_function(), and plotSPC()
+* new arguments to addBrackets() allow for annotation of brackets
+
+-------------------------- aqp 1.7-10 (2015-01-15) --------------------------
+* names() method for SoilProfileCollection objects returns a concatenated vector of horizon + site names
+* siteNames() and horizonNames() can now be used to extract from SoilProfileCollection
+* siteNames<- and horizonNames<- can now be used to change names; experimental!
+* note: internal structure of SoilProfileCollection objects will be changing soon!!!
+
+-------------------------- aqp 1.7-8 (2014-12-08) --------------------------
+* texture.triangle.low.rv.high(): new arguments, likely breaking previous usage when method='closest', see manual page for details
+
 -------------------------- aqp 1.7-7 (2014-11-06) --------------------------
 * bug fix c/o José Padarian: SPC objects now understand logical indexing rules
 * removed spatial_subset(): this functionality can be accomplished outside of AQP and removes dependency on rgeos package

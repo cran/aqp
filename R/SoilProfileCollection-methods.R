@@ -95,6 +95,7 @@ setMethod("coordinates", "SoilProfileCollection",
   }
 )
 
+
 ## site data
 if (!isGeneric("site"))
   setGeneric("site", function(object, ...) standardGeneric("site"))
@@ -155,6 +156,32 @@ setMethod(f='depth_units', signature='SoilProfileCollection',
 	return(u)
   }
 )
+
+
+## TODO: strip-out idname
+## get site column names
+if (!isGeneric("siteNames"))
+  setGeneric("siteNames", function(object, ...) standardGeneric("siteNames"))
+
+setMethod("siteNames", "SoilProfileCollection",
+          function(object) {
+            res <- names(object@site)
+            return(res)
+          }
+)
+
+## TODO: strip-out idname
+## get horizon column names
+if (!isGeneric("horizonNames"))
+  setGeneric("horizonNames", function(object, ...) standardGeneric("horizonNames"))
+
+setMethod("horizonNames", "SoilProfileCollection",
+          function(object) {
+            res <- names(object@horizons)
+            return(res)
+          }
+)
+
 
 
 
@@ -249,13 +276,19 @@ rbind.SoilProfileCollection <- function(...) {
 	}
 
 
-## column names
+
+
+# return a concatenated vector of horizon + site names
+# note that we strip out the ID column name from @site
 setMethod("names", "SoilProfileCollection",
   function(x) {
-  res <- list(horizons=names(horizons(x)), site=names(site(x)))
+  res <- c(horizons=horizonNames(x), site=siteNames(x)[-1])
   return(res)
   }
 )
+
+
+
 
 # overload min() to give us the min depth within a collection
 setMethod(f='min', signature='SoilProfileCollection',
@@ -359,8 +392,8 @@ setMethod("$", "SoilProfileCollection",
   function(x, name) {
 
 	# get names from site and hz data
-	s.names <- names(site(x))
-	h.names <- names(horizons(x))
+	s.names <- siteNames(x)
+	h.names <- horizonNames(x)
 
 	# when site data are initialized from an external DF, it is possible that
 	# there will be duplicate column names
@@ -506,7 +539,7 @@ setMethod("[", "SoilProfileCollection",
   	if(!missing(i)) {
   	  if(any(is.na(i)))
   	    stop('NA not permitted in profile index', call.=FALSE)
-      # convert logical to integer per standard vector/list indexing rules (thanks José Padarian for the suggestion!)
+      # convert logical to integer per standard vector/list indexing rules (thanks Jos? Padarian for the suggestion!)
   	  if(is.logical(i)) i <- (1:length(x))[i]
   	  i <- as.integer(i)
   	}

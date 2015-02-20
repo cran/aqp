@@ -1,3 +1,40 @@
+
+## set horizon names
+if (!isGeneric('horizonNames<-'))
+  setGeneric('horizonNames<-', function(object, value) standardGeneric('horizonNames<-'))
+
+## TODO: strip-out idname
+setReplaceMethod("horizonNames", "SoilProfileCollection",
+  function(object, value) {
+    
+    # sanity check
+    if(is.na(value) | is.null(value))
+      stop('cannot assign NA or NULL column names', call. = FALSE)
+    
+    names(object@horizons) <- make.names(value)
+    return(object)
+  }
+)
+
+
+
+## set site names
+if (!isGeneric('siteNames<-'))
+  setGeneric('siteNames<-', function(object, value) standardGeneric('siteNames<-'))
+
+## TODO: strip-out idname
+setReplaceMethod("siteNames", "SoilProfileCollection",
+  function(object, value) {
+    # sanity check
+    if(is.na(value) | is.null(value))
+      stop('cannot assign NA or NULL column names', call. = FALSE)
+                   
+      names(object@horizons) <- make.names(value)
+        return(object)
+  }
+)
+
+
 ##
 ## initialize metadata: object modification in-place
 ##
@@ -109,7 +146,7 @@ setReplaceMethod("depths", "data.frame",
   # create object
   depthcols <- c(nm[2], nm[3])
   res <- SoilProfileCollection(idcol=nm[1], depthcols=depthcols, horizons=data[new.order, ])
-
+  
   # done
   return(res)
 }
@@ -139,7 +176,7 @@ setReplaceMethod("site", "SoilProfileCollection",
     if (inherits(value, "data.frame")) {
       # get column names from proposed site, and existing horizons
       ns <- names(value)
-      nh <- names(object@horizons)
+      nh <- horizonNames(object)
       
       ## remove ID column from names(horizons)
       ID.idx <- match(idname(object), nh)
@@ -188,7 +225,7 @@ setReplaceMethod("site", "SoilProfileCollection",
   # create a numeric index for named site columns, as we will remove them
   # from the horizon data
   names_attr <- names(mf)
-  idx <- match(names_attr, names(horizons(object)))
+  idx <- match(names_attr, horizonNames(object))
   # remove the index to the ID columnm, as we do not want to remove this from
   # the horizon data !
   idx <- idx[-match(idname(object), names_attr)]
@@ -203,11 +240,10 @@ setReplaceMethod("site", "SoilProfileCollection",
   )
 
   # if site data is already present in the object, we don't want to erase it
-  if (length(site(object)) > 0)
-    site_data <- join(site(object), new_site_data, by=idname(object))
+  site_data <- join(site(object), new_site_data, by=idname(object))
 
   # remove the named site data from horizon_data
-  horizons(object) <- horizons(object)[, -idx]
+  object@horizons <- horizons(object)[, -idx]
 	
   # replace existing site data
   object@site <- site_data

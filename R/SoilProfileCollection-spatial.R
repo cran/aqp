@@ -65,11 +65,11 @@ setReplaceMethod("coordinates", "SoilProfileCollection",
   # remove coordinates from source data
   # note that mf is a matrix, so we need to access the colnames differently
   coord_names <- dimnames(mf)[[2]]
-  idx <- match(coord_names, names(site(object)))
+  idx <- match(coord_names, siteNames(object))
   
   # remove the named site data from site_data
   # TODO we should use a proper setter!
-  # bug fix c/o José Padarian: drop=FALSE
+  # bug fix c/o Jose Padarian: drop=FALSE
   object@site <- site(object)[, -idx, drop=FALSE]
   
   # done
