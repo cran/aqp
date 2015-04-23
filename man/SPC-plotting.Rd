@@ -26,12 +26,12 @@ plotSPC(x, color='soil_color', width=0.2, name=NULL, label=idname(x),
 alt.label=NULL, alt.label.col='black', cex.names=0.5, 
 cex.depth.axis=cex.names, cex.id=cex.names+(0.2*cex.names), 
 print.id=TRUE, id.style='auto', plot.order=1:length(x), add=FALSE, 
-scaling.factor=1, y.offset=0, n=length(x),
+scaling.factor=1, y.offset=0, x.idx.offset=0, n=length(x),
 max.depth=max(x), n.depth.ticks=5, shrink=FALSE, 
 shrink.cutoff=3, abbr=FALSE, abbr.cutoff=5, divide.hz=TRUE, 
 hz.distinctness.offset=NULL, hz.distinctness.offset.col='black', 
 hz.distinctness.offset.lty=2, axis.line.offset=-2.5, 
-density=NULL, col.label=color, 
+plot.depth.axis=TRUE, density=NULL, col.label=color, 
 col.palette = rev(brewer.pal(10, 'Spectral')), lwd=1, lty=1, \dots)
 }
 
@@ -54,6 +54,7 @@ col.palette = rev(brewer.pal(10, 'Spectral')), lwd=1, lty=1, \dots)
   \item{add}{add to an existing figure} 
   \item{scaling.factor}{vertical scaling of the profile heights} 
   \item{y.offset}{vertical offset for top of profiles} 
+  \item{x.idx.offset}{integer specifying horizontal offset from 0} 
   \item{n}{integer describing amount of space along x-axis to allocate, defaults to length(x)}
   \item{max.depth}{suggested lower depth boundary of plot}
   \item{n.depth.ticks}{suggested number of ticks in depth scale}
@@ -66,6 +67,7 @@ col.palette = rev(brewer.pal(10, 'Spectral')), lwd=1, lty=1, \dots)
   \item{hz.distinctness.offset.col}{color used to encode horizon distinctness (default is 'black')}
   \item{hz.distinctness.offset.lty}{line style used to encode horizon distinctness (default is 2)}
   \item{axis.line.offset}{horizonatal offset applied to depth axis (default is -2.5)}
+  \item{plot.depth.axis}{plot depth axis? (default is TRUE)}
   \item{density}{fill density used for horizon color shading, either a single integer or a column name containing integer values (default is NULL, no shading)}
   \item{col.label}{text printed above the color-coded legend}
   \item{col.palette}{color palette used to plot numeric data}
@@ -81,6 +83,8 @@ The 'side' \code{id.style} is useful when plotting a large collection of profile
 If the column containing horizon designations is not specified (the \code{name} argument), a column (presumed to contain horizon designation labels) is guessed based on regular expression matching of the pattern 'name'-- this usually works, but it is best to manual specify the name of the column containing horizon designations. 
 
 The \code{color} argument can either name a column containing R-compatible colors, possibly created via \code{\link{munsell2rgb}}, or column containing numeric values. In the second case, numeric values are converted into colors and displayed along with a simple legend above the plot. Note that this functionality makes several assumptions about plot geometry and is most useful in an interactive setting.
+
+The \code{x.idx.offset} argument can be used to shift a collection of pedons from left to right in the figure. This can be useful when plotting several different \code{SoilProfileCollection} objects within the same figure. Space must be pre-allocated in the first plotting call, with an offset specified in the second call. See examples below.
 }
 \value{
 A new plot of soil profiles is generated, or optionally added to an existing plot.
@@ -91,7 +95,7 @@ A new plot of soil profiles is generated, or optionally added to an existing plo
 \author{Dylan E. Beaudette}
 
 \seealso{
-\code{\link{SoilProfileCollection-class}, \link{pretty}, \link{hzDistinctnessCodeToOffset}, \link{addBracket}}
+\code{\link{SoilProfileCollection-class}, \link{pretty}, \link{hzDistinctnessCodeToOffset}, \link{addBracket}, \link{profileGroupLabels}}
 }
 \examples{
 data(sp1)
@@ -130,5 +134,13 @@ site(sp2) <- ~ surface
 
 # label with site-level attribute: `surface`
 plot(sp2, label='surface', plot.order=order(sp2$surface))
+
+# plot two SPC objects in the same figure
+par(mar=c(1,1,1,1))
+# plot the first SPC object and 
+# allocate space for the second SPC object
+plot(sp1, n=length(sp1) + length(sp2))
+# plot the second SPC, starting from the first empty space
+plot(sp2, x.idx.offset=length(sp1), add=TRUE)
 }
 
