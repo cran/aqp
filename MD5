@@ -1,11 +1,11 @@
-9a9b7b0c35e6429ef1f3bf7e521a11aa *DESCRIPTION
+d40a0e130e78df6139aab8dfe02175d4 *DESCRIPTION
 6764552d08c2ab89b81a7379b616aef3 *NAMESPACE
-3cbf56746eef02315aa69e5136ae9f12 *NEWS
+623b7808cca05535e9717fedebcdfb21 *NEWS
 1fbb2050ea7003bb0db05fe605e40449 *R/AAAA.R
 07682b5afbd7b9fd4d02780cf4d472f0 *R/Class-SoilProfileCollection.R
 6a22ce837f222e110def21020252a604 *R/SoilProfileCollection-coercion.R
 ca1ca2d6ac2ed09cc41ea546f791166a *R/SoilProfileCollection-iterators.R
-7fdb68ef888c5296a73d5d2d3995aa20 *R/SoilProfileCollection-methods.R
+1fad330910a33d3ae5354d762fd123aa *R/SoilProfileCollection-methods.R
 b3e8a344493d1a8caca0a41ba599425c *R/SoilProfileCollection-slice-methods.R
 277153ece03a7b720fc8ce95f9bf0193 *R/SoilProfileCollection-spatial.R
 33ebd79d59dae38b22470367958988de *R/addVolumeFraction.R
