@@ -196,14 +196,26 @@ hzDistinctnessCodeToOffset <- function(x, codes=c('A','C','G','D'), offset=c(0.5
 
 
 
-
+# Function testing the validity of a colour expressed as a character string
+# Uses col2rgb() to test the validity
+# Adapted from: 
+# https://stackoverflow.com/questions/13289009/check-if-character-string-is-a-valid-color-representation
+#s
+.isColorValid <- function(x) {
+  sapply(x, function(i) {
+    tryCatch(
+      is.matrix(col2rgb(i)), 
+      error = function(e) { FALSE }
+    )
+  })
+}
 
 # TODO: behavior not defined for horizons with an indefinate lower boundary
 # TODO: save important elements of geometry from last plot to aqp.env
 # TODO: move some of the processing outside of the main loop: column names, etc.
 
 ## basic function
-plotSPC <- function(x, color='soil_color', width=0.2, name=NULL, label=idname(x), alt.label=NULL, alt.label.col='black', cex.names=0.5, cex.depth.axis=cex.names, cex.id=cex.names+(0.2*cex.names), print.id=TRUE, id.style='auto', plot.order=1:length(x), add=FALSE, scaling.factor=1, y.offset=0, x.idx.offset=0, n=length(x), max.depth=max(x), n.depth.ticks=5, shrink=FALSE, shrink.cutoff=3, abbr=FALSE, abbr.cutoff=5, divide.hz=TRUE, hz.distinctness.offset=NULL, hz.distinctness.offset.col='black', hz.distinctness.offset.lty=2, axis.line.offset=-2.5, plot.depth.axis=TRUE, density=NULL, col.label=color, col.palette = rev(brewer.pal(10, 'Spectral')), lwd=1, lty=1, default.color=grey(0.95), ...) {
+plotSPC <- function(x, color='soil_color', width=0.2, name=NULL, label=idname(x), alt.label=NULL, alt.label.col='black', cex.names=0.5, cex.depth.axis=cex.names, cex.id=cex.names+(0.2*cex.names), print.id=TRUE, id.style='auto', plot.order=1:length(x), add=FALSE, scaling.factor=1, y.offset=0, x.idx.offset=0, n=length(x), max.depth=max(x), n.depth.ticks=5, shrink=FALSE, shrink.cutoff=3, abbr=FALSE, abbr.cutoff=5, divide.hz=TRUE, hz.distinctness.offset=NULL, hz.distinctness.offset.col='black', hz.distinctness.offset.lty=2, axis.line.offset=-2.5, plot.depth.axis=TRUE, density=NULL, col.label=color, col.palette = rev(brewer.pal(10, 'Spectral')), col.legend.cex=1, lwd=1, lty=1, default.color=grey(0.95), ...) {
   
   # save arguments to aqp env
   lsp <- list('width'=width, 'plot.order'=plot.order, 'y.offset'=y.offset, 'scaling.factor'=scaling.factor)
@@ -246,9 +258,33 @@ plotSPC <- function(x, color='soil_color', width=0.2, name=NULL, label=idname(x)
     pretty.vals <- pretty(h[[color]])
     color.legend.data <- list(legend=pretty.vals, col=rgb(cr(scales::rescale(pretty.vals)), maxColorValue=255))
   }
-  # 2. character vector, assume these are valid colors
-  if(is.character(h[[color]])) {
-    h$.color <- h[[color]]
+  # 2. vector of categorical data
+  if(is.character(h[[color]]) | is.factor(h[[color]])) {
+    # Testing if the data in the column are valid columns
+    if( all(.isColorValid(na.omit(h[[color]]))) ) {
+      # If this is true this is a column of valid colors
+      h$.color <- h[[color]]
+    } else {
+      # Otherwise that means this is a factor
+      
+      # Generate colour values
+      h$.color <- scales::col_factor(
+        palette = col.palette,
+        domain = NULL,
+        na.color = "#FFFFFF"
+      )(h[[color]])
+      
+      ## TODO: does this respect factor levels?
+      ## TODO: does not generate enough colors...?
+      # generate range / colors for legend
+      pretty.vals <- na.omit( unique( h[[color]] ) )
+      color.legend.data <- list(
+        legend = pretty.vals, 
+        col = scales::col_factor(col.palette, NULL, na.color = "#FFFFFF")(pretty.vals), 
+        maxColorValue = 255
+      )
+      
+    }
   }
   
   # if the color column doesn't exist, fill with NA
@@ -436,7 +472,7 @@ plotSPC <- function(x, color='soil_color', width=0.2, name=NULL, label=idname(x)
   if(exists('color.legend.data')) {
     # If no title given, set col.label is set to color
     mtext(side=3, text=col.label, font=2, line=1.6)
-    legend('bottom', legend=color.legend.data$legend, col=color.legend.data$col, bty='n', pch=15, horiz=TRUE, xpd=TRUE, inset=c(0, 0.99))
+    legend('bottom', legend=color.legend.data$legend, col=color.legend.data$col, bty='n', pch=15, horiz=TRUE, xpd=TRUE, inset=c(0, 0.99), cex=col.legend.cex)
   }
   }
 

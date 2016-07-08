@@ -8,29 +8,15 @@
 .SumDistanceList <- function(x) Reduce("+", x)
 
 
-## consider using 'ff' package for file-based storage of VERY large objects. Probably just the dissimilarity matrix
-
-## slice() would be a better approach than using every nth depth slice
-
-## TODO: site/hz properties combined:
-## 2012-02-28: partially implemented, but no way to control weighting
-## D = (D_hz/max(D_hz) * w_hz) + (D_site/max(D_site) * w_site) / (w_hz + w_site)
-
-## TODO: we are suppressing warnings from daisy() when input is all NA
-##       this is fine for now, but we should figure out a better way
-
-## TODO: allow for other distance-computing functions
-## TODO: allow for 'weights' argument (when metric = 'Gower') to daisy()
-
-## TODO: determine practical significance of 'filter' argument
 
 ## low-level function that the user will probably not ever use directly
 # Seems to scale to 1000 profiles with 5 variables, could use optimization
 # function requires at least two attributes
 # hard coded reference to s$id
 # set k to 0 for no depth weighting 
-pc <- function(s, vars, max_d, k, filter=NULL, sample_interval=NA, replace_na=TRUE, add_soil_flag=TRUE, return_depth_distances=FALSE, strict_hz_eval=FALSE, progress='none', plot.depth.matrix=FALSE, 
-rescale.result=FALSE, verbose=FALSE) {
+pc <- function(s, vars, max_d, k, filter=NULL, sample_interval=NA, replace_na=TRUE, 
+add_soil_flag=TRUE, return_depth_distances=FALSE, strict_hz_eval=FALSE, progress='none', 
+plot.depth.matrix=FALSE, rescale.result=FALSE, verbose=FALSE) {
 	
 	# currently this will only work with integer depths
 	# test by attempting to cast to integers
@@ -49,33 +35,6 @@ rescale.result=FALSE, verbose=FALSE) {
 	# optionally filter the data
 	if(!missing(filter)) {
 		s <- s[filter, ]
-	}
-	
-	## TODO: put this into its own function
-	## TODO: weight result using horizon thickness
-	# iterate over profiles and compute percent missing data by variable
-	pct_missing <- ddply(s, 'id', .fun=function(i, v=vars) {
-		## TODO: rows.to.review may not be needed
-		# only evaluate missing data within horizons that aren't completly NA (Oi, Cr, R horizons)
-		# all.missing.test <- apply(sapply(i[, v], is.na), 1, all)
-		# rows.to.review <- which( ! all.missing.test )
-		round(sapply(i[, v], function(j) length(which(is.na(j)))) / nrow(i) * 100)
-	})
-  
-	# keep track of profiles missing any or all of their data
-	problem.profiles.idx <- which(apply(pct_missing[, vars], 1, function(i) any(i > 0)) )
-	bad.profiles.idx <- which(apply(pct_missing[, vars], 1, function(i) all(i == 100)) )
-  
-	if(length(problem.profiles.idx) > 0) {
-	  assign('problem.profiles', value=pct_missing[problem.profiles.idx,], envir=aqp.env)
-		message('Missing data will bias results, check inputs.\nPercent missing:')
-		print(pct_missing[problem.profiles.idx, ])
-	}
-  
-	if(length(bad.profiles.idx) > 0) {
-	  # stop stop and let the user know
-	  bad.profiles <- unique(s$id)[bad.profiles.idx]
-	  stop(paste('no non-NA values associated with profiles:', paste(bad.profiles, collapse=', '), '\nConsider removing these profiles and re-running.'), call.=FALSE)
 	}
 	
 	# identify the number of profiles
@@ -316,6 +275,29 @@ rescale.result=FALSE, verbose=FALSE) {
 pc.SPC <- function(s, vars, rescale.result=FALSE, ...){
 	# default behavior: do not normalize D
 	
+  ## 2016-02-22: check for missing data moved from pc() to here
+  ## TODO: this makes an assumption on the column containing horizon designations
+  # iterate over profiles and compute percent missing data by variable
+  pct_data <- evalMissingData(s, vars)
+  
+  ## TODO: review this, and make optional via argument
+  # keep track of profiles missing any or all of their data
+  problem.profiles.idx <- which(pct_data < 1)
+  # bad.profiles.idx <- which(pct_data == 0)
+  
+  if(length(problem.profiles.idx) > 0) {
+    # assign('problem.profiles', value=pct_missing[problem.profiles.idx,], envir=aqp.env)
+    message('Missing data will bias results, check inputs.')
+  }
+
+  
+  ## 2016-02-22: disabled for now
+#   if(length(bad.profiles.idx) > 0) {
+#     # stop stop and let the user know
+#     bad.profiles <- profile_id(s)[bad.profiles.idx]
+#     stop(paste('no non-NA values associated with profiles:', paste(bad.profiles, collapse=', '), '\nConsider removing these profiles and re-running.'), call.=FALSE)
+#   }
+  
 	# extract horizons
 	s.hz <- horizons(s)
 	

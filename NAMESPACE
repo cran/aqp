@@ -24,7 +24,8 @@ importFrom(methods,
   setReplaceMethod,
   setMethod,
   as,
-  show
+  show,
+  slot
 )
 
 
@@ -59,6 +60,7 @@ importFrom(lattice,
 
 importFrom(cluster, 
   daisy,
+  pam,
   silhouette
 )
 
@@ -83,7 +85,8 @@ importFrom(reshape,
 )
 
 importFrom(scales,
-  rescale
+  rescale,
+  col_factor
 )
 
 importFrom(stringr, 
@@ -100,7 +103,8 @@ importFrom(sp,
   coordinates, 
   "coordinates<-", 
   proj4string, 
-  "proj4string<-"
+  "proj4string<-",
+  rbind.SpatialPoints
 )
 
 importFrom(Hmisc, 

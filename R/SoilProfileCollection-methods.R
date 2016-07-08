@@ -189,9 +189,9 @@ setMethod("horizonNames", "SoilProfileCollection",
 ## overloads
 ##
 
-
+### This will be greatly improved with new class structure
 ## concatentation
-## NOTE: data are re-sorted according to idname(objects[[1]])
+## TODO: concatenation of data with duplicated IDs in @site, but unique data in other @site fields, will result in corrupt SPC
 ## TODO: duplicates in @sp will cause errors
 ## TODO: duplicates are removed in all other slots... does this make sense?
 rbind.SoilProfileCollection <- function(...) {
@@ -221,7 +221,7 @@ rbind.SoilProfileCollection <- function(...) {
 	o.h <- lapply(objects, horizons)
 	o.s <- lapply(objects, site)
 	o.d <- lapply(objects, diagnostic_hz)
-	o.sp <- lapply(objects, function(i) i@sp)
+	o.sp <- lapply(objects, slot, 'sp')
 	
 	# sanity checks:
 	if(length(o.idname) > 1)
@@ -240,28 +240,35 @@ rbind.SoilProfileCollection <- function(...) {
 		stop('inconsistent CRS', call.=FALSE)
 	
 	# generate new SPC components
-	o.h <- unique(do.call('rbind', o.h)) # horizon data, must be re-ordered
-	o.s <- unique(do.call('rbind', o.s)) # site data, must be re-ordered
+	o.h <- unique(do.call('rbind', o.h)) # horizon data
+	o.s <- unique(do.call('rbind', o.s)) # site data
 	o.d <- unique(do.call('rbind', o.d)) # diagnostic data, leave as-is
 	
 	## 2015-12-18: removed re-ordering, was creating corrupt SPC objects
+	##             site and horizon data are implicitly ordered when making a new SoilProfileCollection
   
 	# spatial points require some more effort when spatial data are missing
 	o.1.sp <- objects[[1]]@sp
 	if(ncol(coordinates(o.1.sp)) == 1) # missing spatial data
 		o.sp <- o.1.sp # copy the first filler
 	
-	## TODO: how can we make sure that unique-ness is enforced? 
+	## 2015-12-18: added call to specific function: "sp::rbind.SpatialPoints"
 	# not missing spatial data
 	else
-		o.sp <- do.call('rbind', o.sp) # rbind properly
+		o.sp <- do.call("rbind.SpatialPoints", o.sp) # rbind properly
 	
 	# make SPC and return
 	res <- SoilProfileCollection(idcol=o.idname[[1]], depthcols=o.hz.depths[[1]], metadata=o.m[[1]], horizons=o.h, site=o.s, sp=o.sp, diagnostic=o.d)
 	
-	# one more final check:
+# 	# one more final check:
+# 	print(profile_id(res))
+# 	print( site(res)[[idname(res)]])
+# 	print(site(res))
+	
+	if(length(profile_id(res)) != length(site(res)[[idname(res)]]))
+	  stop("SPC object corruption. This shouldn't happen and will be fixed in aqp 2.0", call. = FALSE)
 	if(! all.equal(profile_id(res), site(res)[[idname(res)]]))
-	  stop('SPC object corruption. What now?')
+	  stop("SPC object corruption. This shouldn't happen and will be fixed in aqp 2.0", call. = FALSE)
   
 	return(res)
 	}
@@ -516,8 +523,8 @@ setMethod("subsetProfiles", "SoilProfileCollection",
 ## i = profile index
 ## j = horizon / slice index
 ##
-setMethod("[", "SoilProfileCollection",
-  function(x, i, j, ...) {
+setMethod("[", signature=c("SoilProfileCollection", i="ANY", j="ANY"),
+  function(x, i, j) {
 		
   	# check for missing i and j
   	if(missing(i) & missing(j))
@@ -600,8 +607,10 @@ setMethod("[", "SoilProfileCollection",
     else {
       res <- SoilProfileCollection(idcol=x@idcol, depthcols=x@depthcols, metadata=x@metadata, horizons=h, site=s, sp=sp, diagnostic=d)
       # one more final check:
+      if(length(profile_id(res)) != length(site(res)[[idname(res)]]))
+        stop("SPC object corruption. This shouldn't happen and will be fixed in aqp 2.0", call. = FALSE)
       if(! all.equal(profile_id(res), site(res)[[idname(res)]]))
-        stop('SPC object corruption. What now?')
+        stop("SPC object corruption. This shouldn't happen and will be fixed in aqp 2.0", call. = FALSE)
       
       return(res)
     }
