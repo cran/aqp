@@ -1,11 +1,12 @@
-19e610af1826fe4b992cb0f5e038c978 *DESCRIPTION
+641e956b6fcc2a55920a55106f3d4502 *DESCRIPTION
 1765a6677dbbf35098d09418b2c82829 *NAMESPACE
-fb22f0f54633d052a861d98852b9a5b5 *NEWS
+1c97237ad638040cfb281dc9d8e0c3d3 *NEWS
 1fbb2050ea7003bb0db05fe605e40449 *R/AAAA.R
 07682b5afbd7b9fd4d02780cf4d472f0 *R/Class-SoilProfileCollection.R
+e19471e0c4d0a6fa19f4c1f80b626a32 *R/SPC-find_horizons.R
 6a22ce837f222e110def21020252a604 *R/SoilProfileCollection-coercion.R
 ca1ca2d6ac2ed09cc41ea546f791166a *R/SoilProfileCollection-iterators.R
-bde97072e04cff1574b49291009b3bab *R/SoilProfileCollection-methods.R
+2950ee569e27c364593c2238e25e8196 *R/SoilProfileCollection-methods.R
 b3e8a344493d1a8caca0a41ba599425c *R/SoilProfileCollection-slice-methods.R
 277153ece03a7b720fc8ce95f9bf0193 *R/SoilProfileCollection-spatial.R
 a7d21248ae0a6a384fa2cf3372a217a2 *R/addVolumeFraction.R
@@ -23,7 +24,7 @@ f67f7be93794e5d566b4d2fac5358626 *R/getSoilDepthClass.R
 92bca158fdb941651e733d5afe08b11d *R/make.segments.R
 7dae76550bc2bca422b815c2e81d694c *R/missingDataGrid.R
 aafb1783f8020b37619c451b980a4721 *R/mostLikelyHzSequence.R
-5aa7dda0bc37358165ba4ea951743555 *R/munsell2rgb.R
+0af2a74d63be85451424d545b5607c5f *R/munsell2rgb.R
 1b854263fbdc4f2843441f9fbe5d1209 *R/panel.depth_function.R
 ec718ffe12e2832d72120131e0024c41 *R/plot_distance_graph.R
 c0e06296bf3c5b1c8c92c8cf5efec2bb *R/prepanel.depth_function.R
@@ -31,8 +32,8 @@ c0e06296bf3c5b1c8c92c8cf5efec2bb *R/prepanel.depth_function.R
 ce0eb5f2225f4d6956bbefdb77b72665 *R/profile_plot.R
 66cb04d92f13a3f982790f7da269d84b *R/random_profile.R
 2f9d965814ef58f666cd6864bb6a2fba *R/resample.twotheta.R
-9bfe05f8a13b92aa7ef623008162f5f1 *R/setters.R
-80178097ac01760d33c92a0b75c8d61c *R/sim.R
+7330f9aac31b493123cddf084dc94ebc *R/setters.R
+c8f78ce0bf678ce4eb0079d477e7706e *R/sim.R
 07f80d3465c237db9450a5b49fecd703 *R/slab.R
 be141fa701031b6bf6688dbae025e04e *R/soilColorSignature.R
 193c48f0f6319d74679a57587e06d380 *R/soil_slotting.R
@@ -66,8 +67,8 @@ da82da8e665b2c36eb621bcfa6382265 *man/addVolumeFraction.Rd
 76f3a427a1c50c0e88091d1560b1b14c *man/aggregateColor.Rd
 f5c42eb92ac2f995acd3d24dd3656a86 *man/aggregateSoilDepth.Rd
 2c21e6964d19990998a7971efffe242e *man/amarillo.Rd
-18a0e1861365422d51e626a7393e895a *man/aqp-package.Rd
-ed7090f15b2ce0e07ff104714195abc8 *man/ca630.Rd
+b6acd9b07b388800e1ab66098660e312 *man/aqp-package.Rd
+7794d4e4d22afb47a2b7ee916743c804 *man/ca630.Rd
 5b9e17f524a19c51b7182d34928df04f *man/estimateSoilDepth.Rd
 bd4cc66dd2b5ebb1d28a5b012126a5dd *man/evalGenHZ.Rd
 f26ecd49619dc9ca0d7ce15ea103fecc *man/evalMissingData.Rd

@@ -41,8 +41,9 @@ getClosestMunsellChip <- function(munsellColor, convertColors=TRUE, ...) {
   # extract pieces of hue
   hue.data <- .parseMunsellHue(cd$hue)
   
+  # note: this is incompatible with LazyData: true
   # extract pieces from unique Munsell hues
-  load(system.file("data/munsell.rda", package="aqp")[1]) 
+  load(system.file("data/munsell.rda", package="aqp")[1])
   all.hue.data <- na.omit(.parseMunsellHue(unique(munsell$hue)))
   
   # locate closest chip in `munsell` set of hues
@@ -111,9 +112,10 @@ rgb2munsell <- function(color) {
   # This is a hack to avoid munsell2rgb: "no visible binding for global variable munsell" at package R CMD check
   munsell <- NULL
   
+  # note: this is incompatible with LazyData: true
   # load look-up table from our package
-  # This should be moreover more foolproof than data(munsell) c/o PR
-  load(system.file("data/munsell.rda", package="aqp")[1]) 
+  # This should be more foolproof than data(munsell) c/o PR
+  load(system.file("data/munsell.rda", package="aqp")[1])
   
   # iterate over colors
   for(i in 1:n) {
@@ -166,9 +168,10 @@ munsell2rgb <- function(the_hue, the_value, the_chroma, alpha=1, maxColorValue=1
   # This is a hack to avoid munsell2rgb: "no visible binding for global variable munsell" at package R CMD check
   munsell <- NULL
   
+  # note: this is incompatible with LazyData: true
   # load look-up table from our package
   # This should be moreover more foolproof than data(munsell) c/o PR
-  load(system.file("data/munsell.rda", package="aqp")[1]) 
+  load(system.file("data/munsell.rda", package="aqp")[1])
   
   ## 2016-03-07: "fix" neutral hues
   ## they will typically be missing chroma or have some arbitrary number
