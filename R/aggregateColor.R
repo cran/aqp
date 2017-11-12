@@ -38,24 +38,32 @@ aggregateColor <- function(x, groups='genhz', col='soil_color') {
   })
   
   
-  ## TODO: LAB is the ideal color space for color averaging
-  ## but this would require an additional dependency on the colorspace package
-  # compute weighted mean color for each GHL
+  # compute weighted mean color for each GHL, in LAB colorspace
+  # TODO: this is similar to soilDB::mix_and_clean_colors(), consider consolidation
   s.agg <- ldply(s.scaled, function(i) {
-    # convert to RGB
+    # convert to sRGB
     v <- t(col2rgb(i[[col]])) / 255
+    
+    # convert to LAB
+    v <- convertColor(v, from='sRGB', to='Lab', from.ref.white='D65', to.ref.white = 'D65')
     
     # compute weighted mean via matrix manip
     w <- i$weight
     vw <- sweep(v, 1, STATS = w, FUN = '*')
     wm <- colSums(vw) / sum(w)
     
+    # convert back to sRGB
+    wm <- convertColor(wm, from='Lab', to='sRGB', from.ref.white='D65', to.ref.white = 'D65')
+    dimnames(wm)[[2]] <- c('red', 'green', 'blue')
+    
     # convert result back to R color specification
-    wm.col <- rgb(t(wm), maxColorValue = 1)
+    wm.col <- rgb(wm, maxColorValue = 1)
     
     # get closest Munsell color
-    wm.munsell <- rgb2munsell(t(wm))
-    res <- data.frame(munsell=wm.munsell, col=wm.col, t(wm), n=nrow(i))
+    wm.munsell <- rgb2munsell(wm)
+    
+    # consolidate and return
+    res <- data.frame(munsell=wm.munsell, col=wm.col, wm, n=nrow(i))
     return(res)
   })
   names(s.agg)[1] <- groups

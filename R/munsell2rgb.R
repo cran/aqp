@@ -103,7 +103,7 @@ parseMunsell <- function(munsellColor, convertColors=TRUE, ...) {
 
 # color is a matrix/vector of sRGB values in range of [0,1]
 # ideally output from munsell2rgb()
-rgb2munsell <- function(color) {
+rgb2munsell <- function(color, colorSpace='LAB', nClosest=1) {
   
   # vectorize via for-loop
   n <- nrow(color)
@@ -117,17 +117,40 @@ rgb2munsell <- function(color) {
   # This should be more foolproof than data(munsell) c/o PR
   load(system.file("data/munsell.rda", package="aqp")[1])
   
+  ## TODO (this is now the default)
+  ## - test
+  ## - report changes, possibly save for 2.0
+  ## - Euclidean distance most useful?
+  
+  ## TODO: this could probably be optimized
   # iterate over colors
   for(i in 1:n) {
     # convert current color to matrix, this will allow matrix and DF as input
-    this.color <- as.matrix(color[i, ])
+    this.color <- as.matrix(color[i, , drop=FALSE])
     
-    # euclidean distance (in RGB space) is our metric for closest-color
-    # d = sqrt(r^2 + g^2 + b^2)
-    sq.diff <- sweep(munsell[, 4:6], MARGIN=2, STATS=this.color, FUN='-')^2
-    sq.diff.sum.sqrt <- sqrt(rowSums(sq.diff))
-    idx <- which.min(sq.diff.sum.sqrt)
-    
+    if(colorSpace == 'sRGB') {
+      # euclidean distance (in sRGB space) is our metric for closest-color
+      # d = sqrt(r^2 + g^2 + b^2)
+      sq.diff <- sweep(munsell[, 4:6], MARGIN=2, STATS=this.color, FUN='-')^2
+      sq.diff.sum.sqrt <- sqrt(rowSums(sq.diff))
+      # rescale distances to 0-1
+      sq.diff.sum.sqrt <- sq.diff.sum.sqrt / max(sq.diff.sum.sqrt)
+      # return the closest n-matches
+      idx <- order(sq.diff.sum.sqrt)[1:nClosest]
+    }
+    if(colorSpace == 'LAB') {
+      # euclidean distance (in LAB space) is our metric for closest-color
+      # convert sRGB to LAB
+      this.color.lab <- convertColor(this.color, from='sRGB', to='Lab', from.ref.white='D65', to.ref.white = 'D65')
+      # d = sqrt(L^2 + A^2 + B^2)
+      sq.diff <- sweep(munsell[, 7:9], MARGIN=2, STATS=this.color.lab, FUN='-')^2
+      sq.diff.sum.sqrt <- sqrt(rowSums(sq.diff))
+      # rescale distances to 0-1
+      sq.diff.sum.sqrt <- sq.diff.sum.sqrt / max(sq.diff.sum.sqrt)
+      # return the closest n-matches
+      idx <- order(sq.diff.sum.sqrt)[1:nClosest]
+    }
+
     # with NA as an input, there will be no output
     if(length(idx) == 0)
       res[[i]] <- data.frame(hue=NA, value=NA, chroma=NA, sigma=NA, stringsAsFactors=FALSE)

@@ -1,3 +1,24 @@
+-------------------------- aqp 1.15 (2017-11-11) ------------------------
+* push to CRAN, getting ready for aqp 2.0
+
+-------------------------- aqp 1.14 (2017-09-19) ------------------------
+* missingDataGrid() relaxing slice() with strict=FALSE
+
+-------------------------- aqp 1.12 (2017-07-05) ------------------------
+* CIE LAB colors are now in the `munsell` look-up table
+
+-------------------------- aqp 1.12 (2017-07-05) ------------------------
+* plotSPC() now able to deal with missing horizon data (thanks Stephen R.)
+* this is likely the last release before aqp 2.0
+
+-------------------------- aqp 1.11 (2017-06-13) ------------------------
+* rgb2munsell() now uses CIELAB colorspace for lookup, results are more accurate as compared to using sRGB colorspace
+
+-------------------------- aqp 1.10-4 (2017-05-02) ------------------------
+* texture.triangle.low.rv.high() renamed to textureTriangleSummary(). The old name still works, but a message is issued
+* new argument to textureTriangleSummary() texture.names: for toggling texture class names
+* minor bug fix in textureTriangleSummary(..., sim=TRUE), previous simulated compositional data was not correct because the stats::var() was being used vs. compositions::var.acomp(). the variance / covariance values were 2-5x too small.
+* new function tauW(), addd by D.G. Rossiter: see manual page for references
 
 -------------------------- aqp 1.10 (2017-01-05) ------------------------
 * fixed major bug (https://github.com/ncss-tech/aqp/issues/23) related to editing horizon-level attributes after rbinding
@@ -45,7 +66,6 @@
 * new function aggregateColor() and associated helper function sharpshootR::aggregateColorPlot()
 * more code clean-up and fixes in examples to make R CMD check --as-cran happy
 * fixed some ancient examples in the profileApply() manual page
-* this is the last major update before aqp 2.0, expecting a major re-write of core SoilProfileCollection class and methods
 
 -------------------------- aqp 1.8-5 (2015-04-17) --------------------------
 * bug fixes and documentation updates

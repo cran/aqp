@@ -271,8 +271,12 @@ rbind.SoilProfileCollection <- function(...) {
 	  stop("SPC object corruption. This shouldn't happen and will be fixed in aqp 2.0", call. = FALSE)
   
 	return(res)
-	}
+}
 
+
+## TODO: this doesn't work as expected ... fix in 2.0
+## overload rbind
+#setMethod("rbind", "SoilProfileCollection", .rbind.SoilProfileCollection)
 
 
 
@@ -298,11 +302,10 @@ definition=function(x, v=NULL) {
   if(!missing(v)) {
   	# combine bottom depths with IDs and variable
   	h <- horizons(x)[, c(hz_bottom_depths, idname(x), v)]
-  }
-  else {
-  	# combine bottom depths with IDs
+  } else {
+    # combine bottom depths with IDs
   	h <- horizons(x)[, c(hz_bottom_depths, idname(x))]
-  }
+  	}
   
   # filter out missing data
   h <- h[complete.cases(h), ]
@@ -324,11 +327,10 @@ definition=function(x, v=NULL){
 	if(!missing(v)) {
 		# combine bottom depths with IDs and variable
 		h <- horizons(x)[, c(hz_bottom_depths, idname(x), v)]
-	}
-	else {
-		# combine bottom depths with IDs
+	}	else {
+	  # combine bottom depths with IDs
 		h <- horizons(x)[, c(hz_bottom_depths, idname(x))]
-	}
+		}
 	
 	# filter out missing data
 	h <- h[complete.cases(h), ]
@@ -389,24 +391,26 @@ setMethod("$", "SoilProfileCollection",
 	# get names from site and hz data
 	s.names <- siteNames(x)
 	h.names <- horizonNames(x)
-
-	# when site data are initialized from an external DF, it is possible that
-	# there will be duplicate column names
-	if((name %in% h.names) & (name %in% s.names))
-		warning('column name is present in horizon and site data, extracting from horizon data only', call.=FALSE)
-
+  
+	# ## note: warnings may be issued when using auto-complete feature in RStudio
+	# # when site data are initialized from an external DF, it is possible that
+	# # there will be duplicate column names
+	# if((name %in% h.names) && (name %in% s.names)) {
+	#   warning('column name is present in horizon and site data, extracting from horizon data only', call.=FALSE)
+	# }
+	
 	# get column from horizon data
-    if (name %in% h.names)
+    if (name %in% h.names) {
       res <- horizons(x)[[name]]
-
-    # otherwise check site data
-    else
-      if (name %in% s.names)
-		res <- site(x)[[name]]
-
-	  # if still missing return NULL
-	  else
-		res <- NULL
+    } else {
+      # otherwise check site data
+      if (name %in% s.names) {
+        res <- site(x)[[name]]
+      } else {
+        # if still missing return NULL
+        res <- NULL
+      }
+    }
 
 	return(res)
   }
