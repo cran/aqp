@@ -23,31 +23,48 @@ groupedProfilePlot <- function(x, groups, group.name.offset=-5, group.name.cex=0
     lab <- factor(lab, levels=c(o.levels, '<missing>'))
   }
     
-  # get just those levels that are in our data, preserving order of original levels
-  unique.lab <- levels(lab)[which(levels(lab) %in% unique(lab))]
-  group.lengths <- rle(as.numeric(lab))$lengths
-  lab.positions <- (cumsum(group.lengths) - (group.lengths / 2)) + 0.5
-  boundary.positions <-  cumsum(group.lengths)[-length(group.lengths)] + 0.5
-  
   # setup plot with plot.SoilProfileCollection
   plot(x, plot.order=new.order, ...)
   
-  # add group boundaries
-  if(break.style == 'line')
-    abline(v=boundary.positions, lty=group.line.lty, lwd=group.line.lwd, col=group.line.col)
-  if(break.style == 'arrow')
-    arrows(x0=c(0.5, boundary.positions), x1=c(boundary.positions, length(x)+0.5), y0=arrow.offset, code=3, length=arrow.length, lty=group.line.lty, lwd=group.line.lwd, col=group.line.col)
-  if(break.style == 'both') {
-    abline(v=boundary.positions, lty=group.line.lty, lwd=group.line.lwd, col=group.line.col)
-    arrows(x0=c(0.5, boundary.positions), x1=c(boundary.positions, length(x)+0.5), y0=arrow.offset, code=3, length=arrow.length, lty=group.line.lty, lwd=group.line.lwd, col=group.line.col)
+  # get last plot parameters
+  lsp <- get('last_spc_plot', envir=aqp.env)
+  
+  # get just those levels that are in our data, preserving order of original levels
+  unique.lab <- levels(lab)[which(levels(lab) %in% unique(lab))]
+  group.lengths <- rle(as.numeric(lab))$lengths
+  
+  # label positions
+  lab.positions <- (cumsum(group.lengths) - (group.lengths / 2)) + 0.5
+  
+  # group boundaries on x-axis
+  boundary.positions <-  cumsum(group.lengths)[-length(group.lengths)] + 0.5
+  
+  # resonable upper / lower boundaries on y-axis
+  # these are informed by plotting parameters sent to plotSPC()
+  upper.position <- (lsp$y.offset) + (group.name.offset/2 * lsp$scaling.factor)
+  lower.position <- (lsp$y.offset) + (lsp$max.depth * lsp$scaling.factor)
+  
+  if(length(boundary.positions)) { # only add grouping symbols if number of groups is > 1
+    # add group boundaries
+    if(break.style == 'line')
+      segments(y0 = upper.position, y1=lower.position, x0=boundary.positions, x1=boundary.positions, lty=group.line.lty, lwd=group.line.lwd, col=group.line.col)
+    
+    if(break.style == 'arrow')
+      arrows(x0=c(0.5, boundary.positions), x1=c(boundary.positions, length(x)+0.5), y0=arrow.offset, code=3, length=arrow.length, lty=group.line.lty, lwd=group.line.lwd, col=group.line.col)
+    
+    if(break.style == 'both') {
+      segments(y0 = upper.position, y1=lower.position, x0=boundary.positions, x1=boundary.positions, lty=group.line.lty, lwd=group.line.lwd, col=group.line.col)
+      arrows(x0=c(0.5, boundary.positions), x1=c(boundary.positions, length(x)+0.5), y0=arrow.offset, code=3, length=arrow.length, lty=group.line.lty, lwd=group.line.lwd, col=group.line.col)
+    }
   }
   
   # annotate with group labels
-  text(lab.positions, group.name.offset, unique.lab, cex=group.name.cex, adj=0.5, font=4)
+  text(lab.positions, group.name.offset, unique.lab, cex=group.name.cex, adj=c(0.75, 0), font=4)
 }
 
 
 
+## TODO: labeling is not very helpful
 ## TODO: figure out intellegent recycling of arguments
 ## TODO: no mechanism for merged legends
 plotMultipleSPC <- function(spc.list, group.labels, args=rep(list(NA), times=length(spc.list)), arrow.offset=2, bracket.base.depth=95, ...) {
@@ -80,6 +97,7 @@ plotMultipleSPC <- function(spc.list, group.labels, args=rep(list(NA), times=len
 }
 
 
+## TODO: this doesn't take into account non-default figure geometry
 # annotate profile plots with group labels, usually below
 profileGroupLabels <- function(x0, x1, labels, y0=100, y1=98, label.offset=2, label.cex=0.75) {
   
@@ -101,91 +119,6 @@ profileGroupLabels <- function(x0, x1, labels, y0=100, y1=98, label.offset=2, la
 }
 
 
-## TODO: still not completely generalized
-# annotate elements from @diagnostic with brackets 
-# mostly a helper function for addBracket()
-addDiagnosticBracket <- function(s, kind, id=idname(s), top='featdept', bottom='featdepb', ...) {
-	
-  # get plotting details from aqp environment
-  lsp <- get('last_spc_plot', envir=aqp.env)
-    
-  ## TODO: integrate these
-  y.offset <- lsp$y.offset
-  scaling.factor <- lsp$scaling.factor
-  plot.order <- lsp$plot.order
-  
-  # extract diagnostic horizon information
-  d <- diagnostic_hz(s)
-  d <- d[which(d$diag_kind == kind), ]
-  
-  # generate index linking our top/bottom depths with original ordering
-  key <- match(d[[id]], profile_id(s))
-  
-  # add backets
-  addBracket(top=d[[top]], bottom=d[[bottom]], idx=key, ...)
-}
-
-## TODO: add proper documentation
-## NOTE: this function is vectorized
-# internal function for plotting a bracket (usually defines a diagnostic feature or similar)
-# idx: (optional) integer index to profile
-# top: top depth
-# bottom: bottom depth
-# tick.length: bracket tick length
-# offset: left-hand offset from profile center
-addBracket <- function(top, bottom=NULL, idx=NULL, label=NULL, label.cex=0.75, tick.length=0.05, arrow.length=0.05, offset=-0.3, missing.bottom.depth=25, ...) {
-  
-  # get plotting details from aqp environment
-  lsp <- get('last_spc_plot', envir=aqp.env)
-  depth.offset <- lsp$y.offset
-  sf <- lsp$scaling.factor
-  w <- lsp$width
-  
-  # get number of brackets ~ number bracket top boundaries
-  n <- length(top)
-  
-  # if missing an specific index, assume plotting order
-  if(is.null(idx))
-    plot.order <- lsp$plot.order
-  else
-    plot.order <- idx
-  
-  
-  # determine horizon depths in current setting
-  # depth_prime = (depth * scaling factor) + y.offset
-  top <- (top * sf) + depth.offset
-  bottom <- (bottom * sf) + depth.offset
-  
-	# normal case: both top and bottom defined
-	if(!missing(top) & !missing(bottom)) {
-    # x-positions
-    x.1 <- 1:n + offset
-    x.2 <- x.1 + tick.length
-		# top tick
-		segments(x.1, top[plot.order], x.2, top[plot.order], lend=2, ...)
-		# bottom tick
-		segments(x.1, bottom[plot.order], x.2, bottom[plot.order], lend=2, ...)
-		# vertical bar
-		segments(x.1, top[plot.order], x.1, bottom[plot.order], lend=2, ...)
-	}
-	
-	# missing bottom: replace bottom tick with arrow head
-	if(!missing(top) & missing(bottom)) {
-	  # x-positions
-	  x.1 <- 1:n + offset
-	  x.2 <- x.1 + tick.length
-		# top tick
-		segments(x.1, top[plot.order], x.2, top[plot.order], lend=2, ...)
-		# vertical bar is now an arrow
-		arrows(x.1, top[plot.order], x.1, top[plot.order] + missing.bottom.depth, length=arrow.length, lend=2, ...)
-	}
-	
-  # optionally plot label
-  if(!missing(top) & !missing(label)){
-    text(x.1 - 0.05, (top[plot.order] + bottom[plot.order])/2, label, srt=90, cex=label.cex, pos=3)
-  }
-  
-}
 
 
 
@@ -220,9 +153,20 @@ hzDistinctnessCodeToOffset <- function(x, codes=c('A','C','G','D'), offset=c(0.5
 ## basic function
 plotSPC <- function(x, color='soil_color', width=0.2, name=NULL, label=idname(x), alt.label=NULL, alt.label.col='black', cex.names=0.5, cex.depth.axis=cex.names, cex.id=cex.names+(0.2*cex.names), print.id=TRUE, id.style='auto', plot.order=1:length(x), add=FALSE, scaling.factor=1, y.offset=0, x.idx.offset=0, n=length(x), max.depth=ifelse(is.infinite(max(x)), 200, max(x)), n.depth.ticks=5, shrink=FALSE, shrink.cutoff=3, abbr=FALSE, abbr.cutoff=5, divide.hz=TRUE, hz.distinctness.offset=NULL, hz.distinctness.offset.col='black', hz.distinctness.offset.lty=2, axis.line.offset=-2.5, plot.depth.axis=TRUE, density=NULL, col.label=color, col.palette = rev(brewer.pal(10, 'Spectral')), col.legend.cex=1, lwd=1, lty=1, default.color=grey(0.95), ...) {
   
+  # get profile IDs
+  pIDs <- profile_id(x)
+  
   # save arguments to aqp env
-  lsp <- list('width'=width, 'plot.order'=plot.order, 'y.offset'=y.offset, 'scaling.factor'=scaling.factor)
-  assign('last_spc_plot', lsp, envir=aqp.env)
+  lsp <- list('width'=width, 
+              'plot.order'=plot.order, 
+              'pIDs'=pIDs[plot.order],
+              'idname'=idname(x),
+              'y.offset'=y.offset, 
+              'scaling.factor'=scaling.factor, 
+              'max.depth'=max.depth, 
+              n=n)
+  
+  assign('last_spc_plot', lsp, envir=aqp.env, )
   
   # get horizons
   h <- horizons(x)
@@ -307,9 +251,6 @@ plotSPC <- function(x, color='soil_color', width=0.2, name=NULL, label=idname(x)
   hzDepthCols <- horizonDepths(x)
   tcol <- hzDepthCols[1]
   bcol <- hzDepthCols[2]
-  
-  # get profile IDs
-  pIDs <- profile_id(x)
   
   # get profile labels from @site
   pLabels <- site(x)[[label]]
