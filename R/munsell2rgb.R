@@ -101,7 +101,7 @@ parseMunsell <- function(munsellColor, convertColors=TRUE, ...) {
 
 
 
-# color is a matrix/vector of sRGB values in range of [0,1]
+# color is a matrix/data.frame of sRGB values in range of [0,1]
 # ideally output from munsell2rgb()
 rgb2munsell <- function(color, colorSpace='LAB', nClosest=1) {
   
@@ -121,6 +121,7 @@ rgb2munsell <- function(color, colorSpace='LAB', nClosest=1) {
   ## - test
   ## - report changes, possibly save for 2.0
   ## - Euclidean distance most useful?
+  ## - consider shades::distance() for CIE delta-E metric (e.g. perceptual distance)
   
   ## TODO: this could probably be optimized
   # iterate over colors
