@@ -64,6 +64,31 @@ test_that("SPC deconstruction into a data.frame", {
 })
 
 
+test_that("SPC deconstruction into a list", {
+  
+  # do it here
+  l <- as(sp1, 'list')
+  
+  # result should be a list
+  expect_match(class(l), 'list')
+  
+  # there should be no NULL data, e.g. missing slots
+  res <- sapply(l, is.null)
+  expect_false(any(res))
+  
+  # check internals
+  expect_equivalent(l$idcol, idname(sp1))
+  expect_equivalent(l$hzidcol, hzidname(sp1))
+  expect_equivalent(l$depthcols, horizonDepths(sp1))
+  expect_equivalent(l$metadata, metadata(sp1))
+  expect_equivalent(l$horizons, horizons(sp1))
+  expect_equivalent(l$site, site(sp1))
+  expect_equivalent(l$sp, sp1@sp)
+  expect_equivalent(l$diagnostic, diagnostic_hz(sp1))
+  
+})
+
+
 test_that("SPC subsetting ", {
   
   # profile subsets
@@ -128,6 +153,171 @@ test_that("SPC misc. ", {
   expect_equal(ncol(metadata(sp1)), 2)
   
 })
+
+
+test_that("SPC depth columns get/set ", {
+  
+  # getting 
+  hd <- horizonDepths(sp1)
+  expect_equal(hd, c('top', 'bottom'))
+  
+  # setting
+  hd.new <- c('t', 'b')
+  horizonDepths(sp1) <- hd.new
+  expect_equal(horizonDepths(sp1), hd.new)
+  
+  # error conditions
+  expect_error(horizonDepths(sp1) <- NA)
+  expect_error(horizonDepths(sp1) <- NULL)
+  expect_error(horizonDepths(sp1) <- c(1,2,3))
+  expect_error(horizonDepths(sp1) <- c('t'))
+  expect_error(horizonDepths(sp1) <- c('t', NA))
+  
+  # warnings
+  expect_warning(horizonDepths(sp1) <- c('t', '2342sdrse'))
+  
+})
+
+
+test_that("SPC horizonNames get/set ", {
+  
+  # getting 
+  hn <- horizonNames(sp1)
+  expect_equal(hn, c("id", "top", "bottom", "bound_distinct", "bound_topography",
+                     "name", "texture", "prop", "structure_grade", "structure_size", 
+                     "structure_type", "stickiness", "plasticity", "field_ph", "hue", 
+                     "value", "chroma", "hzID"))
+  
+  # setting
+  idx <- match('chroma', hn)
+  hn[idx] <- 'g'
+  horizonNames(sp1) <- hn
+  expect_equal(horizonNames(sp1), hn)
+  
+  # error conditions
+  expect_error(horizonNames(sp1) <- NA)
+  expect_error(horizonNames(sp1) <- NULL)
+  expect_error(horizonNames(sp1) <- c(1,2,3))
+  expect_error(horizonNames(sp1) <- c('t'))
+  expect_error(horizonNames(sp1) <- c('t', NA))
+  expect_error(horizonNames(sp1) <- hn[-1])
+  
+  # warnings
+  hn[idx] <- '   g'
+  expect_warning(horizonNames(sp1) <- hn)
+  
+})
+
+
+test_that("SPC horizon ID get/set ", {
+  
+  # automatically generated horizon IDs
+  auto.hz.ids <- hzID(sp1)
+  
+  # should be 1:nrow(sp1)
+  expect_equivalent(auto.hz.ids, seq_len(nrow(sp1)))
+  
+  # try replacing with reasonable IDs
+  hzID(sp1) <- rev(hzID(sp1))
+  expect_equivalent(hzID(sp1), rev(seq_len(nrow(sp1))))
+  
+  # try replacing with bogus values
+  expect_error(hzID(sp1) <- 1)
+  # non-unique
+  expect_error(hzID(sp1) <- sample(hzID(sp1), replace = TRUE))
+  
+})
+
+
+test_that("SPC horizon ID name get/set ", {
+  
+  # check default
+  expect_equivalent(hzidname(sp1), 'hzID')
+  
+  # make a new horizon ID
+  sp1$junk <- 1:nrow(sp1)
+  hzidname(sp1) <- 'junk'
+  expect_equivalent(hzidname(sp1), 'junk')
+  
+  # error conditions:
+  # no column
+  expect_error(hzidname(sp1) <- 'xxx')
+  
+  # not unique
+  expect_error(hzidname(sp1) <- 'top')
+  
+})
+
+test_that("SPC horizon ID get/set ", {
+  
+  # automatically generated horizon IDs
+  auto.hz.ids <- hzID(sp1)
+  
+  # should be 1:nrow(sp1)
+  expect_equivalent(auto.hz.ids, seq_len(nrow(sp1)))
+  
+  # try replacing with reasonable IDs
+  hzID(sp1) <- rev(hzID(sp1))
+  expect_equivalent(hzID(sp1), rev(seq_len(nrow(sp1))))
+  
+  # try replacing with bogus values
+  expect_error(hzID(sp1) <- 1)
+  # non-unique
+  expect_error(hzID(sp1) <- sample(hzID(sp1), replace = TRUE))
+  
+})
+
+
+test_that("SPC profile ID get/set ", {
+  
+  # original
+  pIDs <- profile_id(sp1)
+  
+  # new
+  pIDs.new <- sprintf("%s-copy", pIDs)
+  
+  # try re-setting
+  profile_id(sp1) <- pIDs.new
+  
+  # were the IDs altered?
+  expect_equivalent(profile_id(sp1), pIDs.new)
+  
+  # bogus edits
+  expect_error(profile_id(sp1) <- 1)
+  expect_error(profile_id(sp1) <- sample(pIDs, replace = TRUE))
+  expect_error(profile_id(sp1) <- c(NA, pIDs[-1]))
+  
+})
+
+
+test_that("SPC horizon ID init conflicts", {
+  
+  # decompose, re-init and test for message
+  x <- sp1
+  x <- as(x, 'data.frame')
+  expect_message(depths(x) <- id ~ top + bottom, "^using")
+  expect_equivalent(hzidname(x), 'hzID')
+  
+  # decompose, add non-unique column conflicing with hzID
+  x <- sp1
+  x <- as(x, 'data.frame')
+  x$hzID <- 1
+  expect_warning(depths(x) <- id ~ top + bottom, "not a unique horizon ID, using")
+  # test backup name
+  expect_equivalent(hzidname(x), 'hzID_')
+  
+  # special case: IDs resulting from slice()
+  s <- slice(sp1, 0:100 ~ .)
+  expect_equivalent(hzidname(s), 'sliceID')
+  # check to make sure hzID and sliceID are present
+  expect_equal(grep('hzID|sliceID', horizonNames(s)), c(18, 20))
+  
+})
+
+
+
+
+
 
 
 

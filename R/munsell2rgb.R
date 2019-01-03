@@ -1,4 +1,6 @@
 
+## BUG: .parseMunsellHue('G1') adds to row count of results
+# https://github.com/ncss-tech/aqp/issues/66
 
 # split standard Munsell hue into character | numeric parts
 # function is vectorized
@@ -6,8 +8,21 @@
 # hue.numeric hue.character
 #     2.3            YR
 .parseMunsellHue <- function(hue) {
+  
+  # NA not permitted, convert to ''
+  hue <- ifelse(is.na(hue), '', hue)
+  
+  ## TODO: replace with stringr / stringi version for saftey
   # extract numeric part from hue
-  hue.numeric <- unlist(strsplit(hue, split='[^0-9.]+'))
+  # danger! empty strings will result in an empty list element
+  nm.part <- strsplit(hue, split='[^0-9.]+', )
+  
+  # replace empty list elements with ''
+  nm.part[which(sapply(nm.part, length) < 1)] <- ''
+  
+  # convert to vector
+  hue.numeric <- unlist(nm.part)
+  
   # extract character part from hue
   hue.character <- vector(mode='character', length = length(hue))
   for(i in seq_along(hue)){
@@ -28,6 +43,8 @@
   hue.numeric <- as.numeric(hue.numeric)
   return(data.frame(hue.numeric, hue.character, stringsAsFactors = FALSE))
 }
+
+
 
 # return the closest Munsell chip from `munsell` data in aqp package
 # function is vectorized
@@ -77,13 +94,15 @@ getClosestMunsellChip <- function(munsellColor, convertColors=TRUE, ...) {
 
 
 
-## TODO: this will not correctly parse gley or neutral colors
+## TODO: this will not correctly parse gley
 # convert a color string '10YR 4/3' to sRGB or R color
 parseMunsell <- function(munsellColor, convertColors=TRUE, ...) {
   # sanity check:
   if(all(is.na(munsellColor)) | all(is.null(munsellColor)) | all(munsellColor == ''))
     return(rep(NA, times=length(munsellColor)))
   
+  ## TODO: switch to stringr::str_split()
+  ## https://github.com/ncss-tech/aqp/issues/66
   pieces <- strsplit(munsellColor, ' ', fixed=TRUE)
   pieces.2 <- sapply(pieces, function(i) strsplit(i[2], '/', fixed=TRUE))
   hue <- sapply(pieces, function(i) i[1])
@@ -98,7 +117,6 @@ parseMunsell <- function(munsellColor, convertColors=TRUE, ...) {
   res <- munsell2rgb(hue, value, chroma, ...)
   return(res)
 }
-
 
 
 # color is a matrix/data.frame of sRGB values in range of [0,1]
@@ -121,7 +139,11 @@ rgb2munsell <- function(color, colorSpace='LAB', nClosest=1) {
   ## - test
   ## - report changes, possibly save for 2.0
   ## - Euclidean distance most useful?
-  ## - consider shades::distance() for CIE delta-E metric (e.g. perceptual distance)
+  ## - farver package may be faster and implements distance metrics: https://github.com/thomasp85/farver
+  ##    + added farver to suggests as of 1.17, distance calc is fully vectorized I think
+  
+  ### problems described here, with possible solution, needs testing: 
+  ### https://github.com/ncss-tech/aqp/issues/67
   
   ## TODO: this could probably be optimized
   # iterate over colors
@@ -146,12 +168,13 @@ rgb2munsell <- function(color, colorSpace='LAB', nClosest=1) {
       # d = sqrt(L^2 + A^2 + B^2)
       sq.diff <- sweep(munsell[, 7:9], MARGIN=2, STATS=this.color.lab, FUN='-')^2
       sq.diff.sum.sqrt <- sqrt(rowSums(sq.diff))
+      ## TODO why re-scale?
       # rescale distances to 0-1
       sq.diff.sum.sqrt <- sq.diff.sum.sqrt / max(sq.diff.sum.sqrt)
       # return the closest n-matches
       idx <- order(sq.diff.sum.sqrt)[1:nClosest]
     }
-
+    
     # with NA as an input, there will be no output
     if(length(idx) == 0)
       res[[i]] <- data.frame(hue=NA, value=NA, chroma=NA, sigma=NA, stringsAsFactors=FALSE)
@@ -166,8 +189,6 @@ rgb2munsell <- function(color, colorSpace='LAB', nClosest=1) {
 }
 
 # TODO if alpha is greater than maxColorValue, there will be an error
-# TODO: properly convert N chips
-# TODO: correctly interpret values of 2.5
 # convert munsell Hue, Value, Chroma into sRGB
 # user can adjust how rgb() function will return an R-friendly color
 munsell2rgb <- function(the_hue, the_value, the_chroma, alpha=1, maxColorValue=1, return_triplets=FALSE) {

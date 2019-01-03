@@ -31,12 +31,27 @@
 
 \alias{horizonDepths}
 \alias{horizonDepths,SoilProfileCollection-method}
+\alias{horizonDepths<-}
+\alias{horizonDepths<-,SoilProfileCollection-method}
 
 \alias{idname}
 \alias{idname,SoilProfileCollection-method}
 
 \alias{profile_id}
 \alias{profile_id,SoilProfileCollection-method}
+\alias{profile_id<-}
+\alias{profile_id<-,SoilProfileCollection-method}
+
+\alias{hzID}
+\alias{hzID,SoilProfileCollection-method}
+\alias{hzID<-}
+\alias{hzID<-,SoilProfileCollection-method}
+
+\alias{hzidname}
+\alias{hzidname,SoilProfileCollection-method}
+\alias{hzidname<-}
+\alias{hzidname<-,SoilProfileCollection-method}
+
 
 \title{Getters, Setters, and Utility Methods for SoilProfileCollection Objects}
 \description{Getters, Setters, and Utility Methods for SoilProfileCollection Objects}
@@ -93,6 +108,16 @@ site(sp1) <- ~ group
 # note that IDs should all be character class
 d <- data.frame(id=profile_id(sp1), p=runif(n=length(sp1)), stringsAsFactors=FALSE)
 site(sp1) <- d
+
+
+# edit horizon depths
+horizonDepths(sp1) <- c('t', 'b')
+horizonDepths(sp1)
+
+# edit profile IDs
+p <- sprintf("\%s-new", profile_id(sp1))
+profile_id(sp1) <- p
+profile_id(sp1)
 
 }
 \keyword{methods}
