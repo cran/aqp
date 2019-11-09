@@ -4,6 +4,7 @@
 # * plot in layout similar to Munsell Color Book, alpha ~ frequency
 # * distance matrix calculation takes time, careful with n > 1,000
 # * gower's distance of {L,A,B} looks pretty good too
+# * more control over graphical elements and par()
 
 ## quick preview of colors, sorted by clustering of CIE LAB representation
 # grid size estimation needs some work
@@ -39,7 +40,7 @@ previewColors <- function(cols, method='grid', col.order=NULL, nrow=ceiling(sqrt
     m[1:length(cols)] <- cols[col.order]
     
     par(mar=c(1,0,3,0))
-    plot(1, 1, type='n', axes=FALSE, xlab='', ylab='', ylim=c(ncol+0.5, 0.5), xlim=c(0.5, nrow+0.5))
+    plot(1, 1, type='n', axes=FALSE, xlab='', ylab='', xlim=c(0.5, ncol+0.5), ylim=c(0.5, nrow+0.5))
     rect(xleft = col(m) - 0.5, ybottom = row(m) -0.5, xright = col(m) + 0.5, ytop = row(m) + 0.5, col = m, border = border.col, lwd=0.5)
     
     invisible(col.order)
@@ -51,8 +52,10 @@ previewColors <- function(cols, method='grid', col.order=NULL, nrow=ceiling(sqrt
   cols.lab <- grDevices::convertColor(cols.srgb, from = 'sRGB', to = 'Lab', from.ref.white='D65', to.ref.white='D65', clip=FALSE)
   
   # distances are based on CIE2000 color comparison
-  d <- farver::compare_colour(cols.lab, cols.lab, from_space='lab', to_space = 'lab', method='CIE2000')
-  d <- as.dist(d)
+  # note: single argument -> all pair-wise distances
+  # output is transposed relative to `dist` object
+  d <- farver::compare_colour(cols.lab, from_space='lab', to_space = 'lab', method='CIE2000')
+  d <- as.dist(t(d))
   
   # distances in CIELAB
   # col.order <- cluster::diana(cols.lab, stand = TRUE)$order
@@ -66,7 +69,7 @@ previewColors <- function(cols, method='grid', col.order=NULL, nrow=ceiling(sqrt
     m[1:length(cols)] <- cols[col.order]
     
     par(mar=c(1,0,3,0))
-    plot(1, 1, type='n', axes=FALSE, xlab='', ylab='', ylim=c(ncol+0.5, 0.5), xlim=c(0.5, nrow+0.5))
+    plot(1, 1, type='n', axes=FALSE, xlab='', ylab='', xlim=c(0.5, ncol+0.5), ylim=c(0.5, nrow+0.5))
     rect(xleft = col(m) - 0.5, ybottom = row(m) -0.5, xright = col(m) + 0.5, ytop = row(m) + 0.5, col = m, border = border.col, lwd=0.5)
     
     invisible(col.order)
@@ -83,7 +86,7 @@ previewColors <- function(cols, method='grid', col.order=NULL, nrow=ceiling(sqrt
     # simple plot, no indication of density
     par(mar=c(1,1,3,1))
     plot(mds, type='n', axes=FALSE)
-    grid(nx=10, ny=10, col = 'black')
+    grid(nx=10, ny=10, col=par('fg'))
     points(mds, pch=15, col=cols, cex=pt.cex)
     box()
   }

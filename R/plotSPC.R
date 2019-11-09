@@ -1,15 +1,25 @@
+## 2019-07-16: moved util functions to `sketch-utils.R`
 
-# simple function to convert horizon boundary distinctness codes into vertical (+/-) offsets
-# based on "red book" version 3.0
-hzDistinctnessCodeToOffset <- function(x, codes=c('A','C','G','D'), offset=c(0.5, 1.5, 5, 10)) {	
-	x <- as.character(x)
-	x.code <- match(x, codes)
-	x.offset <- offset[x.code]
-	x.offset <- ifelse(is.na(x.offset), 0, x.offset)
-	return(x.offset)
+
+# split legend into two rows, and create indices
+# any more classes than that and things become impossible to read
+# n: total number of classes
+.splitLegend <- function(n) {
+  
+  #  make enough room for even division of odd numbers
+  n.per.row <- ceiling(n / 2)
+  
+  # make indices for first row
+  row.1.idx <- seq(from=1, to=n.per.row)
+  row.2.idx <- seq(from=n.per.row + 1, to=n)
+  
+  res <- list(
+    row.1=row.1.idx, 
+    row.2=row.2.idx
+  )
+  
+  return(res)
 }
-
-
 
 # Function testing the validity of a colour expressed as a character string
 # Uses col2rgb() to test the validity
@@ -29,7 +39,7 @@ hzDistinctnessCodeToOffset <- function(x, codes=c('A','C','G','D'), offset=c(0.5
 # TODO: move some of the processing outside of the main loop: column names, etc.
 
 ## basic function
-plotSPC <- function(x, color='soil_color', width=0.2, name=NULL, label=idname(x), alt.label=NULL, alt.label.col='black', cex.names=0.5, cex.depth.axis=cex.names, cex.id=cex.names+(0.2*cex.names), print.id=TRUE, id.style='auto', plot.order=1:length(x), add=FALSE, scaling.factor=1, y.offset=0, x.idx.offset=0, n=length(x), max.depth=ifelse(is.infinite(max(x)), 200, max(x)), n.depth.ticks=5, shrink=FALSE, shrink.cutoff=3, abbr=FALSE, abbr.cutoff=5, divide.hz=TRUE, hz.distinctness.offset=NULL, hz.distinctness.offset.col='black', hz.distinctness.offset.lty=2, axis.line.offset=-2.5, plot.depth.axis=TRUE, density=NULL, col.label=color, col.palette = rev(brewer.pal(10, 'Spectral')), col.legend.cex=1, n.legend=8, lwd=1, lty=1, default.color=grey(0.95), ...) {
+plotSPC <- function(x, color='soil_color', width=0.2, name=NULL, label=idname(x), alt.label=NULL, alt.label.col='black', cex.names=0.5, cex.depth.axis=cex.names, cex.id=cex.names+(0.2*cex.names), font.id=2, print.id=TRUE, id.style='auto', plot.order=1:length(x), relative.pos=1:length(x), add=FALSE, scaling.factor=1, y.offset=0, x.idx.offset=0, n=length(x), max.depth=ifelse(is.infinite(max(x)), 200, max(x)), n.depth.ticks=5, shrink=FALSE, shrink.cutoff=3, abbr=FALSE, abbr.cutoff=5, divide.hz=TRUE, hz.distinctness.offset=NULL, hz.distinctness.offset.col='black', hz.distinctness.offset.lty=2, axis.line.offset=-2.5, plot.depth.axis=TRUE, density=NULL, col.label=color, col.palette = rev(brewer.pal(10, 'Spectral')), col.legend.cex=1, n.legend=8, lwd=1, lty=1, default.color=grey(0.95), ...) {
   
   ## fudge factors
   # should be adjusted dynamically https://github.com/ncss-tech/aqp/issues/62
@@ -57,7 +67,8 @@ plotSPC <- function(x, color='soil_color', width=0.2, name=NULL, label=idname(x)
   
   # save arguments to aqp env
   lsp <- list('width'=width, 
-              'plot.order'=plot.order, 
+              'plot.order'=plot.order,
+              'x0'=relative.pos + x.idx.offset,
               'pIDs'=pIDs[plot.order],
               'idname'=idname(x),
               'y.offset'=y.offset, 
@@ -67,7 +78,7 @@ plotSPC <- function(x, color='soil_color', width=0.2, name=NULL, label=idname(x)
               'extra_x_space'=extra_x_space,
               'extra_y_space'=extra_y_space)
   
-  assign('last_spc_plot', lsp, envir=aqp.env, )
+  assign('last_spc_plot', lsp, envir=aqp.env)
   
   # get horizons
   h <- horizons(x)
@@ -127,12 +138,11 @@ plotSPC <- function(x, color='soil_color', width=0.2, name=NULL, label=idname(x)
       
       # make a color mapping function
       color.mapper <- scales::col_factor(
-        palette = col.palette,
+        palette = colorRampPalette(col.palette)(length(color.levels)),
         domain = color.levels,
         na.color = default.color,
         ordered = TRUE
       )
-      
       
       # apply color mapping
       h$.color <- color.mapper(h[[color]])
@@ -140,6 +150,21 @@ plotSPC <- function(x, color='soil_color', width=0.2, name=NULL, label=idname(x)
       # generate colors and labels for legend
       pretty.vals <- color.levels
       color.legend.data <- list(legend = pretty.vals, col = color.mapper(pretty.vals))
+      
+      # interpret n.legend as max(items) / row
+      n.leg.classes <- length(pretty.vals)
+      
+      # create more room via multiple calls to legend
+      if(n.legend < n.leg.classes) {
+        
+        # make indices to two rows of legends
+        # safely accounts for even / odd n.leg.classes
+        leg.row.indices <- .splitLegend(n.leg.classes)
+        
+        # set flag for later
+        multi.row.legend <- TRUE
+      }
+      
       
     }
   }
@@ -187,7 +212,8 @@ plotSPC <- function(x, color='soil_color', width=0.2, name=NULL, label=idname(x)
 	}
   
   
-  # add horizons in specified order	
+  ## iterate over profile index from 1 -> n
+  ## note: there may not be `n` profiles
   for(i in 1:n) {
 	  # convert linear sequence into plotting order
 	  profile_i <- plot.order[i]
@@ -231,10 +257,12 @@ plotSPC <- function(x, color='soil_color', width=0.2, name=NULL, label=idname(x)
       this_profile_names <- ''
     
 	  
-	  # generate rectangle geometry
+	  ### generate rectangle geometry
     
-    # get vector of profile indices
-    x0 <- x.idx.offset + i
+    ## center of each sketch
+    # 2019-07-15: added relative position feature, could use some more testing
+    # x0 <- x.idx.offset + i
+    x0 <- x.idx.offset + relative.pos[i]
     
 	  # get vectors of horizon boundaries, and scale
 	  y0 <- (this_profile_data[, bcol] * scaling.factor) + y.offset
@@ -297,10 +325,10 @@ plotSPC <- function(x, color='soil_color', width=0.2, name=NULL, label=idname(x)
 		
 			# add the text: according to style
 			if(id.style == 'top')
-				text(x0, y.offset, id.text, pos=3, font=2, cex=cex.id)
+				text(x0, y.offset, id.text, pos=3, font=font.id, cex=cex.id)
 	
 			if(id.style == 'side')
-				text(x0 - (width+0.025), y.offset, id.text, adj=c(1, -width), font=2, cex=cex.id, srt=90)
+				text(x0 - (width+0.025), y.offset, id.text, adj=c(1, -width), font=font.id, cex=cex.id, srt=90)
 			}
 	  }
   
@@ -322,8 +350,40 @@ plotSPC <- function(x, color='soil_color', width=0.2, name=NULL, label=idname(x)
     # if no title given, set col.label to name of column containing thematic information
     mtext(side=3, text=col.label, font=2, line=1.6)
     
-    legend('bottom', legend=color.legend.data$legend, col=color.legend.data$col, bty='n', pch=15, horiz=TRUE, xpd=TRUE, inset=c(0, 0.99), cex=col.legend.cex, x.intersp=1)
+    
+    # possibly split legend across multiple rows
+    if(exists('multi.row.legend')) {
+      
+      # compute max space required for legend items
+      # better formatting
+      # note: must be called AFTER high level plot()
+      leg.text.width <- (max(strwidth(pretty.vals, cex = col.legend.cex)))
+      
+      # row 1
+      legend('bottom', inset=c(0, 0.99),
+             legend=color.legend.data$legend[leg.row.indices$row.1], 
+             col=color.legend.data$col[leg.row.indices$row.1], 
+             text.width = leg.text.width,
+             bty='n', pch=15, horiz=TRUE, xpd=TRUE, cex=col.legend.cex, x.intersp=1
+             )
+      
+      # row 2
+      legend('bottom', inset=c(0, 0.94),
+             legend=color.legend.data$legend[leg.row.indices$row.2], 
+             col=color.legend.data$col[leg.row.indices$row.2], 
+             text.width = leg.text.width,
+             bty='n', pch=15, horiz=TRUE, xpd=TRUE, cex=col.legend.cex, x.intersp=1
+      )
+      
+    } else {
+      # standard invocation
+      legend('bottom', legend=color.legend.data$legend, col=color.legend.data$col, bty='n', pch=15, horiz=TRUE, xpd=TRUE, inset=c(0, 0.99), cex=col.legend.cex, x.intersp=1)
+    }
+    
+    
   }
+  
+  
   }
 
 

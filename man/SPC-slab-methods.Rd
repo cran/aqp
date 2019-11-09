@@ -24,7 +24,7 @@ slab.fun=.slab.fun.numeric.default, cpm=1, weights=NULL, ...)
   
   \item{strict}{logical: should horizons be strictly checked for self-consistency?}
   
-  \item{slab.fun}{Function used to process each 'slab' of data, ideally returning a vector with names attribute. Defaults to a wrapper function around \code{hdquantile}. See details.}
+  \item{slab.fun}{Function used to process each 'slab' of data, ideally returning a vector with names attribute. Defaults to a wrapper function around \code{stats::quantile}. See details.}
   
   \item{cpm}{Strategy for normalizing slice-wise probabilities, dividing by either: number of profiles with data at the current slice (cpm=1), or by the number of profiles in the collection (cpm=2). Mode 1 values will always sum to the contributing fraction, while mode 2 values will always sum to 1.}
   
@@ -42,11 +42,13 @@ slab.fun=.slab.fun.numeric.default, cpm=1, weights=NULL, ...)
 }
 
 \details{
-Multiple continuous variables OR a single categorical (factor) variable can be aggregated within a call to \code{slab}. Basic error checking is performed to make sure that top and bottom horizon boundaries make sense. User-defined aggregate functions (\code{slab.fun}) should return a named vector of results. A new, named column will appear in the results of \code{slab} for every named element of a vector returned by \code{slab.fun}. See examples below for a simple example of a slab function that computes mean, mean-1SD and mean+1SD. The default slab function wraps \code{\link{hdquantile}} from the Hmisc package, which requires at least 2 observations per chunk. Note that if `group` is a factor it must not contain NAs.
+Multiple continuous variables OR a single categorical (factor) variable can be aggregated within a call to \code{slab}. Basic error checking is performed to make sure that top and bottom horizon boundaries make sense. User-defined aggregate functions (\code{slab.fun}) should return a named vector of results. A new, named column will appear in the results of \code{slab} for every named element of a vector returned by \code{slab.fun}. See examples below for a simple example of a slab function that computes mean, mean-1SD and mean+1SD. The default slab function wraps \code{stats::quantile} from the Hmisc package, which requires at least 2 observations per chunk. Note that if `group` is a factor it must not contain NAs.
 
 Somtimes \code{slab} is used to conveniently re-arrange data vs. aggregate. This is performed by specifying \code{identity} in \code{slab.fun}. See examples beflow for a demonstration of this functionality.
 
-Execution time scales linearly (slower) with the total number of profiles in \code{object}, and exponentially (faster) as the number of profiles / group is increased. \code{slab()} and \code{slice()} are much faster and require less memory if input data are either numeric or character.
+The default \code{slab.fun} was changed 2019-10-30 from a wrapper around \code{Hmisc::hdquantile} to a wrapper around \code{stats::quantile}. See examples below for a simple way to switch to the HD quantile estimator.
+
+Execution time scales linearly (slower) with the total number of profiles in \code{object}, and exponentially (faster) as the number of profiles / group is increased. \code{slab} and \code{slice} are much faster and require less memory if input data are either numeric or character.
 
 There are several possible ways to define slabs, using \code{slab.structure}:
 
@@ -100,7 +102,7 @@ Harrell FE, Davis CE (1982): A new distribution-free quantile estimator. Biometr
 
 
 \seealso{
-\code{\link{slice}, \link{hdquantile}}
+\code{\link{slice}, \link{quantile}}
 }
 \examples{
 ##
@@ -133,6 +135,7 @@ xyplot(top ~ p.q50 | which, data=ab, ylab='Depth',
 			 panel=panel.depth_function, 
 			 prepanel=prepanel.depth_function,
 			 cf=ab$contributing_fraction,
+			 alpha=0.5,
 			 layout=c(2,1), scales=list(x=list(alternating=1))
 			 )
 
@@ -208,6 +211,48 @@ xyplot(top ~ value | variable, groups=which, data=g, subset=value > 0,
 (gen.hz.ml <- get.ml.hz(a, c('O','A','B','C')))
 
 \dontrun{
+##
+## HD quantile estimator
+##
+
+library(soilDB)
+library(lattice)
+
+# sample data
+data('loafercreek', package = 'soilDB')
+
+# defaul slab.fun wraps stats::quantile()
+a <- slab(loafercreek, fm = ~ total_frags_pct + clay)
+
+# use HD quantile estimator from Hmisc package instead
+a.HD <- slab(loafercreek, fm = ~ total_frags_pct + clay, slab.fun = aqp:::.slab.fun.numeric.HD)
+
+# combine
+g <- make.groups(standard=a, HD=a.HD)
+
+# note differences
+densityplot(~ p.q50 | variable, data=g, groups=which, 
+            scales=list(relation='free', alternating=3, tick.number=10, y=list(rot=0)),
+            xlab='50th Percentile', pch=NA, main='Loafercreek',
+            auto.key=list(columns=2, points=FALSE, lines=TRUE),
+            par.settings=list(superpose.line=list(lwd=2, col=c('RoyalBlue', 'Orange2')))
+)
+
+# differences are slight but important
+xyplot(
+  top ~ p.q50 | variable, data=g, groups=which,
+  xlab='Value', ylab='Depth (cm)',
+  asp=1.5, main='Loafercreek',
+  lower=g$p.q25, upper=g$p.q75, 
+  sync.colors=TRUE, alpha=0.25, cf=g$contributing_fraction,
+  ylim=c(115,-5), layout=c(2,1), scales=list(x=list(relation='free')),
+  par.settings=list(superpose.line=list(lwd=2, col=c('RoyalBlue', 'Orange2'))),
+  strip=strip.custom(bg=grey(0.85)),
+  panel=panel.depth_function, 
+  prepanel=prepanel.depth_function,
+  auto.key=list(columns=2, lines=TRUE, points=FALSE)
+)
+
 ##
 ## multivariate examples
 ##

@@ -30,17 +30,34 @@
 	}
 
 
-## Note: this function requires at least _2_ observations
-## Note: this function can be slow when N is large
+## TODO: make these exported functions with documentation (https://github.com/ncss-tech/aqp/issues/99)
+
+
 # default slab function for continuous variables
 # returns a named vector of results
 # this type of function is compatible with aggregate()
 .slab.fun.numeric.default <- function(values) {
 	q.probs <- c(0.05, 0.25, 0.5, 0.75, 0.95)
-	res <- hdquantile(values, probs=q.probs, na.rm=TRUE)
+	## 2019-10-30: dropping Hmisc as a suggested package
+	# res <- Hmisc::hdquantile(values, probs=q.probs, na.rm=TRUE)
+	res <- quantile(values, probs=q.probs, na.rm=TRUE)
 	names(res) <- paste('p.q', round(q.probs * 100), sep='')
 	return(res)
-	}
+}
+
+# easy specification of Hmisc::hdquantile if available
+.slab.fun.numeric.HD <- function(values) {
+  # sanity check, need this for color distance eval
+  if(!requireNamespace('Hmisc'))
+    stop('pleast install the `Hmisc` package.', call.=FALSE)
+  
+  q.probs <- c(0.05, 0.25, 0.5, 0.75, 0.95)
+  
+  res <- Hmisc::hdquantile(values, probs=q.probs, na.rm=TRUE)
+  
+  names(res) <- paste('p.q', round(q.probs * 100), sep='')
+  return(res)
+}
 
 # basic quantile evaluation, better for large datasets
 .slab.fun.numeric.fast <- function(values) {
@@ -51,17 +68,17 @@
 }
 
 
-## TODO: not yet implemented
-# default slab function for weighted, continuous variables
-# returns a named vector of results
-# this type of function is compatible with aggregate()
-# NOTE: nw (normalize-weights) argument will affect the results!
-.slab.fun.wtd.numeric.default <- function(values, w, nw=TRUE) {
-	q.probs <- c(0.05, 0.25, 0.5, 0.75, 0.95)
-	res <- wtd.quantile(values, weights=w, probs=q.probs, na.rm=TRUE, normwt=nw)
-	names(res) <- paste('p.q', round(q.probs * 100), sep='')
-	return(res)
-}
+# ## TODO: not yet implemented
+# # default slab function for weighted, continuous variables
+# # returns a named vector of results
+# # this type of function is compatible with aggregate()
+# # NOTE: nw (normalize-weights) argument will affect the results!
+# .slab.fun.wtd.numeric.default <- function(values, w, nw=TRUE) {
+# 	q.probs <- c(0.05, 0.25, 0.5, 0.75, 0.95)
+# 	res <- wtd.quantile(values, weights=w, probs=q.probs, na.rm=TRUE, normwt=nw)
+# 	names(res) <- paste('p.q', round(q.probs * 100), sep='')
+# 	return(res)
+# }
 
 
 # SoilProfileCollection method

@@ -332,7 +332,15 @@ setReplaceMethod("depths", "data.frame",
 .initSPCfromMF <- function(data, mf){
   # get column names containing id, top, bottom
   nm <- names(mf)
-
+  
+  
+  ## danger! this will shuffle profile IDs: https://github.com/ncss-tech/aqp/issues/90
+  ## 
+  ## convert to character, then sort
+  ## ... test
+  ##
+  ##
+  
   # re-order data: IDs, top hz depths
   new.order <- order(data[[nm[1]]], data[[nm[2]]])
   

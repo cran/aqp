@@ -1,4 +1,12 @@
 
+## TODO: this could use an overhaul:
+##  * symbol size / resolution should be determined in context
+##  * area approximation should work with a larger grid, after scaling to avoid frational thickness constraints
+##  * standardize symbology with rect() vs. points() and cex
+##   -> init checkerboard, select squares, fill squares
+##   -> number / size of squares is the only parameter
+
+## doesn't work with fractional depths: https://github.com/ncss-tech/aqp/issues/8
 # convert volume pct [0, 100] into DF of points along a res x res grid
 .volume2df <- function(v, depth, res) {
 	# test for no data
@@ -7,7 +15,7 @@
 	
   # test for >= 100%
   if(v >= 100) {
-    warning(sprintf("%s >= 100, likely a data error", v), call. = FALSE)
+    warning(sprintf("%s is >= 100, likely a data error", v), call. = FALSE)
     # truncate at 100%
     v <- 100
   }
@@ -38,19 +46,45 @@
 	}
 
 
+## TODO: symbol size must be controlled by `res`
+## TODO: fails with fractional depths https://github.com/ncss-tech/aqp/issues/8
 # add volume fraction information to an existing SPC plot
 addVolumeFraction <- function(x, colname, res=10, cex.min=0.1, cex.max=0.5, pch=1, col='black') {
 	
+  # color should be either:
+  # single color name / code
+  # vector of colors with length == nrow(x)
+  
+  # simplest case, single color vector
+  if(length(col) == 1) {
+    col <- rep(col, times=nrow(x))
+  } else {
+    # check to make sure that vector of colors is the same length as number of horizons
+    if(length(col) != nrow(x))
+      stop('length of `col` should be either 1 or nrow(x)', call. = FALSE)
+  }
+  
+  # ensure that `colname` is a horizon-level attribute
+  if(! colname %in% horizonNames(x)) {
+    stop(sprintf("%s is not a horizon-level attribute", colname), call. = FALSE)
+  }
+  
+  # test for values < 0.5, could be a fraction [0,1] vs. percent [0,100]
+  if(all( na.omit(horizons(x)[[colname]]) < 0.5) ) {
+    message(sprintf("all %s values are < 0.5, likely a fraction vs. percent", colname))
+  }
+  
 	# get plotting details from aqp environment
 	lsp <- get('last_spc_plot', envir=aqp.env)
 	w <- lsp$width
 	plot.order <- lsp$plot.order
 	depth.offset <- lsp$y.offset
 	sf <- lsp$scaling.factor
+	x0 <- lsp$x0
 	
 	# horizontal shrinkage factor
-	## TODO: why is this hard-coded at '5' ?
-	w.offset <- w / 5
+	## TODO: why is this hard-coded ?
+	w.offset <- w / 7
 	
 	# get top/bottom colnames
 	hd <- horizonDepths(x)
@@ -61,8 +95,9 @@ addVolumeFraction <- function(x, colname, res=10, cex.min=0.1, cex.max=0.5, pch=
 	  # get the current pofile, in plotting order
 		h <- horizons(x[plot.order[p.i], ])
 		
-		# determine left/right extent of symbols
-		x.center <- p.i
+		## determine left/right extent of symbols
+		# 2019-07-15: using relative position as indexed by current profile
+		x.center <- x0[p.i]
 		x.left <- x.center - (w - w.offset)
 		x.right <- x.center + (w - w.offset)
 	
@@ -71,12 +106,26 @@ addVolumeFraction <- function(x, colname, res=10, cex.min=0.1, cex.max=0.5, pch=
 			this.hz <- h[h.i, ]
 			hz.thick <- this.hz[[hd[2]]] - this.hz[[hd[1]]]
 			
+			## hack until #8 is resolved: round the thickness down
+			# https://github.com/ncss-tech/aqp/issues/8
+			if( hz.thick %% 1 != 0) {
+			  msg <- paste0(paste(h[h.i, hd], collapse = ' - '), depth_units(x))
+			  message(sprintf('truncating fractional horizon thickness to integer: %s', msg))
+			  hz.thick <- floor(hz.thick) 
+			}
+			
+			
 			# convert this horizon's data
 			v <- .volume2df(v=this.hz[[colname]], depth=hz.thick, res=res)
 			
 			## TODO: still throws errors
 			# just those with data
 			if(nrow(v) > 0 ) {
+			  
+			  # get the current color from vector of colors
+			  # typically the same color repeated, but could be as many colors as hz
+			  v$color <- col[h.i]
+			  
         # jitter and rescale x-coordinates
 				v$x <- rescale(jitter(v$x), to=c(x.left, x.right))
 		
@@ -91,7 +140,8 @@ addVolumeFraction <- function(x, colname, res=10, cex.min=0.1, cex.max=0.5, pch=
 				p.cex <- runif(nrow(v), min=cex.min, max=cex.max)
 		
 				# add jittered points
-				points(v$x, v$y, cex=p.cex, col=col, pch=pch)
+				# note that color comes from `v`
+				points(v$x, v$y, cex=p.cex, col=v$color, pch=pch)
 			}
 		}
 	}	

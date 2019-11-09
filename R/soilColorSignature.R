@@ -29,8 +29,11 @@
   if(nrow(x.slices) < k+1)
     return(NULL)
   
-  # use PAM to cluster
-  cl <- pam(x.slices[, -1], k = k, stand = FALSE)
+  ## TODO: 
+  ##   use distance matrix via delta-E00 as implemented in farver::compare_colour()
+  ##   see recent changes in aggregateSoilColor() for dE00 example
+  # use PAM to cluster, note pamonce=5 used for optimization
+  cl <- pam(x.slices[, -1], k = k, stand = FALSE, pamonce = 5)
   
   # get data
   x.medoids <- x.slices[cl$id.med, c(idname(x), 'L', 'A', 'B')]
@@ -122,7 +125,10 @@
   return(pigment)
 }
 
-## TODO: move method-specific arguments to ...
+## TODO: 
+#   move method-specific arguments to ...
+#   allow for specification of colors via: hex, sRGB, LAB
+
 soilColorSignature <- function(spc, r='r', g='g', b='b', method='colorBucket', pam.k=3, RescaleLightnessBy=1, useProportions=TRUE, pigmentNames=c('.white.pigment', '.red.pigment', '.green.pigment', '.yellow.pigment', '.blue.pigment')) {
   
   # warn about methods
@@ -137,7 +143,7 @@ soilColorSignature <- function(spc, r='r', g='g', b='b', method='colorBucket', p
   # note: convertColor() expects a matrix
   lab.colors <- convertColor(as.matrix(h[, c(r, g, b)]), from='sRGB', to='Lab', from.ref.white='D65', to.ref.white = 'D65')
   
-  ## TODO: does it make sense to normalized based on limited data or entire possible range?
+  ## TODO: does it make sense to normalize based on limited data or entire possible range?
   # normalize the L coordinate
   lab.colors[, 1] <- lab.colors[, 1] / RescaleLightnessBy
   

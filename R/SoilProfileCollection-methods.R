@@ -205,6 +205,26 @@ setMethod("horizonNames", "SoilProfileCollection",
 )
 
 
+## TODO: this seems stupid, NULL would be much simpler to reason over...
+## are the contents of @sp valid: n x 2 matrix?
+## if not, then contents of @sp is an empty SpatialPoints object
+if (!isGeneric("validSpatialData"))
+  setGeneric("validSpatialData", function(object, ...) standardGeneric("validSpatialData"))
+
+setMethod("validSpatialData", "SoilProfileCollection",
+          function(object) {
+            # n x 2 ---> valid / initialized coordinates
+            # n x 1 ---> emtpy SP object
+            res <- dim(coordinates(object))[[2]]
+            
+            if(res == 2)
+              return(TRUE)
+            else
+              return(FALSE)
+          }
+)
+
+
 
 
 ##
@@ -475,20 +495,46 @@ setMethod("[", signature=c("SoilProfileCollection", i="ANY", j="ANY"),
   	if(!missing(i)) {
   	  if(any(is.na(i)))
   	    stop('NA not permitted in profile index', call.=FALSE)
+  	  
       # convert logical to integer per standard vector/list indexing rules (thanks Jos? Padarian for the suggestion!)
-  	  if(is.logical(i)) i <- (1:length(x))[i]
-  	  i <- as.integer(i)
+  	  if(is.logical(i)) 
+  	    i <- (1:length(x))[i]
+  	  
+  	  can.cast <- is.numeric(i) 
+  	  if(can.cast) {
+  	    if(all(abs(i - round(i)) < .Machine$double.eps^0.5))
+  	      i <- as.integer(i)
+  	    else stop("Numeric site index does not contain whole numbers.")
+  	  } else {
+  	    stop("Failed to coerce site index to integer.")
+  	  }
   	}
     else # if no index is provided, the user wants all profiles
       i <- 1:length(x)
 
     # sanity check
     if(!missing(j)) {
-      j <- as.integer(j)
+      
+      # AGB -- added logical handling to horizon index -- there have been times I've expected j index to behave like i
+      if(is.logical(j)) 
+        j <- (1:length(x))[j]
+      
+      can.cast <- is.numeric(j) 
+      if(can.cast) {
+        if(all(abs(j - round(j)) < .Machine$double.eps^0.5))
+          j <- as.integer(j)
+        else stop("Numeric horizon/slice index does not contain whole numbers.")
+      } else {
+        stop("Failed to coerce horizon/slice index to integer.")
+      }
+      
       if(any(is.na(j)))
-      stop('NA not permitted in horizon/slice index', call.=FALSE)
+        stop('NA not permitted in horizon/slice index', call.=FALSE)
     }
-
+    
+    #### TODO: implicit sub-setting of horizon records should affect all slots 
+    ####      https://github.com/ncss-tech/aqp/issues/89
+    
     # extract requested profile IDs
     p.ids <- profile_id(x)[i]
 
@@ -502,12 +548,16 @@ setMethod("[", signature=c("SoilProfileCollection", i="ANY", j="ANY"),
     s.all <- site(x)
     s.i <- which(s.all[[idname(x)]] %in% p.ids)
   	s <- s.all[s.i, , drop=FALSE] # need to use drop=FALSE when @site contains only a single column
-
-    # subset spatial data if exists
-    if(nrow(coordinates(x)) == length(x))
-      sp <- x@sp[i]
-    else
-      sp <- x@sp
+    
+  	# subset spatial data, but only if valid
+  	if(validSpatialData(x)) {
+  	  sp <- x@sp[i]
+  	}
+  	# copy emtpy SpatialPoints object
+  	else {
+  	  sp <- x@sp
+  	}
+      
     
     # subset diagnostic data, but only if it exists
     # note that not all profiles have diagnostic hz data
@@ -516,17 +566,45 @@ setMethod("[", signature=c("SoilProfileCollection", i="ANY", j="ANY"),
     	d <- d[which(d[[idname(x)]] %in% p.ids), ]
     
     
+    ## this is almost correct, but subsetting does not propagate to other slots (https://github.com/ncss-tech/aqp/issues/89)
     # subset horizons/slices based on j --> only when j is given
-    if(!missing(j))
-      h <- ddply(h, idname(x), .fun=function(y) y[j, ])
+    if(!missing(j)) {
+      # work via list-wise iteration
+      hh <- split(h, h[[idname(x)]])
+      
+      # safely extract horizon by index, could have length > 1
+      hh <- lapply(hh, function(this.profile, idx=j) {
+        
+        # total horizon records available
+        this.profile.n <- nrow(this.profile)
+        
+        # the total number that can be collected
+        # assumes correct depth sorting
+        safe.idx <- idx[which(idx <= this.profile.n)]
+        
+        # conditionally return all available records up to this.profile.n
+        if(length(safe.idx) > 0) {
+          res <- this.profile[safe.idx, ]
+        }  else {
+          res <- NULL
+        }
+        
+        # done
+        return(res)
+      })
+      
+      # put it all back together and replace what we started with
+      h <- do.call('rbind', hh)
+    }
+      
 
     # if there is REAL data in @sp, and we only have 1 row of hz per coordinate- return SPDF
-    # for now test for our custom dummy SP obj: number of coordinates == number of profiles
+    # valid spatial data is now tested via validSpatialData()
     # also need to test that there is only 1 horizon/slice per location
   	# only produces a SPDF when j index is present
-    if(nrow(coordinates(x)) == length(x) & length(p.ids) == nrow(h) & !missing(j)) {
+    if(validSpatialData(x) & length(p.ids) == nrow(h) & !missing(j)) {
       # combine with coordinates
-      cat('result is a SpatialPointsDataFrame object\n')
+      message('result is a SpatialPointsDataFrame object')
       # note that we are filtering based on 'i' - an index of selected profiles
 			
       # since the order of our slices and coordinates are the same
@@ -534,10 +612,12 @@ setMethod("[", signature=c("SoilProfileCollection", i="ANY", j="ANY"),
       # this gets around a potential problem when dimnames(x)[[1]] aren't consecutive 
       # values-- often the case when subsetting has been performed
       
+      ## TODO: there should always be something in @site
       # if site data, join hz+site
       if(nrow(s) > 0) {
       	return(SpatialPointsDataFrame(as(x, 'SpatialPoints')[i, ], data=join(h, s, by=idname(x)), match.ID=FALSE))
       }
+      ## TODO: can this ever happen?
       # no site data
       else {
       	return(SpatialPointsDataFrame(as(x, 'SpatialPoints')[i, ], data=h, match.ID=FALSE))	
@@ -547,11 +627,20 @@ setMethod("[", signature=c("SoilProfileCollection", i="ANY", j="ANY"),
     # in this case there may be missing coordinates, or we have more than 1 slice of hz data
     else {
       res <- SoilProfileCollection(idcol=idname(x), depthcols=horizonDepths(x), metadata=aqp::metadata(x), horizons=h, site=s, sp=sp, diagnostic=d)
-      # one more final check:
+      
+      
+      
+      ## integrity checks: these will be implicit in the aqp 2.0 SPC
+      
+      # https://github.com/ncss-tech/aqp/issues/89
+      # there should be as many records in @site as there are profile IDs
       if(length(profile_id(res)) != length(site(res)[[idname(res)]]))
-        stop("SPC object corruption. This shouldn't happen and will be fixed in aqp 2.0", call. = FALSE)
+        warning("Some profiles have been removed from the collection.", call. = FALSE)
+      
+      # the order of profile_ids should be the same as in @site
       if(! all(profile_id(res) == site(res)[[idname(res)]]))
-        stop("SPC object corruption. This shouldn't happen and will be fixed in aqp 2.0", call. = FALSE)
+        warning("profile ID order does not match order in @site", call. = FALSE)
+      
       
       return(res)
     }

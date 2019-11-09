@@ -27,7 +27,8 @@
 \alias{siteNames<-}
 \alias{horizonNames<-,SoilProfileCollection-method}
 \alias{siteNames<-,SoilProfileCollection-method}
-
+\alias{validSpatialData}
+\alias{validSpatialData,SoilProfileCollection-method}
 
 \title{SoilProfileCollection Class}
 \description{Basic class for storing soil profile collections, associated site data, and metadata.}

@@ -1,6 +1,6 @@
 # R 3.3 compatibility:
 
-importFrom("grDevices", "chull", "col2rgb", "colorRamp",
+importFrom("grDevices", "chull", "col2rgb", "colorRamp", "rgb2hsv", "hsv",
              "colorRampPalette", "grey", "rgb", "convertColor")
 
 importFrom("graphics", "abline", "arrows", "axis", "box", "grid",
@@ -10,7 +10,7 @@ importFrom("graphics", "abline", "arrows", "axis", "box", "grid",
 importFrom("stats", "aggregate", "approxfun", "as.dist", "as.formula",
              "complete.cases", "cov", "formula", "median", "model.frame",
              "na.omit", "na.pass", "quantile", "rnorm", "runif", "sd",
-             "splinefun", "update", "cmdscale")
+             "splinefun", "update", "cmdscale", "dist")
 
 importFrom("utils", "head", "object.size")
 
@@ -50,6 +50,7 @@ importFrom(grid,
 )
 
 importFrom(lattice,
+  xyplot,
   levelplot,
   trellis.par.get,
   panel.levelplot,
@@ -57,7 +58,10 @@ importFrom(lattice,
   panel.lines,
   panel.polygon,
   panel.segments,
-  panel.grid
+  panel.grid,
+  panel.rect,
+  panel.text,
+  strip.custom
 )
 
 importFrom(cluster, 
@@ -110,14 +114,6 @@ importFrom(sp,
   rbind.SpatialPoints
 )
 
-importFrom(Hmisc, 
-  hdquantile,
-  wtd.mean, 
-  wtd.var, 
-  wtd.quantile, 
-  wtd.rank, 
-  wtd.table
-)
 
 importFrom(plotrix, 
   soil.texture,
@@ -132,6 +128,7 @@ exportMethods(
   "[",
   "$",
   "$<-",
+  validSpatialData,
   coordinates,
   "coordinates<-",
   "depths<-", 

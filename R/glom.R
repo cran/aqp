@@ -22,39 +22,72 @@ glom <- function(p, z1, z2=NA, as.data.frame = FALSE) {
   }
 }
 
-# create a list of horizons comprising a "clod" by intersection of horizons by depth
-clod.hz.ids <- function(p, z1, z2=NA, as.list = FALSE) {
+# create a vector of horizon IDs comprising a "clod" (by depth intersection of horizons)
+clod.hz.ids <- function (p, z1, z2 = NA, as.list = FALSE) 
+{
+  # access SPC slots to get important info about p
+  hz <- horizons(p)
+  dz <- horizonDepths(p)
   hzid <- hzidname(p)
-  top.depth <- horizonDepths(p)[1]
-  depthz <- horizons(p)[[top.depth]]
   
-  # make two logical vectors reflecting horizon depths being
-  #  greater than and less than z1 (and z2?)
-  gt1 <- depthz >= z1
+  # get top and bottom horizon depth vectors
+  tdep <- hz[[dz[1]]]
+  bdep <- hz[[dz[2]]]
   
+  # determine top depths greater than z1
+  gt1 <- tdep > z1
+  
+  # include top depths equal to z1
+  gt1[which(tdep == z1)] <- TRUE 
+  
+  # include horizons whose bottom portion are below z1
+  gt1 <- gt1 | (bdep > z1)
+  
+  # get the index of the first horizon
   idx.top <- which(gt1)
   
-  if(!length(idx.top))
-    return(NA)
+  if (!length(idx.top)) 
+    stop('Invalid horizon index. Check argument `z1`.')
   
-  # some high tech reindexing
-  idx.top <- idx.top[1] - 1
+  idx.top <- idx.top[1] # always returns the top horizon
   
-  if(!is.na(z2)) {
-    gt2 <- depthz >= z2
-    idx.bot <- which(gt2)
-    if(!length(idx.bot))
-      idx.bot <- length(depthz) + 1
-    idx.bot <- idx.bot[1] - 1
-    idval <- horizons(p)[idx.top:idx.bot, hzid]
-    if(!as.list)
+  # if a bottom depth of the clod interval is specified
+  if (!is.na(z2)) {
+    # determine bottom depths less than z2
+    lt2 <- bdep < z2 
+    
+    # include bottom depths equal to z2
+    lt2[which(bdep == z2)] <- TRUE 
+    
+    # include horizons whose top portion are above z2
+    lt2 <- lt2 | (tdep < z2)
+    
+    # get index of last horizon
+    idx.bot <- rev(which(lt2))
+    
+    if (!length(idx.bot)) 
+      stop('Invalid horizon index. Check arguments `z1` and `z2`.')
+    
+    idx.bot <- idx.bot[1]
+    
+    # not really sure how this could happen ... maybe with wrong depth units for z?
+    if(!(all(idx.top:idx.bot %in% 1:nrow(p))))
+      stop('Invalid horizon index. Check arguments `z1` and `z2`.')
+    
+    # get the ID values out of horizon table
+    idval <- hz[idx.top:idx.bot, hzid]
+    
+    # just the horizon IDs
+    if (!as.list) 
       return(idval)
+    
+    # list result.
     return(list(hzid = hzid, hz.idx = idx.top:idx.bot, value = idval))
   }
   
-  idval <- horizons(p)[idx.top, hzid]
+  idval <- hz[idx.top, hzid]
   
-  if(!as.list)
+  if (!as.list) 
     return(idval)
   
   return(list(hz.idx = idx.top, value = idval))

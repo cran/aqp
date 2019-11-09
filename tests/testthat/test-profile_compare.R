@@ -55,3 +55,19 @@ test_that("profile_compare basics", {
 
 
 
+## this is a known failure point
+test_that("profile_compare preserves ID ordering after editing (#7)", {
+  
+  data(sp4)
+  depths(sp4) <- id ~ top + bottom
+  
+  # edit IDs after SPC init
+  # !! SPC records are not re-sorted
+  profile_id(sp4) <- sprintf("%s-zzz", profile_id(sp4))
+  
+  # fail-safe triggered
+  # expect an error until #7 is resolved
+  expect_error(d <- profile_compare(sp4, vars=c('ex_Ca_to_Mg', 'CEC_7'), k=0, max_d=40))
+})
+
+
