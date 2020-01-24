@@ -21,17 +21,68 @@ x.neutral <- parseMunsell('N 2/', return_triplets=TRUE)
 test_that("parsing Munsell notation", {
 
   # parsing bogus notation generates NA
-  expect_equal(parseMunsell('10YZ 4/5'), as.character(NA))
-  expect_equal(parseMunsell('10YR /5'), as.character(NA))
-  expect_equal(parseMunsell('10YR '), as.character(NA))
-  expect_equal(parseMunsell('10YR 4/'), as.character(NA))
-  expect_equal(parseMunsell('G1 6/N'), as.character(NA))
+  # will also generate a warning from munsell2rgb()
+  expect_equal(suppressWarnings(parseMunsell('10YZ 4/5')), as.character(NA))
+  expect_equal(suppressWarnings(parseMunsell('10YR /5')), as.character(NA))
+  expect_equal(suppressWarnings(parseMunsell('10YR ')), as.character(NA))
+  expect_equal(suppressWarnings(parseMunsell('10YR 4/')), as.character(NA))
+  expect_equal(suppressWarnings(parseMunsell('G1 6/N')), as.character(NA))
+  
+  # parsing bogus notation without conversion
+  # doesn't replace with NA
+  bogus <- parseMunsell('G1 3/X', convertColors = FALSE)
+  expect_equal(bogus$hue, 'G1')
+  expect_equal(bogus$value, '3')
   
   # neutral colors
   expect_true(inherits(parseMunsell('N 2/', convertColors = FALSE), 'data.frame'))
   
   # splitting of text into colums within data.frame
   expect_identical(x.p, data.frame(hue = "10YR", value = "3", chroma = "4", stringsAsFactors = FALSE))
+  
+})
+
+
+# addresses #66 (https://github.com/ncss-tech/aqp/issues/66)
+test_that("Munsell hue parsing", {
+  
+  # normal operation
+  res <- aqp:::.parseMunsellHue('10YR')
+  expect_true(inherits(res, 'data.frame'))
+  expect_equal(res$hue.numeric, 10L)
+  expect_equal(res$hue.character, 'YR')
+  expect_equal(nrow(res), 1)
+  
+  # bogus hue
+  res <- aqp:::.parseMunsellHue('G1 ')
+  expect_true(inherits(res, 'data.frame'))
+  expect_true(is.na(res$hue.numeric))
+  expect_true(is.na(res$hue.character))
+  expect_equal(nrow(res), 1)
+})
+
+
+test_that("non-integer value and chroma are rounded", {
+  
+  # rounding of value, throws warning
+  expect_warning(res <- parseMunsell('10YR 3.3/4'), regexp = 'rounded')
+  # this will not throw a warning
+  res <- parseMunsell('10YR 3.3/4', convertColors = FALSE)
+  # results should be the same
+  expect_equal(
+    suppressWarnings(parseMunsell('10YR 3.3/4')),
+    parseMunsell('10YR 3/4')
+  )
+  
+  # rounding of chroma, throws warning
+  expect_warning(res <- parseMunsell('10YR 3/4.6'), regexp = 'rounded')
+  # this will not throw a warning
+  res <- parseMunsell('10YR 3/4.6', convertColors = FALSE)
+  # results should be the same
+  expect_equal(
+    suppressWarnings(parseMunsell('10YR 3/4.6')),
+    parseMunsell('10YR 3/5')
+  )
   
 })
 
@@ -53,7 +104,11 @@ test_that("Munsell <--> sRGB and back again", {
   expect_equal(x.neutral$b, 0.2, tolerance=0.01)
   
   # sRGB --> Munsell
-  expect_equal(x.back, data.frame(hue='10YR', value=3, chroma=4, sigma=0, stringsAsFactors = FALSE))
+  expect_equal(x.back$hue, '10YR')
+  expect_equal(x.back$value, 3)
+  expect_equal(x.back$chroma, 4)
+  expect_equal(x.back$sigma, 0)
+  
   expect_equal(x.back.trunc$hue, '10YR')
   expect_equal(x.back.trunc$value, 3)
   expect_equal(x.back.trunc$chroma, 4)

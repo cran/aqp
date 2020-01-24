@@ -1,13 +1,11 @@
-
-## pending TODOs
-# https://github.com/ncss-tech/aqp/issues/98
+## TODO: replace dlply and ddply with base functions
 
 # x: SPC
 # groups: groups to aggregate over, can be either site/horizon attribute, need not be a factor
 # col: r-compatible hex notation of color
 # k: number of groups to reduce colors to (within each group), conditioned on unique colors available
 # profile_wt: weighting via site-level attribute
-aggregateColor <- function(x, groups='genhz', col='soil_color', k=NULL, profile_wt=NULL) {
+aggregateColor <- function(x, groups='genhz', col='soil_color', colorSpace = 'CIE2000', k=NULL, profile_wt=NULL) {
   
   # sanity check
   if(!is.null(k)) {
@@ -15,7 +13,7 @@ aggregateColor <- function(x, groups='genhz', col='soil_color', k=NULL, profile_
     
     # sanity check, need this for color distance eval
     if(!requireNamespace('farver'))
-      stop('pleast install the `farver` package.', call.=FALSE)
+      stop('please install the `farver` package.', call.=FALSE)
     
     if(is.na(k)) {
       stop('k must be a single integer > 0')
@@ -36,6 +34,9 @@ aggregateColor <- function(x, groups='genhz', col='soil_color', k=NULL, profile_
   # sanity check: col must be a horizon-level attribute
   if(! col %in% horizonNames(x))
     stop('`col` must be a horizon-level attribute of `x`', call. = FALSE)
+  
+  if(!colorSpace %in% c("CIE2000","LAB","sRGB"))
+    stop('colorSpace must be either: CIE2000, LAB or sRGB', call. = FALSE)
   
   ## hack to make R CMD check --as-cran happy
   top <- bottom <- thick <- NULL
@@ -76,7 +77,7 @@ aggregateColor <- function(x, groups='genhz', col='soil_color', k=NULL, profile_
   
   # split by genhz
   # note that some genhz will have 0 records
-  s <- dlply(h.no.na, groups, function(i){
+  s <- dlply(h.no.na, groups, function(i) {
     
     # optionally reduce to `k` colors via PAM, by group
     # this will only work if there are >= 1 unique colors
@@ -129,7 +130,7 @@ aggregateColor <- function(x, groups='genhz', col='soil_color', k=NULL, profile_
     res <- res[order(res$weight, decreasing=TRUE), ]
     
     # back-calculate the closest Munsell color
-    m <- rgb2munsell(t(col2rgb(res[[col]])) / 255)
+    m <- rgb2munsell(t(col2rgb(res[[col]])) / 255, colorSpace=colorSpace)
     
     # format as text
     res$munsell <- paste0(m[, 1], ' ', m[, 2], '/', m[, 3])
@@ -168,7 +169,7 @@ aggregateColor <- function(x, groups='genhz', col='soil_color', k=NULL, profile_
     wm.col <- rgb(wm, maxColorValue = 1)
     
     # get closest Munsell color
-    wm.munsell <- rgb2munsell(wm)
+    wm.munsell <- rgb2munsell(wm, colorSpace = colorSpace)
     
     # consolidate and return
     res <- data.frame(munsell=wm.munsell, col=wm.col, wm, n=nrow(i))

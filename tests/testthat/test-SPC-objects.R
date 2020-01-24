@@ -34,11 +34,17 @@ test_that("SPC construction from a data.frame", {
   # correct number of profiles and horizons?
   expect_equal(length(sp1), 9)
   expect_equal(nrow(sp1), 60)
-  
-  # diagnostic slot should be initialized as an empty data.frame
+})
+
+test_that("SPC diagnostics and restrictions", {
+  # diagnostic & restriction slot should be initialized as an empty data.frame
   sp1.dh <- diagnostic_hz(sp1)
   expect_true(inherits(sp1.dh, 'data.frame'))
   expect_equal(nrow(sp1.dh), 0)
+  
+  sp1.rh <- restrictions(sp1)
+  expect_true(inherits(sp1.rh, 'data.frame'))
+  expect_equal(nrow(sp1.rh), 0)
 })
 
 test_that("SPC data.frame interface", {
@@ -82,13 +88,28 @@ test_that("SPC deconstruction into a list", {
   # check internals
   expect_equivalent(l$idcol, idname(sp1))
   expect_equivalent(l$hzidcol, hzidname(sp1))
+  expect_equivalent(l$hzdesgncol, hzdesgnname(sp1))
+  expect_equivalent(l$hztexclcol, hztexclname(sp1))
   expect_equivalent(l$depthcols, horizonDepths(sp1))
   expect_equivalent(l$metadata, metadata(sp1))
+  
   expect_equivalent(l$horizons, horizons(sp1))
   expect_equivalent(l$site, site(sp1))
   expect_equivalent(l$sp, sp1@sp)
   expect_equivalent(l$diagnostic, diagnostic_hz(sp1))
+  expect_equivalent(l$restrictions, restrictions(sp1))
   
+  # check internals after [-subsetting 
+  sp1.sub <- sp1[1:2,]
+  # none of these slots should change, the others will be subset
+  # verifying these are transferred ensures key info slots are handled
+  # by the SPC subset method
+  expect_equivalent(l$idcol, idname(sp1.sub))
+  expect_equivalent(l$hzidcol, hzidname(sp1.sub))
+  expect_equivalent(l$hzdesgncol, hzdesgnname(sp1.sub))
+  expect_equivalent(l$hztexclcol, hztexclname(sp1.sub))
+  expect_equivalent(l$depthcols, horizonDepths(sp1.sub))
+  expect_equivalent(l$metadata, metadata(sp1.sub))
 })
 
 
@@ -132,8 +153,8 @@ test_that("SPC graceful failure of spatial operations when data are missing", {
 test_that("SPC spatial operations ", {
   
   # init / extract coordinates
-  sp::coordinates(sp1) <- ~ x + y
-  co <- sp::coordinates(sp1)
+  coordinates(sp1) <- ~ x + y
+  co <- coordinates(sp1)
   
   # these are valid coordinates
   expect_true(validSpatialData(sp1))
@@ -147,10 +168,10 @@ test_that("SPC spatial operations ", {
   expect_true(all( ! dimnames(co)[[2]] %in% siteNames(sp1)))
   
   # CRS
-  sp::proj4string(sp1) <- '+proj=longlat +datum=NAD83 +ellps=GRS80 +towgs84=0,0,0'
+  proj4string(sp1) <- '+proj=longlat +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +no_defs'
   
   # we should get back the same thing we started with
-  expect_equal(sp::proj4string(sp1), '+proj=longlat +datum=NAD83 +ellps=GRS80 +towgs84=0,0,0')
+  expect_equal(proj4string(sp1), '+proj=longlat +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +no_defs')
   
   # basic coercion
   expect_true(inherits(as(sp1, 'SpatialPoints'), 'SpatialPoints'))
@@ -280,6 +301,39 @@ test_that("SPC horizon ID name get/set ", {
   
 })
 
+test_that("SPC horizon designation/texcl name get/set ", {
+  
+  # check intended behavior of setters
+  hzdesgnname(sp1) <- 'name'
+  hztexclname(sp1) <- 'texture'
+  
+  expect_equivalent(hzdesgnname(sp1), 'name')
+  expect_equivalent(hztexclname(sp1), 'texture')
+  
+  # check handy accessor for hz designations
+  designations <- hzDesgn(sp1)
+  expect_type(designations, 'character')
+  expect_equal(length(designations), 60)
+  
+  # make a new horizon column
+  sp1$junk <- rep("foo", nrow(sp1))
+  hzdesgnname(sp1) <- 'junk'
+  hztexclname(sp1) <- 'junk'
+  expect_equivalent(hzdesgnname(sp1), 'junk')
+  expect_equivalent(hztexclname(sp1), 'junk')
+  
+  # error conditions:
+  # no column in horizon table 'xxx'
+  expect_error(hzdesgnname(sp1) <- 'xxx')
+  
+  # message when setting to empty (sets slot to character(0))
+  # NOTE: cannot have this be so verbose, needs to happen during subsetting
+  expect_message(hzdesgnname(sp1) <- '')
+  
+  # error when slot is empty and using accessor
+  expect_error(designations <- hzDesgn(sp1))
+})
+
 test_that("SPC horizon ID get/set ", {
   
   # automatically generated horizon IDs
@@ -391,7 +445,7 @@ test_that("horizon slot set/merge", {
   
   hnew$prop[1] <- 50
   
-  # utilize horizons() merge() functionality to add all new variables in hnew to horizons
+  # utilize horizons() merge(..., sort=FALSE) functionality to add all new variables in hnew to horizons
   horizons(x) <- hnew
   
   # verify new columns have been added
@@ -404,6 +458,26 @@ test_that("horizon slot set/merge", {
   expect_equivalent(horizons(x)[1,c('prop')], c(50))
 })
 
-
-
+test_that("ordering of profiles and horizons is retained following set/merge", {
+  # IDs that when sorted will no be in this order
+  s <- c('a', "1188707", "1188710", "120786", "1207894", 'z')
+  l <- lapply(s, random_profile)
+  d <- do.call('rbind', l)
+  
+  # init SPC
+  depths(d) <- id ~ top + bottom
+  
+  ## !! bug happens here, when attempting to set a new horizon-level attr
+  ## call stack roughly
+  # $<-
+  # horizons<-
+  # merge(old, new)
+  d$zzz <- rep(NA, times=nrow(d))
+  
+  # previously mysterious warning message
+  z <- d[1:5, ]
+  
+  # ordering of profile IDs (unique, from @horizons) != ordering of IDs in @site
+  expect_true(all(profile_id(d) == site(d)[[idname(d)]]))
+})
 

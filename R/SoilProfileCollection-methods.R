@@ -6,10 +6,11 @@ metadata=data.frame(stringsAsFactors=FALSE),
 horizons,
 site=data.frame(stringsAsFactors=FALSE),
 sp=new('SpatialPoints'), # this is a bogus place-holder
-diagnostic=data.frame(stringsAsFactors=FALSE)
+diagnostic=data.frame(stringsAsFactors=FALSE),
+restrictions=data.frame(stringsAsFactors=FALSE)
 ){
   # creation of the object (includes a validity check)
-  new("SoilProfileCollection", idcol=idcol, depthcols=depthcols, metadata=metadata, horizons=horizons, site=site, sp=sp, diagnostic=diagnostic)
+  new("SoilProfileCollection", idcol=idcol, depthcols=depthcols, metadata=metadata, horizons=horizons, site=site, sp=sp, diagnostic=diagnostic, restrictions=restrictions)
 }
 
 
@@ -89,11 +90,53 @@ setMethod("hzID", "SoilProfileCollection",
             
 )
 
+## horizon designation name
+if (!isGeneric("hzdesgnname"))
+  setGeneric("hzdesgnname", function(object, ...) standardGeneric("hzdesgnname"))
+
+## get column containing horizon designations (there is a setter of same name)
+setMethod("hzdesgnname", "SoilProfileCollection",
+          function(object)
+            return(object@hzdesgncol)
+)
+
+## get horizon designations (no corresponding setter -- no need)
+if (!isGeneric("hzDesgn"))
+  setGeneric("hzDesgn", function(object, ...) standardGeneric("hzDesgn"))
+
+setMethod("hzDesgn", "SoilProfileCollection",
+          function(object) {
+            h <- horizons(object)
+            hzd <- hzdesgnname(object)
+            if(length(hzd)) {
+              if(hzd %in% horizonNames(object)) {
+                res <- h[[hzd]]
+                return(res)
+              }
+            } else {
+              stop("horizon designation name (",hzd,") not in horizonNames().", call.=FALSE)
+            }
+          }
+            
+)
+
+## horizon texture class name
+if (!isGeneric("hztexclname"))
+  setGeneric("hztexclname", function(object, ...) standardGeneric("hztexclname"))
+
+## get column containing horizon designations (there is a setter of same name)
+setMethod("hztexclname", "SoilProfileCollection",
+          function(object)
+            return(object@hztexclcol)
+)
+
 
 ## distinct profile IDs
 if (!isGeneric("profile_id"))
   setGeneric("profile_id", function(object, ...) standardGeneric("profile_id"))
 
+## warning! this assumes that horizon data aren't re-shuffled
+## will be fixed in aqp 2.0
 setMethod("profile_id", "SoilProfileCollection",
   function(object)
     unique(as.character(horizons(object)[[idname(object)]]))
@@ -136,7 +179,18 @@ if (!isGeneric("diagnostic_hz"))
 
 setMethod(f='diagnostic_hz', signature='SoilProfileCollection',
   function(object){
-  return(object@diagnostic)
+    return(object@diagnostic)
+  }
+)
+
+## restrictions: stored as a DF, must be join()-ed to other data via ID
+## note: ordering may or may not be the same as in site data
+if (!isGeneric("restrictions"))
+  setGeneric("restrictions", function(object, ...) standardGeneric("restrictions"))
+
+setMethod(f='restrictions', signature='SoilProfileCollection',
+  function(object){
+    return(object@restrictions)
   }
 )
 
@@ -374,7 +428,7 @@ setMethod("$", "SoilProfileCollection",
 )
 
 
-## problem: when making new columns how  can the function determine where to insert the replacement>?
+
 setReplaceMethod("$", "SoilProfileCollection",
   function(x, name, value) {
   	# extract hz and site data
@@ -390,36 +444,32 @@ setReplaceMethod("$", "SoilProfileCollection",
       
     # working with site data  
     if(name %in% names(s)) {
-	  s[[name]] <- value
+      s[[name]] <- value
       # TODO: use site(x) <- s
       x@site <- s
       return(x)
       }
     
-    # ambiguous: use length of replacement to determing: horizon / site   
-    else {
-      n.site <- nrow(s)
-      n.hz <- nrow(h)
-      l <- length(value)
-
-      if(l == n.hz) {
-      	h[[name]] <- value
-	    horizons(x) <- h
-	    return(x)
-      	}
-      
-      if(l == n.site) {
-      	s[[name]] <- value
-      	# TODO: use site(x) <- s
-      	x@site <- s
-      	return(x)
-      	}
-	
-	  else
-	  	stop('length of replacement must equal number of sites or number of horizons')
-    		
-    }
-  # done  
+    # ambiguous: use length of replacement to determing: horizon / site
+		n.site <- nrow(s)
+		n.hz <- nrow(h)
+		l <- length(value)
+		
+		if(l == n.hz) {
+		  h[[name]] <- value
+		  horizons(x) <- h
+		  return(x)
+		}
+		
+		if(l == n.site) {
+		  s[[name]] <- value
+		  # TODO: use site(x) <- s
+		  x@site <- s
+		  return(x)
+		}
+		
+		# otherwise, there is a problem
+		stop('length of replacement must equal number of sites or number of horizons')
   }
 )
 
@@ -565,6 +615,11 @@ setMethod("[", signature=c("SoilProfileCollection", i="ANY", j="ANY"),
     if(length(d) > 0) # some data
     	d <- d[which(d[[idname(x)]] %in% p.ids), ]
     
+    # subset restriction data, but only if it exists
+    # note that not all profiles have restrictions
+    r <- restrictions(x)
+    if(length(r) > 0) # some data
+      r <- r[which(r[[idname(x)]] %in% p.ids), ]
     
     ## this is almost correct, but subsetting does not propagate to other slots (https://github.com/ncss-tech/aqp/issues/89)
     # subset horizons/slices based on j --> only when j is given
@@ -626,8 +681,13 @@ setMethod("[", signature=c("SoilProfileCollection", i="ANY", j="ANY"),
 
     # in this case there may be missing coordinates, or we have more than 1 slice of hz data
     else {
-      res <- SoilProfileCollection(idcol=idname(x), depthcols=horizonDepths(x), metadata=aqp::metadata(x), horizons=h, site=s, sp=sp, diagnostic=d)
+      res <- SoilProfileCollection(idcol=idname(x), depthcols=horizonDepths(x), metadata=aqp::metadata(x), horizons=h, site=s, sp=sp, diagnostic=d, restrictions=r)
       
+      # preserve one off slots that may have been customised relative to defaults 
+      #  in prototype or resulting from construction of SPC 
+      suppressMessages(hzidname(res) <- hzidname(x))
+      suppressMessages(hzdesgnname(res) <- hzdesgnname(x))
+      suppressMessages(hztexclname(res) <- hztexclname(x))
       
       
       ## integrity checks: these will be implicit in the aqp 2.0 SPC

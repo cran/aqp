@@ -11,16 +11,12 @@
 
 
 
-
+## TODO: quantiles should be weighted by thickness, can we do this via slice()?
 colorQuantiles <- function(soilColors, p = c(0.05, 0.5, 0.95)) {
   
   # sanity check, need this for L1 median
   if(!requireNamespace('Gmedian'))
     stop('pleast install the `Gmedian` package.', call.=FALSE)
-  
-  # sanity check, need this for color distance eval
-  if(!requireNamespace('farver'))
-    stop('pleast install the `farver` package.', call.=FALSE)
   
   # hex represntation -> sRGB
   soilColors.srgb <- t(col2rgb(soilColors)) / 255
@@ -71,8 +67,18 @@ colorQuantiles <- function(soilColors, p = c(0.05, 0.5, 0.95)) {
   B.closest <- .closestMunselltoCIELAB(soilColors.lab[B.q.idx, ])
   
   
-  # find closest observed color to L1 median, linear CIE2000 distance metric
-  d <- farver::compare_colour(from=L1, to=soilColors.lab, from_space='lab', method = 'cie2000')
+  ## find closest observed color to L1 median via CIE2000 distance metric
+  ## requires farver >= 2.0.3
+  if( !requireNamespace('farver') | packageVersion("farver") < '2.0.3' ) {
+    message('CIE2000 comparisons require `farver` version 2.0.3 or greater, using Euclidean distance in CIELAB instead', call.=FALSE)
+    d <- farver::compare_colour(from=L1, to=soilColors.lab, from_space='lab', method = 'cie2000')
+  } else {
+    # backup plan using Euclidean distance in CIELAB
+    d <- sqrt(rowSums(sweep(soilColors.lab, MARGIN = 2, STATS=L1, FUN = '-')^2))
+  }
+
+  
+  # assign L1 color
   L1.color <- soilColors[which.min(d)]
   
   # closest observed colors to marginal quantiles

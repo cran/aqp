@@ -29,6 +29,11 @@
 \alias{diagnostic_hz,SoilProfileCollection-method}
 \alias{diagnostic_hz<-,SoilProfileCollection-method}
 
+\alias{restrictions}
+\alias{restrictions<-}
+\alias{restrictions,SoilProfileCollection-method}
+\alias{restrictions<-,SoilProfileCollection-method}
+
 \alias{horizonDepths}
 \alias{horizonDepths,SoilProfileCollection-method}
 \alias{horizonDepths<-}
@@ -52,6 +57,18 @@
 \alias{hzidname<-}
 \alias{hzidname<-,SoilProfileCollection-method}
 
+\alias{hzdesgnname}
+\alias{hzdesgnname,SoilProfileCollection-method}
+\alias{hzdesgnname<-}
+\alias{hzdesgnname<-,SoilProfileCollection-method}
+
+\alias{hztexclname}
+\alias{hztexclname,SoilProfileCollection-method}
+\alias{hztexclname<-}
+\alias{hztexclname<-,SoilProfileCollection-method}
+
+\alias{hzDesgn}
+\alias{hzDesgn,SoilProfileCollection-method}
 
 \title{Getters, Setters, and Utility Methods for SoilProfileCollection Objects}
 \description{Getters, Setters, and Utility Methods for SoilProfileCollection Objects}
@@ -77,6 +94,17 @@ depths(sp1) <- id ~ top + bottom
 (du <- depth_units(sp1))
 depth_units(sp1) <- 'in'
 depth_units(sp1) <- du
+
+## horizon designation column
+hzdesgnname(sp1) <- "name"
+hzdesgnname(sp1)
+
+## all designations in an SPC (useful for single profile SPC)
+hzDesgn(sp1)
+
+## horizon texture class column
+hztexclname(sp1) <- "texture"
+hztexclname(sp1)
 
 ## get/set metadata on SoilProfileCollection objects
 # this is a 1-row data.frame

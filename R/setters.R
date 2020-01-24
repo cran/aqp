@@ -37,7 +37,6 @@ setReplaceMethod("hzID", "SoilProfileCollection",
                  }
 )
 
-
 ## profile IDs
 if (!isGeneric('profile_id<-'))
   setGeneric('profile_id<-', function(object, value) standardGeneric('profile_id<-'))
@@ -91,6 +90,18 @@ setReplaceMethod("profile_id", "SoilProfileCollection",
                      update.idx <- match(dg[[idx]], lut[, 1])
                      dg[[idx]] <- lut[update.idx, 2]
                      suppressWarnings(diagnostic_hz(object) <- dg)
+                   }
+                   
+                   # search in @restrictions
+                   re <- restrictions(object)
+                   re.nm <- names(re)
+                   idx <- grep(idn, re.nm)
+                   
+                   if(length(idx) > 0) {
+                     # apply edits via LUT
+                     update.idx <- match(re[[idx]], lut[, 1])
+                     re[[idx]] <- lut[update.idx, 2]
+                     suppressWarnings(restrictions(object) <- re)
                    }
                    
                    return(object)
@@ -210,20 +221,20 @@ setReplaceMethod("hzidname", "SoilProfileCollection",
                    
                    # quick sanity check
                    if(length(value) != 1)
-                     stop("horizon ID name should have length of 1", call.=FALSE)
+                     stop("horizon ID name should have length of 1", call.=TRUE)
                    
                    
                    # sanity checks
                    
                    # test: does it exist?
                    if(! value %in% horizonNames(object)) {
-                     stop("ID name not in horizon data", call.=FALSE)
+                     stop("horizon ID name not in horizon data", call.=TRUE)
                    }
                    
                    # test: unique?
                    x <- horizons(object)[[value]]
                    if(length(unique(x)) != nrow(object)){
-                     stop("target ID name not unique", call.=FALSE)
+                     stop("horizon ID name (",value,") not unique", call.=TRUE)
                    }
                    
                    # replace
@@ -234,6 +245,63 @@ setReplaceMethod("hzidname", "SoilProfileCollection",
                  }
 )
 
+##
+## set hz designation name
+##
+if (!isGeneric('hzdesgnname<-'))
+  setGeneric('hzdesgnname<-', function(object, value) standardGeneric('hzdesgnname<-'))
+
+setReplaceMethod("hzdesgnname", "SoilProfileCollection",
+                 function(object, value) {
+                   # test: does it exist?
+                   if(!length(value))
+                     value <- ""
+                   
+                   if(length(value)) {
+                     # several ways to "reset" the hzdesgnname
+                     if((value == "") | is.na(value) | is.null(value)) {
+                       value <- character(0)
+                       message("set horizon designation name column to `character` of length zero")
+                     } else if (!(value %in% horizonNames(object))) {
+                       stop(paste0("horizon designation name (",value,") not in horizon data"), call.=FALSE)
+                     }
+                   } 
+                   
+                   # replace
+                   object@hzdesgncol <- value
+                   
+                   # done
+                   return(object)
+})
+
+##
+## set hz designation name
+##
+if (!isGeneric('hztexclname<-'))
+  setGeneric('hztexclname<-', function(object, value) standardGeneric('hztexclname<-'))
+
+setReplaceMethod("hztexclname", "SoilProfileCollection",
+                 function(object, value) {
+                   # test: does it exist?
+                   if(!length(value))
+                     value <- ""
+                   
+                   if(length(value)) {
+                     # several ways to "reset" the hzdesgnname
+                     if((value == "") | is.na(value) | is.null(value)) {
+                       value <- character(0)
+                       #message("set horizon texture class name to `character` of length zero")
+                     } else if (! value %in% horizonNames(object)) {
+                       stop("horizon texture class name not in horizon data", call.=TRUE)
+                     }
+                   } 
+                   
+                   # replace
+                   object@hztexclcol <- value
+                   
+                   # done
+                   return(object)
+                 })
 
 ##
 ## initialize metadata: object modification in-place
@@ -524,7 +592,8 @@ setReplaceMethod("horizons", "SoilProfileCollection",
 
   if(length(setdiff(unique(as.character(value[[idname(object)]])), profile_id(object))) > 0)
   	stop("there are IDs in the replacement that do not exist in the original data", call.=FALSE)
-
+  
+  ## NOTE: this can incur a lot of overhead when length(object) > 1,000
   # NEW: more extensive test of ids -- is it possible to merge rather than replace?
   if(hzidname(object) %in% names(value)) {
     # if hzidname for the SPC is present in the new data,
@@ -534,7 +603,7 @@ setReplaceMethod("horizons", "SoilProfileCollection",
     if((length(setdiff(unique(as.character(value[[hzidname(object)]])), hzID(object))) == 0) &
        any(!unique(names(value)) %in% unique(names(object@horizons)))) {
       to_merge <- c(names(value)[!names(value) %in% names(object@horizons)], idname(object), hzidname(object))
-      object@horizons <- merge(object@horizons, value[,to_merge], all.x = TRUE, by = c(idname(object), hzidname(object)))
+      object@horizons <- merge(object@horizons, value[,to_merge], all.x = TRUE, by = c(idname(object), hzidname(object)), sort=FALSE)
       
       # now, do updates to "old" columns so we do not duplicate
       to_update <- names(value)[!names(value) %in% to_merge]
@@ -593,7 +662,7 @@ setReplaceMethod("diagnostic_hz", "SoilProfileCollection",
   
   # test to make sure that our common ID is present in the new data
   if(! idn %in% nm)
-  	stop(paste("diagnostic horizon data are missing a common ID:", idn), call.=FALSE)
+  	stop(paste("diagnostic horizon data are missing pedon ID column: ", idn), call.=FALSE)
   
   # test to make sure that at least one of the IDS in candidate data are present within SPC
   if(all( ! unique(value[[idn]]) %in% pIDs) )
@@ -614,4 +683,56 @@ setReplaceMethod("diagnostic_hz", "SoilProfileCollection",
   # done
   return(object)
   }
+)
+
+
+# restriction data
+# likely to either have no restrictions or possibly more than one
+if (!isGeneric('restrictions<-'))
+  setGeneric('restrictions<-', function(object, value) standardGeneric('restrictions<-'))
+
+setReplaceMethod("restrictions", "SoilProfileCollection",
+                 function(object, value) {
+                   
+                   # get the initial data
+                   d <- restrictions(object)
+                   
+                   # get column and ID names
+                   nm <- names(value)
+                   idn <- idname(object)
+                   pIDs <- profile_id(object)
+                   
+                   # testing the class of the new data
+                   if (!inherits(value, "data.frame"))
+                     stop("restriction data must be a data.frame", call.=FALSE)
+                   
+                   # test for the special case where internally-used functions 
+                   # are copying over data from one object to another, and diagnostic_hz(obj) is a 0-row data.frame
+                   # short-circut, and return original object
+                   if(nrow(d) == 0 & nrow(value) == 0)
+                     return(object)
+                   
+                   # test to make sure that our common ID is present in the new data
+                   if(! idn %in% nm)
+                     stop(paste("restriction data are missing pedon ID column: ", idn), call.=FALSE)
+                   
+                   # test to make sure that at least one of the IDS in candidate data are present within SPC
+                   if(all( ! unique(value[[idn]]) %in% pIDs) )
+                     warning('restriction data have NO matching IDs in target SoilProfileCollection object!', call. = FALSE)
+                   
+                   # warn user if some of the IDs in the candidate data are missing
+                   if(any( ! unique(value[[idn]]) %in% pIDs) ) {
+                     warning('some records in restriction data have no matching IDs in target SoilProfileCollection object')
+                   }
+                   
+                   # if data are already present, warn the user
+                   if(nrow(d) > 0)
+                     warning('overwriting existing restriction data!', call.=FALSE)
+                   
+                   # copy data over
+                   object@restrictions <- value
+                   
+                   # done
+                   return(object)
+                 }
 )

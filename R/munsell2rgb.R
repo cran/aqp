@@ -1,6 +1,4 @@
 
-## BUG: .parseMunsellHue('G1') adds to row count of results
-# https://github.com/ncss-tech/aqp/issues/66
 
 # split standard Munsell hue into character | numeric parts
 # function is vectorized
@@ -12,13 +10,17 @@
   # NA not permitted, convert to ''
   hue <- ifelse(is.na(hue), '', hue)
   
-  ## TODO: replace with stringr / stringi version for saftey
   # extract numeric part from hue
   # danger! empty strings will result in an empty list element
   nm.part <- strsplit(hue, split='[^0-9.]+', )
   
   # replace empty list elements with ''
   nm.part[which(sapply(nm.part, length) < 1)] <- ''
+  
+  # the numeric part is always the first returned match
+  # solves bogus rows associated with invalid hues
+  # # https://github.com/ncss-tech/aqp/issues/66
+  nm.part <- lapply(nm.part, '[', 1)
   
   # convert to vector
   hue.numeric <- unlist(nm.part)
@@ -96,7 +98,7 @@ getClosestMunsellChip <- function(munsellColor, convertColors=TRUE, ...) {
 
 ## TODO: this will not correctly parse gley
 ## TODO: re-write with REGEX for extraction from within other text
-## TODO: short-circuit for obviously wrong Munsell codes
+## TODO: return NA for obviously wrong Munsell codes
 #
 # convert a color string '10YR 4/3' to sRGB or R color
 parseMunsell <- function(munsellColor, convertColors=TRUE, ...) {
@@ -121,10 +123,11 @@ parseMunsell <- function(munsellColor, convertColors=TRUE, ...) {
   return(res)
 }
 
-## TODO: distance calculation should be delta-E00, sigma is delta-E00 to closest chip
-# color is a matrix/data.frame of sRGB values in range of [0,1]
-# ideally output from munsell2rgb()
-rgb2munsell <- function(color, colorSpace='LAB', nClosest=1) {
+
+# color: matrix/data.frame of sRGB values in range of [0,1]
+# colorSpace: color space / distance metric (CIE2000, LAB, sRGB)
+# nClosest: number of closest chips to return
+rgb2munsell <- function(color, colorSpace='CIE2000', nClosest=1) {
   
   # vectorize via for-loop
   n <- nrow(color)
@@ -138,17 +141,15 @@ rgb2munsell <- function(color, colorSpace='LAB', nClosest=1) {
   # This should be more foolproof than data(munsell) c/o PR
   load(system.file("data/munsell.rda", package="aqp")[1])
   
-  ## TODO (this is now the default)
-  ## - test
-  ## - report changes, possibly save for 2.0
-  ## - Euclidean distance most useful?
-  ## - farver package may be faster and implements distance metrics: https://github.com/thomasp85/farver
-  ##    + added farver to suggests as of 1.17, distance calc is fully vectorized I think
   
-  ### problems described here, with possible solution, needs testing: 
-  ### https://github.com/ncss-tech/aqp/issues/67
+  # CIE2000 requires farver >= 2.0.3
+  if(colorSpace == 'CIE2000') {
+    if( !requireNamespace('farver') | packageVersion("farver") < '2.0.3' ) {
+      message('rgb2munsell: using LAB color space; install farver v2.0.3 or higher for perceptual distance in CIE2000')
+      colorSpace <- 'LAB';
+    }
+  }
   
-  ## TODO: this could probably be optimized
   # iterate over colors
   for(i in 1:n) {
     # convert current color to matrix, this will allow matrix and DF as input
@@ -158,24 +159,38 @@ rgb2munsell <- function(color, colorSpace='LAB', nClosest=1) {
       # euclidean distance (in sRGB space) is our metric for closest-color
       # d = sqrt(r^2 + g^2 + b^2)
       sq.diff <- sweep(munsell[, 4:6], MARGIN=2, STATS=this.color, FUN='-')^2
-      sq.diff.sum.sqrt <- sqrt(rowSums(sq.diff))
+      sigma <- sqrt(rowSums(sq.diff))
       # rescale distances to 0-1
-      sq.diff.sum.sqrt <- sq.diff.sum.sqrt / max(sq.diff.sum.sqrt)
+      sigma <- sigma / max(sigma)
       # return the closest n-matches
-      idx <- order(sq.diff.sum.sqrt)[1:nClosest]
+      idx <- order(sigma)[1:nClosest]
     }
+    
     if(colorSpace == 'LAB') {
       # euclidean distance (in LAB space) is our metric for closest-color
       # convert sRGB to LAB
       this.color.lab <- convertColor(this.color, from='sRGB', to='Lab', from.ref.white='D65', to.ref.white = 'D65')
       # d = sqrt(L^2 + A^2 + B^2)
       sq.diff <- sweep(munsell[, 7:9], MARGIN=2, STATS=this.color.lab, FUN='-')^2
-      sq.diff.sum.sqrt <- sqrt(rowSums(sq.diff))
-      ## TODO why re-scale?
+      sigma <- sqrt(rowSums(sq.diff))
       # rescale distances to 0-1
-      sq.diff.sum.sqrt <- sq.diff.sum.sqrt / max(sq.diff.sum.sqrt)
+      sigma <- sigma / max(sigma)
       # return the closest n-matches
-      idx <- order(sq.diff.sum.sqrt)[1:nClosest]
+      idx <- order(sigma)[1:nClosest]
+    }
+    
+    # most accurate / efficient method as of farver >= 2.0.3
+    if(colorSpace == 'CIE2000') {
+      # CIE dE00
+      # convert sRGB to LAB
+      this.color.lab <- convertColor(this.color, from='sRGB', to='Lab', from.ref.white='D65', to.ref.white = 'D65')
+      dimnames(this.color.lab)[[2]] <- c('L', 'A', 'B')
+      
+      # fully-vectorized
+      sigma <- farver::compare_colour(this.color.lab, munsell[, 7:9], from_space='lab', method = 'CIE2000', white_from = 'D65')
+      
+      # return the closest n-matches
+      idx <- order(sigma)[1:nClosest]
     }
     
     # with NA as an input, there will be no output
@@ -184,11 +199,17 @@ rgb2munsell <- function(color, colorSpace='LAB', nClosest=1) {
     
     # otherwise return the closest color
     else
-      res[[i]] <- data.frame(munsell[idx, 1:3], sigma=sq.diff.sum.sqrt[idx])
+      res[[i]] <- data.frame(munsell[idx, 1:3], sigma=sigma[idx])
   }
   
-  # convert to DF and return
-  return(ldply(res))
+  # convert to DF
+  res <- do.call('rbind', res)
+  row.names(res) <- as.character(1:nrow(res))
+  
+  # save sigma units
+  attr(res, which = 'sigma') <- switch(colorSpace, 'sRGB' = 'distance in sRGB', 'LAB' = 'distance in CIELAB', 'CIE2000' = 'dE00')
+  
+  return(res)
 }
 
 # TODO if alpha is greater than maxColorValue, there will be an error
@@ -203,7 +224,7 @@ munsell2rgb <- function(the_hue, the_value, the_chroma, alpha=1, maxColorValue=1
 		stop('Must supply a valid Munsell color.')
 	
 	# check to make sure that each vector is the same length
-	if(length(unique( c(length(the_hue),length(the_value),length(the_chroma)))) != 1)
+	if(length(unique( c(length(the_hue), length(the_value), length(the_chroma)))) != 1)
 		stop('All inputs must be vectors of equal length.')
 	
   ## plyr <= 1.6 : check to make sure hue is a character
@@ -232,10 +253,21 @@ munsell2rgb <- function(the_hue, the_value, the_chroma, alpha=1, maxColorValue=1
   ## 2016-03-07: "fix" values of 2.5 by rounding to 2
   the_value <- ifelse(the_value == 2.5, 2, the_value)
   
+  ## temporary fix for #44 (https://github.com/ncss-tech/aqp/issues/44)
+  # round non integer value and chroma
+  if ( !isTRUE(all.equal(as.character(the_value), as.character(as.integer(the_value)) )) ) {
+    the_value <- round(as.numeric(the_value))
+    warning("'the_value' has been rounded to the nearest integer.", call. = FALSE)
+  }
+  if ( !isTRUE(all.equal(as.character(the_chroma), as.character(as.integer(the_chroma)) )) ) {
+    the_chroma <- round(as.numeric(the_chroma))
+    warning("'the_chroma' has been rounded to the nearest integer.", call. = FALSE)
+  }
   
   # join new data with look-up table
   d <- data.frame(hue=the_hue, value=the_value, chroma=the_chroma, stringsAsFactors=FALSE)
-  res <- join(d, munsell, type='left', by=c('hue','value','chroma')) # result has original munsell + r,g,b
+  ## TODO: convert to merge()
+  res <- join(d, munsell, type='left', by=c('hue','value','chroma')) 
 	
   # reset options:
   options(opt.original)
