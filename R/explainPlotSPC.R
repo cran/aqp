@@ -1,7 +1,18 @@
 
-# useful for debugging plotSPC
+#' @title Visual Explanation for \code{plotSPC}
+#' @description Create a visual explanation for the many arguments to \code{plotSPC}. Call this function instead of \code{plotSPC}, all objects after \code{x} are passed on to \code{plotSPC}. Nearly all of the figures in the \href{https://ncss-tech.github.io/AQP/aqp/aqp-intro.html}{Introduction to SoilProfileCollection Objects tutorial} are created with this function.
+#' 
+#' @author D.E. Beaudette
+#' @seealso \code{\link{plotSPC}}
+#' @keywords manip
+#' 
+#' @param x a \code{SoilProfilecollection} object
+#' @param \dots arguments passed to \code{\link{plotSPC}}
+#' 
+#' @return a list of internally-used ordering vectors and graphical offsets / scaling factors
+#' 
 explainPlotSPC <- function(x, ...) {
-  plot(x, id.style='side', ...)
+  plotSPC(x, id.style='side', ...)
   box()
   
   # get last plot parameters
@@ -50,6 +61,11 @@ explainPlotSPC <- function(x, ...) {
   arrows(x0=lsp$n, x1=lsp$n + lsp$extra_x_space, y0=x.space.y, y1=x.space.y, length = 0.08, code = 3, col='orange', lwd=1)
   text(x=x.space.x, y=x.space.y, labels = 'extra x-space', cex=0.65, pos=3, font=3, col='orange')
   text(x=x.space.x, y=x.space.y, labels = lsp$extra_x_space, cex=0.85, pos=1, font=2, col='orange')
+  
+  # demonstrate width on first profile
+  arrows(x0=lsp$x0[1] - lsp$width, x1=lsp$x0[1] + lsp$width, y0=x.space.y, y1=x.space.y, length = 0.08, code = 3, col='orange', lwd=1)
+  text(x=lsp$x0[1], y=x.space.y, labels = 'width', cex=0.65, pos=3, font=3, col='orange')
+  text(x=lsp$x0[1], y=x.space.y, labels = lsp$width, cex=0.85, pos=1, font=2, col='orange')
   
   # plotting order
   text(x=lsp$x0, y=original.profile.idx.y, labels=lsp$plot.order, col='darkred', font=4, cex=0.75)

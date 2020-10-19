@@ -1,7 +1,7 @@
 # R 3.3 compatibility:
 
 importFrom("grDevices", "chull", "col2rgb", "colorRamp", "rgb2hsv", "hsv",
-             "colorRampPalette", "grey", "rgb", "convertColor")
+             "colorRampPalette", "grey", "rgb", "convertColor", "colors")
 
 importFrom("graphics", "abline", "arrows", "axis", "box", "grid",
              "image", "legend", "lines", "mtext", "par", "points",
@@ -10,7 +10,7 @@ importFrom("graphics", "abline", "arrows", "axis", "box", "grid",
 importFrom("stats", "aggregate", "approxfun", "as.dist", "as.formula",
              "complete.cases", "cov", "formula", "median", "model.frame",
              "na.omit", "na.pass", "quantile", "rnorm", "runif", "sd",
-             "splinefun", "update", "cmdscale", "dist")
+             "splinefun", "update", "cmdscale", "dist", "TukeyHSD", "aov")
 
 importFrom("utils", "head", "object.size", 'packageVersion')
 
@@ -26,21 +26,9 @@ importFrom(methods,
   as,
   show,
   slot,
+  "slot<-",
   .hasSlot,
   slotNames
-)
-
-
-importFrom(MASS,
-  isoMDS
-)
-
-importFrom(digest,
-  digest
-)
-
-importFrom(RColorBrewer,
-  brewer.pal
 )
 
 importFrom(grid,
@@ -64,18 +52,17 @@ importFrom(lattice,
   strip.custom
 )
 
-importFrom(cluster, 
+importFrom(cluster,
   daisy,
   pam,
   silhouette
 )
 
-importFrom(graphics, 
+importFrom(graphics,
   plot
 )
 
-importFrom(plyr, 
-  idata.frame,
+importFrom(plyr,
   ddply,
   llply,
   ldply,
@@ -85,18 +72,13 @@ importFrom(plyr,
   rbind.fill
 )
 
-importFrom(reshape, 
+importFrom(reshape,
   melt,
   melt.data.frame,
   cast
 )
 
-importFrom(scales,
-  rescale,
-  col_factor
-)
-
-importFrom(stringr, 
+importFrom(stringr,
   fixed,
   str_c,
   str_split,
@@ -107,35 +89,29 @@ importFrom(sp,
   CRS,
   SpatialPoints,
   SpatialPointsDataFrame,
-  coordinates, 
-  "coordinates<-", 
-  proj4string, 
+  coordinates,
+  "coordinates<-",
+  proj4string,
   "proj4string<-",
   rbind.SpatialPoints
 )
 
-
-importFrom(plotrix, 
-  soil.texture,
-  triax.points
-)
-
 exportClasses(SoilProfileCollection)
 
-S3method(rbind, SoilProfileCollection)
-
-exportMethods(  
+exportMethods(
   "[",
   "$",
   "$<-",
+  "[[",
+  "[[<-",
   validSpatialData,
   coordinates,
   "coordinates<-",
-  "depths<-", 
+  "depths<-",
   depth_units,
   "depth_units<-",
   diagnostic_hz,
-  "diagnostic_hz<-",  
+  "diagnostic_hz<-",
   restrictions,
   "restrictions<-",
   horizons,
@@ -145,7 +121,7 @@ exportMethods(
   length,
   max,
   metadata,
-  "metadata<-", 
+  "metadata<-",
   min,
   names,
   nrow,
@@ -167,7 +143,10 @@ exportMethods(
   "hzdesgnname<-",
   hzDesgn,
   hztexclname,
-  "hztexclname<-"
+  "hztexclname<-",
+  filter,
+  grepSPC,
+  subApply
 )
 
 exportPattern("^[^\\.]")

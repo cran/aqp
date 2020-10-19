@@ -1,3 +1,59 @@
+# aqp 1.25 (2020-10-15)
+ * new lookup table `pms.munsell.lut` for converting Pantone spot color codes to (closest) Munsell chip
+ * new function `duplicate` will makes copies of profiles within a `SoilProfileCollection`
+ * new example data `us.state.soils`: 50 state soils + PR and VI soils
+ * simulate subtractive mixtures of Munsell colors with `mixMunsell`
+   + see companion function `plotColorMixture` for visualization of spectra / mixture
+ * complete overhaul of `textureTriangleSummary`:
+   + uses `soiltexture` package for visualization (`plotrix` implementation dropped)
+   + argument names changes (! may break old code, sorry)
+   + dropped simulation via `sim = TRUE` argument, see `bootstrapSoilTexture` for a better approach
+ * new function `bootstrapSoilTexture` for simulating realistic sand/silt/clay compositions
+ * `combine` replaces/expands `aqp::union` due to conflicts with `base::union`
+ * `split` receives some upgrades to the S4 definition to increase parity with `split.default`
+ * `filter` is now an alias for new method `subset`, which mirrors `base::subset`
+ 
+# aqp 1.24 (2020-08-31)
+ * `estimateSoilDepth` **loses** `top` and `bottom` arguments, these are automatically extracted
+ * two new SoilProfileCollection wrapper methods: `munsell2SPC`, `spc2mpspline`
+ * add `returnData` argument to `contrastChart`
+ * improvements to `glom(..., invert=TRUE)`, `glomApply`, and better tests
+ * new wrapper method around `glomApply`: `aqp::trunc` for cases when top and bottom depth interval is the same for all profiles in a _SoilProfileCollection_
+ * fix for routing of `NULL` through `$<-` and `horizons<-` or `site<-` (https://github.com/ncss-tech/aqp/issues/163)
+ * fix handling of missing metadata in (old) serialized _SoilProfileCollection_ objects
+ * fix for promotion of `data.table` with character vector (not formula) interface
+
+# aqp 1.23 (2020-07-14)
+ * enhanced _SoilProfileCollection_ object validity checks via S4; new method `spc_in_sync` (https://github.com/ncss-tech/aqp/pull/152)
+ * optimization of `[` subset method and optional use of `data.table` (https://github.com/ncss-tech/aqp/pull/155)
+ * `depths<-` has been optimized and minimally validates input data
+ * default horizon ID (`hzID`) is now a `character` data type
+ * `aqp::union` uses `depths<-` internally; explicitly enforcing profile ID + top depth order in horizon data is safer but results in different ordering if `union`-ing IDs that "intermingle"  (need to be re-sorted). 
+ * new experimental method is `permute_profile`; similar to `sim` but for boundaries. The interface to this function is likely to change/be expanded.
+ * added `segment` c/o @smroecker
+ * fix for unit-length and zero-length legends in `plotSPC`
+ * fix for `plot` generic to show `aqp::plot` in `?plot`
+
+# aqp 1.22 (2020-06-24)
+ * basic support for promotion of `tbl_df` and `data.table` to _SoilProfileCollection_
+ * new method `aqp_df_class` to determine class name in use in a _SoilProfileCollection_ object
+ * `plotSPC` upgrades (https://github.com/ncss-tech/aqp/pull/146)
+ * new methods related to mollic epipedon: `mollic.thickness.requirement`, `hasDarkColors`
+ * new `estimateSoilDepth`-like methods for depth to multiple features via pattern matching: `depthOf`, `minDepthOf`, `maxDepthOf`
+ * soil texture helper functions (`ssc_to_texcl`, `texcl_to_ssc`, `texmod_to_fragvoltot`, `texture_to_taxpartsize`)
+ * optimization of `[i,]` `[,j]` subset methods for _data.frame_-based slots (https://github.com/ncss-tech/aqp/issues/135)
+ * new verbs: `mutate`, `mutate_profile` (https://github.com/ncss-tech/aqp/issues/118)
+ * ROSETTA centroids and water retention by texture class (https://github.com/ncss-tech/aqp/issues/131)
+ * fix for `getSurfaceHorizonDepth` with buried horizons / non-contiguous instances of matching horizons (https://github.com/ncss-tech/aqp/issues/132)
+ * fix for default `plotSPC` with small number of profiles ((https://github.com/ncss-tech/aqp/issues/128)
+ * remove implicit conversion to SpatialPointsDataFrame with unit-length `[` j-index subset ((https://github.com/ncss-tech/aqp/issues/125)
+ * fix in slab when `slab.structure[2] > max(x)`
+ 
+# aqp 1.19.01 (2020-02-07)
+ * proof of concept for tidy SoilProfileCollection subsetting
+ * define `[[` subsetting method; an "ambivalent" accessor for site- or horizon-level properties
+ * new subset verbs `grepSPC`, `filter`, `subApply` for use in `%>%`-lines 
+ 
 # aqp 1.19 (2020-01-22)
  * CRAN release
  * new functions: `hzDesgn()`, get horizon designations from a SPC
@@ -24,7 +80,7 @@
   * dropped some dependencies
 
 # aqp 1.17.10 (2019-10-30)
-  * removing imported functions from `Hmisc` (hdquantile), loading `aqp` is now much faster
+  * removing imported functions from `Hmisc` (`hdquantile`), loading `aqp` is now much faster
      + `slab()` now uses `stats::quantile()` as the default slab function
      + details at: https://github.com/ncss-tech/aqp/issues/79
      + previous behavior of `slab()` can be activated via argument: `slab.fun = aqp:::.slab.fun.numeric.HD`
@@ -114,9 +170,9 @@
 
 # aqp 1.10-4 (2017-05-02)
    * `texture.triangle.low.rv.high()` renamed to `textureTriangleSummary()`. The old name still works, but a message is issued
-   * new argument to textureTriangleSummary() texture.names: for toggling texture class names
-   * minor bug fix in textureTriangleSummary(..., sim=TRUE), previous simulated compositional data was not correct because the stats::var() was being used vs. compositions::var.acomp(). the variance / covariance values were 2-5x too small.
-   * new function tauW(), addd by D.G. Rossiter: see manual page for references
+   * new argument to `textureTriangleSummary()` `texture.names`: for toggling texture class names
+   * minor bug fix in `textureTriangleSummary(..., sim=TRUE)`, previous simulated compositional data was not correct because the stats::var() was being used vs. compositions::var.acomp(). the variance / covariance values were 2-5x too small.
+   * new function `tauW()`, addd by D.G. Rossiter: see manual page for references
 
 # aqp 1.10 (2017-01-05)
    * fixed major bug (https://github.com/ncss-tech/aqp/issues/23) related to editing horizon-level attributes after `rbind`-ing
@@ -258,16 +314,15 @@
 
 # aqp 1.4-7 (2013-01-24)
    * HTML version of all documentation (including images) auto-generated via knitr and available on the r-forge website
-   * new function: texture.triangle.low.rv.high() plots texture data with low-high range defined by quantiles
+   * new function: `texture.triangle.low.rv.high()` plots texture data with low-high range defined by quantiles
 
 # aqp 1.4-6 (2013-01-03)
-   * updated documentation and SoilProfileCollection tutorial here:
-      + https://r-forge.r-project.org/scm/viewvc.php/*checkout*/docs/aqp/aqp-intro.html?root=aqp
-   * plans laid for parallel processing in slab() and profileApply() via 'parallel' package
-   * plotSPC() gets a 'density' argument for shaded coloring of horizons
+   * updated documentation and SoilProfileCollection tutorial
+   * plans laid for parallel processing in `slab()` and `profileApply()` via 'parallel' package
+   * `plotSPC()` gets a `density` argument for shaded coloring of horizons
 
 # aqp 1.4-5 (2012-12-29)
-   * slab() re-written from scratch, resulting in reduced memory footprint and quicker running time
+   * `slab()` re-written from scratch, resulting in reduced memory footprint and quicker running time
   ! older code based on slab() is likely to now broken- sorry, it won't happen again
       + the new code is much slimmer and based on aggregate() rather than ddply
       + function arguments have changed so be sure to check the manual page
@@ -275,11 +330,11 @@
       + the next major release will contain additional examples of how to use the new features
 
 # aqp 1.4 (2012-12-18)
-   * new function sim() for simulation based on a template soil profile, proper documentation pending...
+   * new function `sim()` for simulation based on a template soil profile, proper documentation pending...
 
 # aqp 1.3-3 (2012-12-06)
-   * new function subsetProfiles() for simpler subsetting of SoilProfileCollection objects via site or horizon-level attributes
-   * get.ml.hz() now returns a 'confidence' for each horizon (as a percent)
+   * new function `subsetProfiles()` for simpler subsetting of `SoilProfileCollection` objects via site or horizon-level attributes
+   * `get.ml.hz()` now returns a 'confidence' for each horizon (as a percent)
    * added experimental 'filter' argument to profile_compare()- see manual page for usage
    * added new argument to plot.SoilProfileCollection()- alt.label: used to add secondary labeling via data in @site
    * plot.SoilProfileCollection() will now do a better job of selecting the location for profile IDs based on label length, font size, and figure size

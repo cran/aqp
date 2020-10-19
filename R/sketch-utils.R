@@ -1,14 +1,44 @@
-
-
-# simple function to convert horizon boundary distinctness codes into vertical (+/-) offsets
-# based on "red book" version 3.0
-hzDistinctnessCodeToOffset <- function(x, codes=c('A','C','G','D'), offset=c(0.5, 1.5, 5, 10)) {	
-  x <- as.character(x)
-  x.code <- match(x, codes)
-  x.offset <- offset[x.code]
-  x.offset <- ifelse(is.na(x.offset), 0, x.offset)
-  return(x.offset)
+# split legend into two rows, and create indices
+# any more classes than that and things become impossible to read
+# n: total number of classes
+.splitLegend <- function(n) {
+  
+  #  make enough room for even division of odd numbers
+  n.per.row <- ceiling(n / 2)
+  
+  # make indices for first row
+  row.1.idx <- seq(from=1, to=n.per.row)
+  row.2.idx <- seq(from=n.per.row + 1, to=n)
+  
+  res <- list(
+    row.1=row.1.idx,
+    row.2=row.2.idx
+  )
+  
+  return(res)
 }
+
+
+# Test for valid colors in vector `x`: 
+#   1. named colors from colors()
+#   2. RGB / RGBA encoding of colors
+.isColorValid <- function(x) {
+  # check for named colors
+  test.1 <- x %in% colors()
+  
+  # check for valid RGB
+  test.2 <- grepl('^#[a-f0-9]{6}', x, ignore.case = TRUE)
+  
+  # check for valid RGBA colors
+  test.3 <- grepl('^#[a-f0-9]{8}', x, ignore.case = TRUE)
+  
+  # must pass at least 1 test
+  res <- test.1 | test.2 | test.3
+  return(res)
+}
+
+
+
 
 # establish which elements within a vector of horizontal positions overlap beyond a given threshold
 # x: vector of horizontal positions
