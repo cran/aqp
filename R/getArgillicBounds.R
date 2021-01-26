@@ -12,10 +12,10 @@
 #' @param require_t require a "t" subscript for positive identification of upper and lower bound of argillic? default: TRUE
 #' @param bottom.pattern regular expression passed to \code{estimateSoilDepth} to match the lower boundary of the soil. default is "Cr|R|Cd" which approximately matches paralithic, lithic and densic contacts.
 #' @param lower.grad.pattern this is a pattern for adjusting the bottom depth of the argillic horizon upwards from the bottom depth of the soil. The absence of illuviation is used as a final control on horizon pattern matching.
-#' @param sandy.texture.pattern this is a pattern for matching sandy textural classes: "-S$|^S$|COS$|L[^V]FS$|[^L]VFS$|LS$|LFS$"
+#' @param sandy.texture.pattern this is a pattern for matching sandy textural classes: `-S$|^S$|COS$|L[^V]FS$|[^L]VFS$|LS$|LFS$`
 #' @param verbose Print out information about 't' subscripts, sandy textures, plow layers and lower gradational horizons?
 #'
-#' @description \code{getArgillicBounds} estimates the upper and lower boundary of argillic diagnostic subsurface horizon for a profile in a single-profile SoilProfileCollection object ('p').
+#' @description \code{getArgillicBounds} estimates the upper and lower boundary of argillic diagnostic subsurface horizon for a profile in a single-profile SoilProfileCollection object (`p`).
 #'
 #' The upper boundary is where the clay increase threshold is met. The function uses \code{crit.clay.argillic} as the threshold function for determining whether a clay increase occurs and \code{get.increase.matrix} to determine whether the increase is met, whether vertical distance of increase is sufficiently small, and in which horizon.
 #'
@@ -23,11 +23,11 @@
 #'
 #' The depth to contact is estimated using 'bottom.pattern' "Cr|R|Cd" by default. It matches anything containing Cr, R or Cd.
 #'
-#' The lower gradational horizon regular expression ‘lower.grad.pattern' default is \code{^[2-9]*B*CB*[^rtd]*[1-9]*$}. It matches anything that starts with a lithologic discontinuity (or none) and a C master horizon designation. May contain B as second horizon designation in transitional horizon. May not contain 'r' or 't' subscript.
+#' The lower gradational horizon regular expression ‘lower.grad.pattern' default is `^[2-9]*B*CB*[^rtd]*[1-9]*$}`. It matches anything that starts with a lithologic discontinuity (or none) and a C master horizon designation. May contain B as second horizon designation in transitional horizon. May not contain 'r' or 't' subscript.
 #'
-#' The minimum thickness of the argillic horizon is dependent on whether all subhorizons are "sandy" or not. The \code{sandy.texture.pattern} default \code{-S$|^S$|COS$|L[^V]FS$|[^L]VFS$|LS$|LFS$} captures USDA textural class fine earth fractions that meet "sandy" particle size class criteria.
+#' The minimum thickness of the argillic horizon is dependent on whether all subhorizons are "sandy" or not. The \code{sandy.texture.pattern} default `-S$|^S$|COS$|L[^V]FS$|[^L]VFS$|LS$|LFS$` captures USDA textural class fine earth fractions that meet "sandy" particle size class criteria.
 #'
-#' There also is an option ‘require_t' to omit the requirement for evidence of eluviation in form of ’t' subscript in 'hzdesgn'. Even if "t" subscript is not required for positive identification, the presence of lower gradational C horizons lacking 't' will still be used to modify the lower boundary upward from a detected contact, if needed. If this behavior is not desired, just set 'lower.grad.pattern' to something that will not match any horizons in your data.
+#' There also is an option ‘require_t' to omit the requirement for evidence of eluviation in form of 't' subscript in 'hzdesgn'. Even if "t" subscript is not required for positive identification, the presence of lower gradational C horizons lacking 't' will still be used to modify the lower boundary upward from a detected contact, if needed. If this behavior is not desired, just set 'lower.grad.pattern' to something that will not match any horizons in your data.
 #'
 #' @author Andrew G. Brown
 #'
@@ -237,7 +237,41 @@ getArgillicBounds <- function(p,
   }
   return(c(ubound = upper.bound, lbound = lower.bound))
 }
-
+#' Determines threshold (minimum) clay content for argillic upper bound
+#'
+#' Given a vector or matrix of "eluvial" horizon clay contents (\%),
+#' \code{crit.clay.argillic()} returns a vector or matrix of minimum clay
+#' contents (thresholds) that must be met for an argillic horizon clay
+#' increase.
+#'
+#' Uses the standard equations for clay contents less than 15 \%, between 15
+#' and 40 \%, and greater than 40 \%. Based on the clay increase criteria in
+#' the definition of the argillic horizon from 12th Edition Keys to Soil
+#' Taxonomy (Soil Survey Staff, 2014).
+#'
+#'
+#' @param eluvial_clay_content A numeric vector or matrix containing clay
+#' contents of potential "eluvial" horizons. May contain \code{NA}.
+#' @return A vector or matrix (input-dependent) containing minimum "illuvial"
+#' horizon clay contents (thresholds) to be met for argillic horizon clay
+#' increase.
+#' @note This function is intended for identifying clay content threshold
+#' required for an argillic horizon. These thresholds may not apply depending
+#' on the specifics of your soil. E.g. if the upper part of argillic has been
+#' plowed (has Ap immediately over upper boundary) the clay increase
+#' requirement can be waived (Soil Survey Staff, 2014).
+#' @author Andrew Gene Brown
+#' @seealso \code{\link{getArgillicBounds}}, \code{\link{get.increase.matrix}}
+#' @references Soil Survey Staff. 2014. Keys to Soil Taxonomy, 12th ed.
+#' USDA-Natural Resources Conservation Service, Washington, DC.
+#' @keywords manip
+#' @examples
+#'
+#' # crit.clay.argillic uses different equations for clay content
+#' # less than 15 %, between 15 and 40 %, and >40 %
+#'
+#' crit.clay.argillic(eluvial_clay_content=c(5, 20, 45))
+#'
 crit.clay.argillic <- function(eluvial_clay_content) {
   # eluvial clay content is a numeric vector or matrix subsettable with logical vectors based on clay (NA omitted)
   buf <- eluvial_clay_content
@@ -256,17 +290,42 @@ crit.clay.argillic <- function(eluvial_clay_content) {
   buf[idx.lt15] <- eluvial_clay_content[idx.lt15] + 3
   buf[idx.gt40] <- eluvial_clay_content[idx.gt40] + 8
   buf[idx.other] <- 1.2*eluvial_clay_content[idx.other]
-  return(buf)
+  return(round(buf))
 }
 
-# returns the top and bottom depth of the argillic horizon as a numeric vector.
-# applies get.increase.depth() identify the argillic horizon upper bound
-# threshold fun()=`crit.clay.argillic` defines the clay increase that must be met within 30 cm vertical distance
-# the default horizon attribute name is `clay`, but it can be adjusted as needed
+#' Return upper boundary of argillic horizon
+#' 
+#' Returns the top depth of the argillic horizon as a numeric vector.
+#' 
+#' Uses \code{crit.clay.argillic} to determine threshold clay increase, and
+#' \code{get.increase.matrix} to determine where increase is met within a
+#' vertical distance of 30 cm.
+#' 
+#' 
+#' @param p A single-profile \code{SoilProfileCollection} object.
+#' @param clay.attr OPTIONAL: horizon attribute name referring to clay content.
+#' default: `clay`
+#' @return A numeric vector containing top depth of argillic horizon, if
+#' present, or NA.
+#' @author Andrew Gene Brown
+#' @seealso \code{getArgillicBounds}, \code{get.increase.matrix},
+#' \code{crit.clay.argillic}
+#' @keywords manip
+#' @examples
+#' 
+#' data(sp1, package = 'aqp')
+#' depths(sp1) <- id ~ top + bottom
+#' site(sp1) <- ~ group
+#' 
+#' p <- sp1[1]
+#' attr <- 'prop' # clay contents 
+#' foo <- argillic.clay.increase.depth(p, clay.attr = attr)
+#' foo
+#' 
 argillic.clay.increase.depth <- function(p, clay.attr = 'clay') {
   vd <- 30
   return(get.increase.depths(p, attr = clay.attr,
-                          threshold.fun = crit.clay.argillic,
-                          vertical.distance = vd)[1])
+                             threshold.fun = crit.clay.argillic,
+                             vertical.distance = vd)[1])
 }
 

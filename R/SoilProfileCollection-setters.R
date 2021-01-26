@@ -11,7 +11,7 @@ if (!isGeneric('depths<-'))
 #' @rdname depths
 setReplaceMethod("depths", signature(object = "SoilProfileCollection"),
 	function(object, value) {
-		message('This is already a SoilProfilecollection-class object, doing nothing.')
+		message('This is already a SoilProfileCollection-class object, doing nothing.')
 		object
 	})
 
@@ -114,16 +114,28 @@ setReplaceMethod("depths", "data.frame",
   data[[depthcols[2]]] <- .checkNAdepths(data[[depthcols[2]]], "bottom")
 
   iddata <- data[[nm[1]]]
+
+  if (all(is.na(data[[depthcols[1]]]) |
+          all(is.na(data[[depthcols[2]]]) ))) {
+      warning("Dropping profile IDs: ", paste0(iddata, collapse = ","),
+              "; all top and/or bottom depths missing!", call. = FALSE)
+      return(SoilProfileCollection())
+  }
+
   tdep <- data[[depthcols[1]]]
 
-  usortid <- unique(sort(iddata))
+  usortid <- sort(iddata)
 
   idtdepord <- order(as.character(iddata), tdep)
   ditd <- data[idtdepord,]
-  hsorttdep <- all(ditd[[depthcols[1]]] == tdep)
+  hsorttdep <- !all(ditd[[depthcols[1]]] == tdep)
 
   # re-sort horizon data
-  if (suppressWarnings(any(iddata != usortid) | !hsorttdep)) {
+  t12 <- any(iddata != usortid) | hsorttdep
+
+  if (is.na(t12)) {
+    return(SoilProfileCollection())
+  } else if (t12) {
     ## note: forced character sort on ID -- need to impose some order to check depths
     data <- ditd
   }
@@ -323,22 +335,23 @@ setReplaceMethod("site", signature(object = "SoilProfileCollection"),
   names_attr <- names(mf)
   idx <- match(names_attr, horizonNames(object))
 
-  # remove the index to the ID columnm, as we do not want to remove this from
+  # remove the index to the ID column, as we do not want to remove this from
   # the horizon data !
   idx <- idx[-match(idname(object), names_attr)]
 
-  # this will break when multiple horizons in the same pedon have different site data!
-  # this seems to work fine in all cases, as we keep the ID column
-  # and it ensures that the result is in the same order as the IDs
-  new_site_data <- ddply(mf, idname(object),
-      .fun=function(x) {
-	      unique(x[, names_attr, drop = FALSE])
-      }
-  )
-
+  .SD <- NULL
+  
+  dth <- as.data.table(horizons(object))
+  
+  new_site_data <- .as.data.frame.aqp(unique(dth[, .SD, .SDcols = names_attr]), aqp_df_class(object))
+  
+  if (nrow(new_site_data) != length(object)) {
+    warning("One or more horizon columns cannot be normalized to site. Leaving site data unchanged.", call. = FALSE)
+    return(object)
+  }
+  
   # if site data is already present, we don't overwrite/erase it
-  site_data <- merge(object@site, new_site_data, by = idname(object),
-                     all.x = TRUE, sort = FALSE)
+  site_data <- merge(object@site, new_site_data, by = idname(object), all.x = TRUE, sort = FALSE)
 
   # remove the named site data from horizon_data
   h <- object@horizons

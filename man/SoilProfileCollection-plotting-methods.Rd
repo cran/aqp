@@ -39,7 +39,8 @@ plotSPC(
   abbr.cutoff = 5,
   divide.hz = TRUE,
   hz.distinctness.offset = NULL,
-  hz.topography.lty = NULL,
+  hz.topography.offset = NULL,
+  hz.boundary.lty = NULL,
   axis.line.offset = -2.5,
   plot.depth.axis = TRUE,
   density = NULL,
@@ -108,7 +109,7 @@ plot(x, y, ...)
 
 \item{n.depth.ticks}{suggested number of ticks in depth scale}
 
-\item{shrink}{logical, reduce character scaling for 'long' horizon by 80\% ?}
+\item{shrink}{logical, reduce character scaling for 'long' horizon by 80\%?}
 
 \item{shrink.cutoff}{character length defining 'long' horizon names}
 
@@ -118,9 +119,11 @@ plot(x, y, ...)
 
 \item{divide.hz}{logical, divide horizons with line segment? (TRUE), see details}
 
-\item{hz.distinctness.offset}{quoted column name (horizon-level attribute) containing vertical offsets used to depict horizon boundary distinctness (same units as profiles), see details and code{\link{hzDistinctnessCodeToOffset}}}
+\item{hz.distinctness.offset}{NULL, or quoted column name (horizon-level attribute) containing vertical offsets used to depict horizon boundary distinctness (same units as profiles), see details and code{\link{hzDistinctnessCodeToOffset}}}
 
-\item{hz.topography.lty}{quoted column name (horizon-level attribute) containing line style (integers) used to encode horizon topography}
+\item{hz.topography.offset}{NULL, or quoted column name (horizon-level attribute) containing offsets used to depict horizon boundary topography (same units as profiles), see details and code{\link{hzTopographyCodeToOffset}}}
+
+\item{hz.boundary.lty}{quoted column name (horizon-level attribute) containing line style (integers) used to encode horizon topography}
 
 \item{axis.line.offset}{horizontal offset applied to depth axis (default is -2.5, larger numbers move the axis to the right)}
 
@@ -146,13 +149,13 @@ plot(x, y, ...)
 
 \item{\dots}{other arguments passed into lower level plotting functions}
 
-\item{y}{[not used]}
+\item{y}{(not used)}
 }
 \description{
 Generate a diagram of soil profile sketches from a \code{SoilProfileCollection} object. The \href{https://ncss-tech.github.io/AQP/aqp/aqp-intro.html}{Introduction to SoilProfileCollection Objects tutorial} contains many examples and discussion of the large number of arguments to this function.
 }
 \details{
-Depth limits (\code{max.depth}) and number of depth ticks (\code{n.depth.ticks}) are *suggestions* to the \code{\link{pretty}} function. You may have to tinker with both parameters to get what you want.
+Depth limits (\code{max.depth}) and number of depth ticks (\code{n.depth.ticks}) are \emph{suggestions} to the \code{\link{pretty}} function. You may have to tinker with both parameters to get what you want.
 
 The 'side' \code{id.style} is useful when plotting a large collection of profiles, and/or, when profile IDs are long.
 

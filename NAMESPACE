@@ -72,11 +72,7 @@ importFrom(plyr,
   rbind.fill
 )
 
-importFrom(reshape,
-  melt,
-  melt.data.frame,
-  cast
-)
+import(data.table)
 
 importFrom(stringr,
   fixed,

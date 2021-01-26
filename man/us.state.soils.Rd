@@ -6,15 +6,15 @@
 \title{US State Soils}
 \format{
 \describe{
-  \item{state}{state name}
-  \item{abbreviated}{abbreviated state name}
-  \item{series}{soil series name}
+\item{state}{state name}
+\item{abbreviated}{abbreviated state name}
+\item{series}{soil series name}
 }
 }
 \usage{
 data(us.state.soils)
 }
 \description{
-A listing of the 52 US state soils, including Puerto Rico and Virgin Islands.
+A listing of the 50 US state soils, along with Puerto Rico and Virgin Islands.
 }
 \keyword{datasets}

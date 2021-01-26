@@ -6,10 +6,10 @@
 \title{Pantone Colors / Munsell Lookup Table}
 \format{
 \describe{
-  \item{code}{Pantone spot color code}
-  \item{hex}{hex representation of sRGB colorspace, suitable for on-screen use}
-  \item{munsell}{Munsell notation of closest color "chip"}
-  \item{dE00}{delta-E 2000 metic describing the (perceptual) distance to the closest Munsell chip}
+\item{code}{Pantone spot color code}
+\item{hex}{hex representation of sRGB colorspace, suitable for on-screen use}
+\item{munsell}{Munsell notation of closest color "chip"}
+\item{dE00}{delta-E 2000 metric describing the (perceptual) distance to the closest Munsell chip}
 }
 }
 \usage{
@@ -21,15 +21,14 @@ A simple lookup table to convert \href{https://en.wikipedia.org/wiki/Pantone}{Pa
 Possible uses include rough estimation of soil colors in the field, by means of color swatches based on the Pantone system. This type of color matching is most appropriate in an educational setting where official soil color books may be too expensive.
 }
 \details{
-For now, lookup is performed by manual subset (see examples 1 and 2 below) or implicit subsetting by way of a join (example 3). Reverse lookup (Munsell -> Pantone) will not always result in a matching color, see example 3 below.
+For now, lookup is performed by manual subset (see examples 1 and 2 below) or implicit subset by way of a join (example 3). Reverse lookup (Munsell -> Pantone) will not always result in a matching color, see example 3 below.
 }
 \note{
-The lookup table contains entires for both coated and uncoated colors, these are indentified by a '-c' or '-u' suffix. For example, Pantone code '100-c' is associated with '10Y 9/9'.
-
+The lookup table contains entries for both coated and un-coated colors, these are identified by a '-c' or '-u' suffix. For example, Pantone code '100-c' is associated with '10Y 9/9'.
 
 Several Munsell chips are matched by multiple Pantone spot colors, e.g. 5YR 5/5.
- 
-1    2    3    4    5    6    8    9 
+
+1    2    3    4    5    6    8    9
 0.65 0.24 0.08 0.02 0.01 0.00 0.00 0.00
 }
 \examples{
@@ -82,7 +81,7 @@ plotSPC(sp6, color = 'hex')
 
 
 ## 4. multiple Pantone colors matching a single Munsell color
-# 
+#
 colors <- pms.munsell.lut[pms.munsell.lut$munsell == '5YR 5/5', ]
 colors <- colors[order(colors$dE00), ]
 

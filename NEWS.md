@@ -1,4 +1,23 @@
+# aqp 1.27 (2021-01-22)
+ * `mixMunsell` now relies on suggested package {gower} for 5-10x speed bump
+ * {aqp} no longer imports from {reshape} (less one dependency), all transformations from wide<->long are done via {data.table}
+ * methods from {data.table} are now imported by {aqp} (new dependency)
+ * Major overhaul of `plotColorQuantiles()`, now using {lattice} graphics
+ * New dataset `equivalent_munsell` and method `equivalentMunsellChips` for "equivalent" Munsell chips lookup list based on all pairwise dE00 contrasts for integer "chips" in {aqp} `munsell` data set
+ * Argillic critical clay contents `crit.clay.argillic` rounded to whole numbers per NSSH Part 614, subpart B, sections 614.13 and 614.14
+
+# aqp 1.26 (2020-11-18)
+ * `mutate_profile` uses `data.table::rbindlist(fill=TRUE)` to combine site- and horizon-level transformations
+ * updates to horizon boundary encoding functions (`hzTopographyCodeToOffset`, `hzTopographyCodeToLineType`, `hzDistinctnessCodeToOffset`)
+ * new function `L1_profiles` computes multivariate (L1) medians, compare to marginal medians via `slab`
+ * `plotSPC` updates:
+   + argument named changes: `hz.boundary.lty` is a horizon-level attribute that contains line type codes
+   + `hz.topography.offset` a horizon-level attribute that contains representative offsets that encode horizon boundary topography
+   + `plotSPC` now encodes `hz.topography.offset` using a vertical "bump" (chevron)
+ * `addBracket` can now accept multiple bracket annotations per profile
+
 # aqp 1.25 (2020-10-15)
+ * CRAN release
  * new lookup table `pms.munsell.lut` for converting Pantone spot color codes to (closest) Munsell chip
  * new function `duplicate` will makes copies of profiles within a `SoilProfileCollection`
  * new example data `us.state.soils`: 50 state soils + PR and VI soils
@@ -89,7 +108,7 @@
   * `generalize.hz()` gets a \dots argument for passing additional arguments to `grep()`, e.g. `perl=TRUE`
   * `addVolumeFraction()` can now accept a vector of colors, as many as number of horizons
   * new sample data: `jacobs2000`, pending documentation
-  * `aggregateColor()` faster and more accuracte, using delta-E00 for quantized colors c/o {farver} (see https://github.com/ncss-tech/aqp/issues/98)
+  * `aggregateColor()` faster and more accurate, using delta-E00 for quantized colors c/o {farver} (see https://github.com/ncss-tech/aqp/issues/98)
   * new functions `contrastChart()` and `soilPalette()`
   * aqp 1.18 scheduled for next CRAN release
 
@@ -130,7 +149,7 @@
 
 # aqp 1.16-5 (2018-11-21)
    * moved `explainPlotSPC` from SPC tutorial to `aqp::explainPlotSPC()`
-   * `plotSPC()` is a little better at estimating "extra" vetical / horizontal space, still needs work (https://github.com/ncss-tech/aqp/issues/62)
+   * `plotSPC()` is a little better at estimating "extra" vertical / horizontal space, still needs work (https://github.com/ncss-tech/aqp/issues/62)
 
 # aqp 1.16-2 (2018-05-22)
    * fixing #53 and #54
@@ -172,7 +191,7 @@
    * `texture.triangle.low.rv.high()` renamed to `textureTriangleSummary()`. The old name still works, but a message is issued
    * new argument to `textureTriangleSummary()` `texture.names`: for toggling texture class names
    * minor bug fix in `textureTriangleSummary(..., sim=TRUE)`, previous simulated compositional data was not correct because the stats::var() was being used vs. compositions::var.acomp(). the variance / covariance values were 2-5x too small.
-   * new function `tauW()`, addd by D.G. Rossiter: see manual page for references
+   * new function `tauW()`, added by D.G. Rossiter: see manual page for references
 
 # aqp 1.10 (2017-01-05)
    * fixed major bug (https://github.com/ncss-tech/aqp/issues/23) related to editing horizon-level attributes after `rbind`-ing
@@ -250,7 +269,7 @@
    * removed spatial_subset(): this functionality can be accomplished outside of AQP and removes dependency on rgeos package
 
 # aqp 1.7-6 (2014-09-26)
-   * bug fix c/o Jos? Padarian: when promoting coordiantes from @site, drop=FALSE is required to prevent a single remaining attribute from being down-graded to a vector-- thanks!
+   * bug fix c/o Jos? Padarian: when promoting coordinates from @site, drop=FALSE is required to prevent a single remaining attribute from being down-graded to a vector-- thanks!
    * get.ml.hz() now returns a "pseudo" Brier Score, using the most-likely horizon label as the "correct" value
    * new function rgb2munsell()
    * new function estimateSoilDepth()
@@ -276,7 +295,7 @@
 
 # aqp 1.6 (2013-12-11)
    * rbind.SoilProfileCollection() now re-orders data according to the new set of profile IDs
-      + this fixes several probles associated with assumptions in profile_compare()
+      + this fixes several problems associated with assumptions in profile_compare()
    * profile_compare() will be re-written soon to work natively with SPC objects
 
 # aqp 1.5-6 (2013-11-25)
@@ -387,7 +406,7 @@
 # aqp 1.1 (2012-04-18)
    * merged documentation for soil.slot() and slab()
       + slab() should be used in all places where soil.slot() was used
-      + soil.slot() will dissapear from the package NAMESPACE eventually, so don't use it directly!
+      + soil.slot() will disappear from the package NAMESPACE eventually, so don't use it directly!
    * minor bug fix in panel.depth_function()
    * cleanup of documentation and examples
    * added horizon boundary distinctness code conversions and plotting functionality
@@ -420,7 +439,7 @@
 
 # aqp 0.99-9.6 (2012-02-21)
    * spurious warnings from profile_compare() caused by daisy() now suppressed
-      + warnings were generated when calling daisy() on a matrix of all NA which typically occured when using too-large a lower depth for evaluation of D
+      + warnings were generated when calling daisy() on a matrix of all NA which typically occurred when using too-large a lower depth for evaluation of D
    * preliminary support for diagnostic horizons via diagnostic_hz()
    * new examples
    * error and warnings messages cleaned-up
@@ -445,13 +464,13 @@
    * pedonPC, NASIS, and SDA functions moved *out* of aqp, and *into* new package: soilDB
       + removed assocated, suggested packages from aqp
       + soilDB will be on CRAN shortly
-   * new argument to plot(SoilProfileCollection, ..., divide.hz=TRUE|FALSE) tha can optionally suppress plotting of dividing lines between horizons (suggested by Ludwig Hilger)
+   * new argument to plot(SoilProfileCollection, ..., divide.hz=TRUE|FALSE) that can optionally suppress plotting of dividing lines between horizons (suggested by Ludwig Hilger)
    * new function profileApply() for applying functions by profile
 
 # aqp 0.99-9 (2011-12-22)
    * almost ready for AQP 1.0, vignettes are the last missing piece :)
    * slice(SPC, ...) is now 10-100x faster, scales linearly
-   * slice(SPC, ...) can simultaniously slice categorical and continuous variables
+   * slice(SPC, ...) can simultaneously slice categorical and continuous variables
    * converted ID column in sample data to character class
    * fixed a bug in slice() where NA would be returned when IDs were factors
    * added test to depths()<- such that factor IDs are converted into character IDs and a warning is issued
@@ -495,10 +514,10 @@
 # aqp 0.99-8.2 (2011-09-21)
    * added S4 class/methods for `SoilProfileCollection`
       + this supercedes the (now removed) S3 `SoilProfileList` classes
-      + basic accessors/settors are in place, subject to change
+      + basic accessors/setters are in place, subject to change
    * profile_plot() now uses the `SoilProfileCollection` class
       + *initSoilProfileList() is no longer supported; see depths() for similar functionality*
-      + *expect some tumultous times ahead in the API... should be ironed out by 1.0 release*
+      + *expect some tumultuous times ahead in the API... should be ironed out by 1.0 release*
 
 # aqp 0.99-8 (2011-09-14)
    * soil.slot() will now accept boundaries defining a 'slab' over which aggregates are computed
@@ -600,7 +619,7 @@
    * plotting under dendrograms generated by ape::plot.phylo() may need some manual adjustments
 
 # aqp 0.88 (2010-07-06)
-   * new version of plyr (1.0) should speed up most functions in aqp pacakge 
+   * new version of plyr (1.0) should speed up most functions in aqp package 
    * added support for user-defined aggregate functions in soil.slot and soil.slot.multiple
    * planning addition of PCA by depth slice
    * planning addition of equal-area spline fitting

@@ -14,15 +14,17 @@
 #' @param ccAbbreviate length of abbreviated contrast classes, use 0 to suppress labels
 #'
 #' @param style 'hue' or 'CC', see details
+#' 
+#' @param gridLines logical, add grid lines to the color contrast chart
 #'
 #' @param thresh threshold (<) applied to pair-wise comparisons and resulting color chips
 #'
 #' @param returnData logical, return lattice figure + data used to generate the figure
 #'
 #' @details
-#' A simulated Munsell color book page or pages are used to demonstrate color contrast between all chips and the refnerece color \code{m} (highlighted in red). NCSS color contrast class and CIE delta-E00 values are printed below all other color chips. Munsell color chips for chroma 5 and 7 are ommitted, but axis labels are retained as a reminder of this fact.
+#' A simulated Munsell color book page or pages are used to demonstrate color contrast between all chips and the reference color \code{m} (highlighted in red). NCSS color contrast class and CIE delta-E00 values are printed below all other color chips. Munsell color chips for chroma 5 and 7 are omitted, but axis labels are retained as a reminder of this fact.
 #'
-#' Setting \code{style='hue'} emphasises the contrast classes and CIE delta-E00 of chips adjacent to \code{m}. Setting \code{style='CC'} emphasises adjacent chips according to respective contrast class via lattice panels.
+#' Setting \code{style='hue'} emphasizes the contrast classes and CIE delta-E00 of chips adjacent to \code{m}. Setting \code{style='CC'} emphasizes adjacent chips according to respective contrast class via lattice panels.
 #'
 #' Two-way panels are used when multiple hues are provided and \code{style='CC'}. The default output can be greatly enhanced via:
 #'
@@ -50,7 +52,7 @@
 #' contrastChart(m = '10YR 5/6', hues = c('10YR', '2.5Y'), style='CC')
 #'
 
-contrastChart <- function(m, hues, ccAbbreviate=1, style='hue', thresh = NULL, returnData = FALSE) {
+contrastChart <- function(m, hues, ccAbbreviate = 1, style = 'hue', gridLines = FALSE, thresh = NULL, returnData = FALSE) {
 
   # load Munsell LUT
   # safe for CRAN check
@@ -85,8 +87,9 @@ contrastChart <- function(m, hues, ccAbbreviate=1, style='hue', thresh = NULL, r
     }
   }
 
-  # extract just those hues we are working with, standard value/chroma pairs
-  chroma.subset <- c(1,2,3,4,6,8)
+  # extract just requested hues
+  # along with standard value/chroma pairs found on a typical color book page
+  chroma.subset <- c(1, 2, 3, 4, 6, 8)
   x <- munsell[which(munsell$value %in% 3:8 & munsell$chroma %in% chroma.subset & munsell$hue %in% hues), ]
 
   # convert into hex notation for plotting
@@ -99,12 +102,16 @@ contrastChart <- function(m, hues, ccAbbreviate=1, style='hue', thresh = NULL, r
   x$hue <- factor(x$hue, levels=ll)
 
   # setup query color table
-  m <- data.frame(queryColor=m, parseMunsell(m, convertColors = FALSE), stringsAsFactors = FALSE)
+  m <- data.frame(
+    queryColor = m, 
+    parseMunsell(m, convertColors = FALSE),
+    stringsAsFactors = FALSE
+  )
   m$value <- as.integer(m$value)
   m$chroma <- as.integer(m$chroma)
 
   # compute all pair-wise constrast classes and dE00
-  cc <- colorContrast(x$munsell, rep(m$queryColor, times=nrow(x)))
+  cc <- colorContrast(x$munsell, rep(m$queryColor, times = nrow(x)))
 
   # join for plotting
   z <- merge(x, cc, by.x='munsell', by.y='m1', all.x=TRUE, sort=FALSE)
@@ -115,12 +122,16 @@ contrastChart <- function(m, hues, ccAbbreviate=1, style='hue', thresh = NULL, r
 
   }
 
+  # convert chroma into a factor, in this way we can skip chroma 5/7
+  # note that the full levels of chroma have to be set 
+  z$chroma <- factor(z$chroma, levels = chroma.subset)
+  
   # alternative modes
   fm <- switch(style,
-               'hue' = as.formula('value ~ factor(chroma)'),
-               'multiHue' = as.formula('value ~ factor(chroma) | hue'),
-               'CC' = as.formula('value ~ factor(chroma) | cc'),
-               'multiCC' = as.formula('value ~ factor(chroma) | cc + hue')
+               'hue' = as.formula('value ~ chroma'),
+               'multiHue' = as.formula('value ~ chroma | hue'),
+               'CC' = as.formula('value ~ chroma | cc'),
+               'multiCC' = as.formula('value ~ chroma | cc + hue')
   )
 
 
@@ -130,55 +141,75 @@ contrastChart <- function(m, hues, ccAbbreviate=1, style='hue', thresh = NULL, r
 
   # make plot
   pp <- xyplot(fm, data=z,
-               main=sprintf('Color Contrast Chart: %s', m$queryColor),
-               asp=1, xlab='Chroma', ylab='Value',
-               xlim=c(0.75, 6.25), ylim=c(2.75, 8.25),
-               scales=list(alternating=1, tick.number=8, relation='free', y=list(rot=0), x=list(at=chroma.axis.at, labels=chroma.subset.labels)),
-               as.table=TRUE, strip=strip.custom(bg='grey'),
-               subscripts=TRUE,
-               panel=function(xx, yy, subscripts, ...) {
+               main = sprintf('Color Contrast Chart: %s', m$queryColor),
+               asp = 1, xlab='Chroma', ylab='Value',
+               xlim = c(0.75, 6.25), 
+               ylim = c(2.75, 8.25),
+               scales = list(
+                 alternating = 1, tick.number = 8, relation = 'free', y = list(
+                   rot = 0
+                 )
+                 ,
+                 x = list(
+                   at = chroma.axis.at,
+                   labels = chroma.subset.labels
+                 )
+               ),
+               as.table = TRUE, strip = strip.custom(bg='grey'),
+               subscripts = TRUE,
+               panel = function(xx, yy, subscripts, ...) {
+                 
+                 # note: source `xx` and `yy` aren't actually used for anything
+                 #       -> chroma factor levels reset when full levels aren't present
+                 
                  # prep data for this panel
                  d <- z[subscripts, ]
                  d$cc <- as.character(d$cc)
                  d$dE00 <- format(d$dE00, digits = 2)
-
+                 
                  # convert factor levels to numeric
-                 xx <- as.numeric(xx)
-
+                 # xx <- as.integer(xx)
+                 
+                 # extract from z vs. function arguments
+                 xx <- as.integer(z$chroma)
+                 yy <- z$value
+                 
                  # remove query color contrast and dE00
                  idx <- which(d$munsell == m$queryColor)
                  d$cc[idx] <- ''
                  d$dE00[idx] <- ''
-
-                 # # grid system
-                 # panel.abline(h = 3:8, v=1:8, col=grey(0.85), lty=1)
-
+                 
+                 # grid system
+                 if(gridLines) {
+                   panel.abline(h = 3:8, v=1:8, col=grey(0.85), lty=1) 
+                 }
+                 
                  # offsets, may require additional tinkering
                  bd.side <- 0.3
                  bd.bottom <- 0.2
                  bd.top <- 0.4
                  bd.annot <- 0.05
-
+                 
                  # color chips
                  # border encodes query chip
                  chip.border <- rep('black', times=nrow(d))
                  chip.lwd <- rep(1, times=nrow(d))
-
+                 
                  # update border colors and thickness for the query color
                  border.idx <- which(d$hue == m$hue & d$value == m$value & d$chroma == m$chroma)
                  chip.border[border.idx] <- 'red'
                  chip.lwd[border.idx] <- 3
-
+                 
                  panel.rect(
-                   xleft=xx - bd.side,
-                   ybottom=yy - bd.bottom,
-                   xright=xx + bd.side,
-                   ytop=yy + bd.top,
-                   col=d$color,
-                   border=chip.border,
-                   lwd=chip.lwd
+                   xleft = xx - bd.side,
+                   ybottom = yy - bd.bottom,
+                   xright = xx + bd.side,
+                   ytop = yy + bd.top,
+                   col = d$color,
+                   border = chip.border,
+                   lwd = chip.lwd
                  )
-
+                 
                  # optionally annotate contrast class and abbreviate
                  if(ccAbbreviate >= 1) {
                    panel.text(
@@ -189,8 +220,8 @@ contrastChart <- function(m, hues, ccAbbreviate=1, style='hue', thresh = NULL, r
                      font=4
                    )
                  }
-
-
+                 
+                 
                  # annotate dE00
                  panel.text(
                    xx,

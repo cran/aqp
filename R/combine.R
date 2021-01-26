@@ -11,7 +11,7 @@
 # 2020/09/25: yes it is possible [for a list] with the caveat that the y argument _must_ be missing in order to use the base::union generic but dispatch to the aqp method.
 # The problem with this is IDEs like Rstudio that probe the generics to identify missing required arguments will erroneously warn about the aqp-usage of union
 
-#' [DEPRECATED] union
+#' @title (DEPRECATED) union
 #'
 #' @param x a list of SoilProfileCollection objects
 #' @param y Necessary for proper S4 dispatch.
@@ -358,12 +358,13 @@ pbindlist <- function(l, new.idname = NULL, verbose = TRUE) {
     orn <- colnames(o.r)
     o.r <- .data.frame.j(o.r, unique(orn[match(orn, orn)]), "data.table")
   } else if (requireNamespace("plyr")) {
+    warning("Combining SoilProfileCollections with `plyr` package is deprecated -- please install the `data.table` package.")
     o.h <- do.call('rbind.fill', o.h) # horizon data
     o.s <- do.call('rbind.fill', o.s) # site data
     o.d <- do.call('rbind.fill', o.d) # diagnostic data, leave as-is
     o.r <- do.call('rbind.fill', o.r) # restriction data, leave as-is
   } else {
-    stop("package `data.table` or `plyr` is required to combine nonconformal data.frames.", call.=FALSE)
+    stop("package `data.table` or `plyr` is required to combine SoilProfileCollections", call.=FALSE)
   }
 
   if (!drop.spatial) {

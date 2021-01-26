@@ -429,109 +429,112 @@ setMethod(f = 'show',
 
 
 
-# define a safe generic to facilitate coercion back to parent object class
-if (!isGeneric('.as.data.frame.aqp'))
-  setGeneric('.as.data.frame.aqp', function(x, as.class, ...) {
-    standardGeneric('.as.data.frame.aqp')
-  })
-
-setMethod(".as.data.frame.aqp", signature(x = "ANY"),
-          function(x, as.class = "data.frame", ...) {
-
-            # 2020-05-30: sub-classes of data.frame have more than one class
-            # debug
-#            if (as.class == 'data.frame')
-#              stop("foo")
-
-            # NULL x -- probably from unusual use cases
-            if (class(x)[1] == "NULL")
-              stop(sprintf("input object is NULL, expected '%s'", as.class))
-
-            # don't invoke coercion methods if not needed
-            if (!inherits(x, 'data.frame')) {
-              stop(sprintf("input data class %s does not inherit from `data.frame`", class(x)[1]), call. = TRUE)
-            }
-
-            # note: we handle the possibly NULL/0-length as.class
-            #       by letting it fall through default switch EXPR
-            #       a warning is generated for non-data.frames
-            cond <- class(x)[1] == as.class
-            test <- all(length(cond) > 0 & cond)
-
-            # this happens if a SPC has had its metadata entry wiped out or old SPC object in Rda file
-            if (is.null(test) | is.na(test)) {
-              as.class <- "data.frame"
-              message("missing metadata for aqp_df_class -- run aqp::rebuildSPC(object) to fix slots and metadata")
-            } else if (test) {
-
-              # rm rownames in slots
-              rownames(x) <- NULL
-
-              return(x)
-            }
-
-            switch(as.class,
-              'data.table' = {
-                #print(as.class)
-                if (requireNamespace("data.table", quietly = TRUE))
-                  return(data.table::as.data.table(x, ...))
-                message(
-                  "using data.table class in SoilProfileCollection slots requires the `data.table` package"
-                )
-              },
-              'tbl_df' = {
-                #print(as.class)
-                if (requireNamespace("tibble", quietly = TRUE))
-                  return(tibble::as_tibble(x, ...))
-                message(
-                  "using tbl_df class in SoilProfileCollection slots requires the `tibble` package"
-                )
-              },
-              {
-                # default/data.frame
-                #  if we were supposed to get something else,
-                #  make a warning with a stack trace
-                if (as.class != "data.frame") {
-                  message(sprintf("failed to use %s as data.frame class", as.class))
-                  metadata(object)$aqp_df_class <- "data.frame"
-                  warning("data.table and tbl_df in SoilProfileCollection data.frame slots are EXPERIMENTAL, defaulting to data.frame", call. = FALSE)
-                }
-
-                # return data.frame no matter what
-                res <- as.data.frame(x, ...)
-
-                # rm rownames in slots
-                rownames(res) <- NULL
-
-                return(res)
-              }
-              )
-          })
+#' @title Wrapper method for data.frame subclass conversion
+#'
+#' @param x ANY.
+#' @param as.class `"data.frame"`, `"tibble"`, or `"data.table"` default: `"data.frame"`
+#' @param ... Additional arguments to coercion function  `as.data.frame`, `as_tibble` or `as.data.table`
+#' 
+#' @return a subclass of `data.frame` corresponding to `as.class`,
+#' 
+#' @importFrom data.table as.data.table
+#' @importFrom tibble as_tibble
+#' 
+.as.data.frame.aqp <- function(x, as.class = "data.frame", ...) {
+  # 2020-05-30: sub-classes of data.frame have more than one class
+  # debug
+  #            if (as.class == 'data.frame')
+  #              stop("foo")
+  
+  # NULL x -- probably from unusual use cases
+  if (class(x)[1] == "NULL")
+    stop(sprintf("input object is NULL, expected '%s'", as.class))
+  
+  # don't invoke coercion methods if not needed
+  if (!inherits(x, 'data.frame')) {
+    stop(sprintf(
+      "input data class %s does not inherit from `data.frame`",
+      class(x)[1]
+    ),
+    call. = TRUE)
+  }
+  
+  # note: we handle the possibly NULL/0-length as.class
+  #       by letting it fall through default switch EXPR
+  #       a warning is generated for non-data.frames
+  cond <- class(x)[1] == as.class
+  test <- all(length(cond) > 0 & cond)
+  
+  # this happens if a SPC has had its metadata entry wiped out or old SPC object in Rda file
+  if (is.null(test) | is.na(test)) {
+    as.class <- "data.frame"
+    message(
+      "missing metadata for aqp_df_class -- run aqp::rebuildSPC(object) to fix slots and metadata"
+    )
+  } else if (test) {
+    # rm rownames in slots
+    rownames(x) <- NULL
+    
+    return(x)
+  }
+  
+  switch(as.class,
+         'data.table' = {
+           #print(as.class)
+           if (requireNamespace("data.table", quietly = TRUE))
+             return(data.table::as.data.table(x, ...))
+           message(
+             "using data.table class in SoilProfileCollection slots requires the `data.table` package"
+           )
+         },
+         'tbl_df' = {
+           #print(as.class)
+           if (requireNamespace("tibble", quietly = TRUE))
+             return(tibble::as_tibble(x, ...))
+           message("using tbl_df class in SoilProfileCollection slots requires the `tibble` package")
+         },
+         {
+           # default/data.frame
+           #  if we were supposed to get something else,
+           #  make a warning with a stack trace
+           if (as.class != "data.frame") {
+             message(sprintf("failed to use %s as data.frame class", as.class))
+             metadata(object)$aqp_df_class <- "data.frame"
+             warning(
+               "data.table and tbl_df in SoilProfileCollection data.frame slots are EXPERIMENTAL, defaulting to data.frame",
+               call. = FALSE
+             )
+           }
+           
+           # return data.frame no matter what
+           res <- as.data.frame(x, ...)
+           
+           # rm rownames in slots
+           rownames(res) <- NULL
+           
+           return(res)
+         })
+}
 
 
 # basic wrapper function for multi-j index subsetting of data.frames compatible with data.table
-.data.frame.j <- function(dat, col.names, use_class) {
-  dfnames <- names(dat)
 
-  # allow for re-ordering by column name like data.frame[,j]
-  dfnamesub <- dfnames[dfnames %in% col.names]
-  dfnamesub <- dfnamesub[match(col.names, dfnamesub)]
+.data.frame.j <- function(x, col.names, use_class = class(x)[1]) {
 
-  # access columns one by one in desired order, using "ambivalent" [[
-  res <- lapply(dfnamesub, function(new.name) {
-     newcol <- data.frame(dat[[new.name]], stringsAsFactors = FALSE)
-     names(newcol) <- new.name
-     return(newcol)
-  })
-
-  # recombine
-  res <- do.call('cbind', res)
-  if (inherits(res, 'data.frame')) {
-   h <- .as.data.frame.aqp(res, use_class)
-   return(h)
+  # see: https://github.com/ncss-tech/aqp/issues/176
+  .SD <- NULL
+  
+  if (inherits(x, 'data.table')) {
+    res <- x[, .SD, .SDcols = col.names]
   } else {
-    # return data unchanged if not inheriting from data.frame
-    return(dat)
+    res <- x[, col.names, drop = FALSE]
+  }
+  
+  if (inherits(res, 'data.frame')) {
+    h <- .as.data.frame.aqp(res, use_class)
+    return(h)
+  } else {
+    stop(".data.frame.j: result does not inherit from `data.frame`", call. = FALSE)
   }
 }
 
