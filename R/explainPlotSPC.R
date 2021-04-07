@@ -1,21 +1,18 @@
 #' @title Visual Explanation for \code{plotSPC}
+#' 
 #' @description Create a visual explanation for the many arguments to \code{plotSPC}. Call this function instead of \code{plotSPC}, all objects after \code{x} are passed on to \code{plotSPC}. Nearly all of the figures in the \href{https://ncss-tech.github.io/AQP/aqp/aqp-intro.html}{Introduction to SoilProfileCollection Objects tutorial} are created with this function.
 #'
 #' @author D.E. Beaudette
+#' 
 #' @seealso \code{\link{plotSPC}}
+#' 
 #' @keywords manip
 #' 
 #' @param x a \code{SoilProfileCollection} object
+#' 
 #' @param \dots arguments passed to \code{\link{plotSPC}}
 #'
 #' @return a list of internally-used ordering vectors and graphical offsets / scaling factors
-#'
-#' Attempt to fix overlapping sketches when using relative horizontal spacing.
-#'
-#' This is a very simple optimization algorithm for adjusting horizontal sketch
-#' positions until affected profiles are farther apart than a given threshold.
-#' Rank-ordering and boundary conditions are enforced on the adjustments.
-#' Failure to converge within \code{maxIter} results in an integer sequence.
 #'
 #' @keywords manip
 #' @examples
@@ -31,29 +28,29 @@
 #' explainPlotSPC(sp4, name='name', relative.pos=pos)
 #'
 #' # attempt to fix using an integer sequence, short-circut will prevent adjustments
-#' explainPlotSPC(sp4, name='name', relative.pos=fixOverlap(1:10, trace=TRUE))
+#' explainPlotSPC(sp4, name='name', relative.pos=fixOverlap(1:10))
 #'
 #' # attempt to adjust using defaults
-#' explainPlotSPC(sp4, name='name', relative.pos=fixOverlap(pos, trace=TRUE))
+#' explainPlotSPC(sp4, name='name', relative.pos=fixOverlap(pos))
 #'
 #' # attempt to adjust and tinker with defaults
-#' explainPlotSPC(sp4, name='name', relative.pos=fixOverlap(pos, adj = 0.2, trace=TRUE))
+#' explainPlotSPC(sp4, name='name', relative.pos=fixOverlap(pos, adj = 0.2))
 #'
 #' # repeatable adjustments
 #' set.seed(10101)
-#' explainPlotSPC(sp4, name='name', relative.pos=fixOverlap(pos, thresh = 0.7, trace=TRUE))
+#' explainPlotSPC(sp4, name='name', relative.pos=fixOverlap(pos, thresh = 0.7))
 #'
 #' # more complex adjustments required
 #' pos <- c(1, 2, 3, 3.3, 5, 5.1, 5.5, 8, 9, 9.1)
 #'
 #' # tinker
 #' explainPlotSPC(sp4, name='name', relative.pos=pos)
-#' explainPlotSPC(sp4, name='name', relative.pos=fixOverlap(pos, trace=TRUE))
-#' explainPlotSPC(sp4, name='name', relative.pos=fixOverlap(pos, thresh = 0.7, trace=TRUE))
-#' explainPlotSPC(sp4, name='name', relative.pos=fixOverlap(pos, thres=0.7, adj = 0.2, trace=TRUE))
+#' explainPlotSPC(sp4, name='name', relative.pos=fixOverlap(pos))
+#' explainPlotSPC(sp4, name='name', relative.pos=fixOverlap(pos, thresh = 0.7))
+#' explainPlotSPC(sp4, name='name', relative.pos=fixOverlap(pos, thresh=0.7, adj = 0.2))
 #'
 #' # no solution possible given these constraints
-#' explainPlotSPC(sp4, name='name', relative.pos=fixOverlap(pos, thres=1, adj = 0.2, trace=TRUE))
+#' explainPlotSPC(sp4, name='name', relative.pos=fixOverlap(pos, thresh=1, adj = 0.2))
 #'
 #'
 explainPlotSPC <- function(x, ...) {
@@ -70,8 +67,8 @@ explainPlotSPC <- function(x, ...) {
   max.depths <- max.depths[lsp$plot.order]
   
   # apply y-offset and scaling factor
+  # y-offset is a vector
   scaled.max.depths <- lsp$y.offset + (lsp$scaling.factor * max.depths)
-  scaled.depth.axis <- lsp$y.offset + (lsp$scaling.factor * pretty(1:max(x)))
   
   # suitable location for y-space annotation
   y.space.x <- 2.5
@@ -94,7 +91,7 @@ explainPlotSPC <- function(x, ...) {
   mtext('canvas x-coordinate', side=1, line=2.25, font=4, col='darkgreen')
   
   # y-axis is based on profile depths
-  axis(2, line=0.25, at=scaled.depth.axis, cex.axis=0.75, font=4, las=1, col='blue', col.axis='blue', lwd=2)
+  axis(2, line=0.25, cex.axis=0.75, font=4, las=1, col='blue', col.axis='blue', lwd=2)
   mtext('canvas y-coordinate', side=2, line=2.25, font=4, col='blue')
   
   # show extra y-space

@@ -1,4 +1,42 @@
+# aqp 1.29 (2021-04-05)
+ * Several `SoilProfileCollection` methods that conflict with {dplyr} 1.0+ have been deprecated:
+    * `filter`, `mutate`, `group_by`, `summarize`
+    * New overloaded {base} names:
+       - {base}-like syntax: "filter" -> `subset`, "mutate" -> `transform`, "combine" -> `c`
+    * New unique {aqp}/SoilProfileCollection aliases:
+       - `*SPC` syntax: `filterSPC`, `mutateSPC`, `groupSPC`, `summarizeSPC`
+    * Be aware `dplyr::combine` (deprecated in {dplyr} 0.7) still conflicts 
+ * `aqp::union()`, previously deprecated, has been removed from namespace
+    * Use `c()` or `combine()` for `SoilProfileCollection` input
+    * Use`combine()` or `pbindlist()` for `list` input
+ * Methods that used {rlang} for non-standard evaluation now use {base}
+ * `plotSPC()` gains vectorized `y.offset` support (demonstrated in: http://ncss-tech.github.io/AQP/aqp/genhz-distance-eval.html)
+ * `plotSPC()` gains argument `shrink.thin` for shrinking horizon designation labels when horizons are thin
+ * new function `alignTransect()` for simplifying relative positioning of profile sketches
+ * `plotMultipleSPC()` gains ability to automatically merge thematic legends
+ * `coordinates<-` will check formula terms (_unique_ coordinates) in the `@horizons` slot, if needed.
+ * `mixMunsell`:
+    - gains argument for performing mixture estimation via wt. mean of CIELAB coordinates
+    - suggestions on interpreting spectral distances, message printed when greater than reasonable threshold
+ * minor bug-fix in `panel.depth_function` when plotting grouped step-functions
+ 
+# aqp 1.28 (2021-03-02)
+ * optimization of SoilProfileCollection `[,j]`-index extraction using {data.table}
+ * introduction of `.LAST`, `.FIRST` and `.HZID` SoilProfileCollection "k-keywords"
+ * `perturb()` is the new generalized replacement for `sim()` and `permute_profile()`
+ * `checkHzDepthLogic()` now has a `byhz` argument for checking logic by _horizon_ rather than profile
+ * `fillHzGaps` now has `to_top` and `to_bottom` arguments for filling above shallowest top / deepest bottom by profile
+ * `fixOverlap()` more flexible and will usually settle on a solution in fewer iterations:
+    - `overlapMetrics()` instead of `findOverlap()` for part of objective function
+    - cooling schedule is now fully adjustable via `T0` and `k` arguments
+ * `alignTransect` helper function for computing relative positions and ordering vector supplied to `plotSPC`
+ * `plotSPC()` automatically converts `logical` data supplied to `color` argument into `factor`
+ * `glom()` is now vectorized over profiles
+ * `estimateAWC` introduced for testing lookup table estimation of available water capacity (AWC) of fine-earth fraction
+ * `correctAWC` introduced for testing corrections of AWC estimates for rock fragment and salts
+ 
 # aqp 1.27 (2021-01-22)
+ * `fillHzGaps`: new function for fixing horizon depth topological errors and padding top/bottom of profiles with placeholder (empty) horizons
  * `mixMunsell` now relies on suggested package {gower} for 5-10x speed bump
  * {aqp} no longer imports from {reshape} (less one dependency), all transformations from wide<->long are done via {data.table}
  * methods from {data.table} are now imported by {aqp} (new dependency)
@@ -462,7 +500,7 @@
 
 # aqp 0.99-9.1 (2011-12-27)
    * pedonPC, NASIS, and SDA functions moved *out* of aqp, and *into* new package: soilDB
-      + removed assocated, suggested packages from aqp
+      + removed associated, suggested packages from aqp
       + soilDB will be on CRAN shortly
    * new argument to plot(SoilProfileCollection, ..., divide.hz=TRUE|FALSE) that can optionally suppress plotting of dividing lines between horizons (suggested by Ludwig Hilger)
    * new function profileApply() for applying functions by profile
@@ -513,7 +551,7 @@
 
 # aqp 0.99-8.2 (2011-09-21)
    * added S4 class/methods for `SoilProfileCollection`
-      + this supercedes the (now removed) S3 `SoilProfileList` classes
+      + this supersedes the (now removed) S3 `SoilProfileList` classes
       + basic accessors/setters are in place, subject to change
    * profile_plot() now uses the `SoilProfileCollection` class
       + *initSoilProfileList() is no longer supported; see depths() for similar functionality*
@@ -542,7 +580,7 @@
       + `mapunit_geom_by_ll_bbox()` : get map unit geometry by bounding box
       + `MUKEYS_by_ll_bbox()` : get map unit keys by bounding box
       + `SDA_query()` : retrieve soil tabular data via query written in SQL
-   * additional customizations added to `plotSPC`
+   * additional customization added to `plotSPC`
    * two new sample data sets + examples
 
 # aqp 0.99-1 (2011-01-26)

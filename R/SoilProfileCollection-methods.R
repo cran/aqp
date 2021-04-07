@@ -63,61 +63,28 @@ setMethod(
   f = 'min',
   signature(x = "SoilProfileCollection"),
   definition = function(x, v = NULL) {
-    h <- x@horizons
 
-    # get bottom depth column name
-    hz_bottom_depths <- horizonDepths(x)[2]
-
-    # handle empty spc
-    if(length(x@horizons[[hz_bottom_depths]]) == 0)
-      return(NA)
-
+    htb <- horizonDepths(x)
+    target.names <- c(idname(x), hzidname(x), htb)
+    
     # optionally use a horizon-level property refine calculation
-    if (!missing(v)) {
-      target.names <- c(hz_bottom_depths, idname(x), v)
-    } else {
-      target.names <- c(hz_bottom_depths, idname(x))
+    if (!missing(v) && !is.null(v) && v %in% horizonNames(x)) {
+      target.names <- c(target.names,  v)
     }
-
-    # filter out missing data
-    h <- .data.frame.j(h, target.names, aqp_df_class(x))
-    h <- h[complete.cases(h),]
-
-    # compute max depth within each profile
-    if (aqp_df_class(x) == "data.table" &
-        requireNamespace("data.table") ) {
-
-      # base R faster for big data with no existing key
-      # but if the key is already set, then this is ~2x faster with 1M profiles (sorted numeric IDs)
-      if (idname(x) %in% data.table::key(h)) {
-        idn <- idname(x)
-        .I <- NULL
-        # # with no key
-        # user  system elapsed
-        # 7.26    5.52   16.83
-        # # with pre-set key
-        # user  system elapsed
-        # 2.07    0.00    2.08
-
-        # cant invoke this for something like min/max probably -- might do better on linux
-        # data.table::setkeyv(h, c(idn))
-
-        dep <- h[[hz_bottom_depths]]
-        d <- dep[h[, .I[hz_bottom_depths == max(hz_bottom_depths, na.rm = T)][1],
-                     by = idn]$V1]
-
-        # return from here for data.table
-        return(min(d, na.rm = TRUE))
-      }
+    
+    # handle empty spc
+    if(length(x@horizons[[htb[2]]]) == 0) {
+      return(NA)
     }
-
-    # tapply on a data.frame
-    # user  system elapsed
-    # 4.39    0.00    4.39
-    d <- tapply(h[[hz_bottom_depths]], h[[idname(x)]], max, na.rm = TRUE)
-
+    
+    # filter out missing data, accounting for optional `v`
+    h <- x@horizons
+    idx <- which(complete.cases(.data.frame.j(h, target.names, aqp_df_class(x))))
+    x@horizons <- h[idx,]
+    
     # return the shallowest (of the deepest depths in each profile)
-    return(min(d, na.rm = TRUE))
+    .LAST <- NULL
+    return(min(x[,, .LAST][[htb[2]]], na.rm = TRUE))
   }
 )
 
@@ -137,60 +104,27 @@ setMethod(
   f = 'max',
   signature(x = "SoilProfileCollection"),
   definition = function(x, v = NULL) {
-    # get bottom depth column name
-    h <- x@horizons
-    hz_bottom_depths <- horizonDepths(x)[2]
-
-    # handle empty spc
-    if(length(h[[hz_bottom_depths]]) == 0)
-      return(NA)
-
+    htb <- horizonDepths(x)
+    target.names <- c(idname(x), hzidname(x), htb)
+    
     # optionally use a horizon-level property refine calculation
-    if (!missing(v)) {
-      target.names <- c(hz_bottom_depths, idname(x), v)
-    } else {
-      target.names <- c(hz_bottom_depths, idname(x))
+    if (!missing(v) && !is.null(v) && v %in% horizonNames(x)) {
+      target.names <- c(target.names,  v)
     }
-
-    # filter out missing data
-    h <- .data.frame.j(h, target.names, aqp_df_class(x))
-    h <- h[complete.cases(h),]
-
-    # compute max depth within each profile
-    if (aqp_df_class(x) == "data.table" &
-        requireNamespace("data.table") ) {
-      .I <- NULL
-      # base R faster for big data with no existing key
-      # but if the key is already set, then this is ~2x faster with 1M profiles (sorted numeric IDs)
-      if (idname(x) %in% data.table::key(h)) {
-        idn <- idname(x)
-        # # with no key
-        # user  system elapsed
-        # 7.26    5.52   16.83
-        # # with pre-set key
-        # user  system elapsed
-        # 2.07    0.00    2.08
-
-        # cant invoke this for something like min/max probably -- might do better on linux
-        # data.table::setkeyv(h, c(idn))
-
-        dep <- h[[hz_bottom_depths]]
-        d <- dep[h[, .I[hz_bottom_depths == max(hz_bottom_depths, na.rm = T)][1],
-                   by = idn]$V1]
-
-        # return from here for data.table
-        return(max(d, na.rm = TRUE))
-      }
-
+    
+    # handle empty spc
+    if(length(x@horizons[[htb[2]]]) == 0) {
+      return(NA)
     }
-
-    # tapply on a data.frame
-    # user  system elapsed
-    # 4.39    0.00    4.39
-    d <- tapply(h[[hz_bottom_depths]], h[[idname(x)]], max, na.rm = TRUE)
-
-    # return the deepest depth (of the deepest depths in each profile)
-    return(max(d, na.rm = TRUE))
+    
+    # filter out missing data, accounting for optional `v`
+    h <- x@horizons
+    idx <- which(complete.cases(.data.frame.j(h, target.names, aqp_df_class(x))))
+    x@horizons <- h[idx,]
+    
+    # return the deepest (of the deepest depths in each profile)
+    .LAST <- NULL
+    return(max(x[,, .LAST][[htb[2]]], na.rm = TRUE))
   }
 )
 
@@ -311,19 +245,26 @@ setMethod(f = 'unique',
 setMethod("subset", signature(x = "SoilProfileCollection"),
           function(x, ..., greedy = FALSE) {
             object <- x
-            if (requireNamespace("rlang", quietly = TRUE)) {
 
-              # capture expression(s) at function
-              x <- rlang::enquos(...)
+            # capture expression(s) at function
+              .dots <- substitute(list(...))
+              .dots <- .dots[2:length(.dots)]
 
-              # create composite object to facilitate eval_tidy
-              data <- compositeSPC(object)
+
+              # create composite object to facilitate eval
+              .data <- compositeSPC(object)
 
               # loop through list of quosures and evaluate
-              res <- lapply(x, function(q) {
-                r <- rlang::eval_tidy(q, data)
-                return(r)
-              })
+              res <- vector('list', length(.dots))
+              for (i in 1:length(.dots)) {
+
+                # why does n=2 work?!
+                res[[i]] <- eval(.dots[[i]], .data, parent.frame(n = 2))
+
+                # print(ls(envir=globalenv()))
+                # print(res[[i]])
+                # print(.dots[[i]])
+              }
               res.l <- lapply(res, length)
 
               # distinguish site and horizon level attributes
@@ -379,9 +320,6 @@ setMethod("subset", signature(x = "SoilProfileCollection"),
 
               # return SPC, subsetted using site level index
               return(object[na.omit(idx),])
-            } else {
-               stop("package 'rlang' is required for filter", .call=FALSE)
-            }
           })
 
 if (!isGeneric("filter"))
@@ -395,6 +333,7 @@ if (!isGeneric("filter"))
 #' @rdname subset-SoilProfileCollection-method
 setMethod("filter", signature(.data = "SoilProfileCollection"),
           function(.data, ..., .preserve = FALSE) {
+            .Deprecated("subset")
             # this provides for possible alternate handling of filter() in future
             #  as discussed, the base R verb for this op is subset
             #  I like filter a lot, but don't really like masking stats::filter in principle
@@ -424,15 +363,17 @@ if (!isGeneric("grepSPC"))
 
 setMethod("grepSPC", signature(object = "SoilProfileCollection"),
           function(object, attr, pattern, ...) {
-            if (requireNamespace("rlang", quietly = TRUE)) {
+
+            # .Deprecated("subset")
+
               # capture expression(s) at function
-              x <- rlang::enquo(attr)
+              .dots <- substitute(attr)
 
               # create composite object to facilitate eval_tidy
-              data <- compositeSPC(object)
+              .data <- compositeSPC(object)
 
-              # do tidy eval of attr
-              res <- rlang::eval_tidy(x, data)
+              # do eval of attr
+              res <- .data_dots(.data, eval(.dots))
 
               # do the pattern matching
               idx <- grep(res, pattern = pattern, ...)
@@ -440,9 +381,6 @@ setMethod("grepSPC", signature(object = "SoilProfileCollection"),
               # subset the SPC for result
               return(object[idx,])
 
-            } else {
-              stop("package 'rlang' is required for grepSPC", .call = FALSE)
-            }
           })
 
 #' @title Subset SPC based on result of performing function on each profile
@@ -464,21 +402,14 @@ if (!isGeneric("subApply"))
 
 setMethod("subApply", signature(object = "SoilProfileCollection"),
           function(object, .fun, ...) {
-            if (requireNamespace("rlang", quietly = TRUE)) {
 
-              #TODO: figure out how to use eval helpers here
-
-              ## capture expression(s) at function
-              #.dots <- rlang::enquos(...)
+              # .Deprecated("profileApply")
 
               # apply .fun to elements of x
               res <- profileApply(object, FUN = .fun, ...)
 
               # return subset of x where .fun is true
               return(object[which(res), ])
-            } else {
-             stop("package 'rlang' is required for subApply", .call = FALSE)
-            }
           })
 
 ## subset method for SoilProfileCollection objects

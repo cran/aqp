@@ -28,13 +28,14 @@ plotSPC(
   relative.pos = 1:length(x),
   add = FALSE,
   scaling.factor = 1,
-  y.offset = 0,
+  y.offset = rep(0, times = length(x)),
   x.idx.offset = 0,
   n = length(x),
   max.depth = ifelse(is.infinite(max(x)), 200, max(x)),
   n.depth.ticks = 5,
   shrink = FALSE,
   shrink.cutoff = 3,
+  shrink.thin = NULL,
   abbr = FALSE,
   abbr.cutoff = 5,
   divide.hz = TRUE,
@@ -44,6 +45,7 @@ plotSPC(
   axis.line.offset = -2.5,
   plot.depth.axis = TRUE,
   density = NULL,
+  show.legend = TRUE,
   col.label = color,
   col.palette = c("#5E4FA2", "#3288BD", "#66C2A5", "#ABDDA4", "#E6F598", "#FEE08B",
     "#FDAE61", "#F46D43", "#D53E4F", "#9E0142"),
@@ -99,7 +101,7 @@ plot(x, y, ...)
 
 \item{scaling.factor}{vertical scaling of profile depths, useful for adding profiles to an existing figure}
 
-\item{y.offset}{vertical offset for top of profiles, useful for adding profiles to an existing figure}
+\item{y.offset}{numeric vector of vertical offset for top of profiles in depth units of \code{x}, can either be a single numeric value or vector of length = \code{length(x)}}
 
 \item{x.idx.offset}{integer specifying horizontal offset from 0 (left-hand edge)}
 
@@ -109,11 +111,13 @@ plot(x, y, ...)
 
 \item{n.depth.ticks}{suggested number of ticks in depth scale}
 
-\item{shrink}{logical, reduce character scaling for 'long' horizon by 80\%?}
+\item{shrink}{logical, reduce character scaling for 'long' horizon by 80\%}
 
 \item{shrink.cutoff}{character length defining 'long' horizon names}
 
-\item{abbr}{logical, abbreviate \code{label}?}
+\item{shrink.thin}{integer, horizon thickness threshold for shrinking horizon names by 80\%, only activated when \code{shrink = TRUE} (\code{NULL} = no shrinkage)}
+
+\item{abbr}{logical, abbreviate \code{label}}
 
 \item{abbr.cutoff}{suggested minimum length for abbreviated \code{label}}
 
@@ -130,6 +134,8 @@ plot(x, y, ...)
 \item{plot.depth.axis}{logical, plot depth axis? (default is TRUE)}
 
 \item{density}{fill density used for horizon color shading, either a single integer or a quoted column name (horizon-level attribute) containing integer values (default is NULL, no shading)}
+
+\item{show.legend}{logical, show legend? (default is TRUE)}
 
 \item{col.label}{thematic legend title}
 
@@ -226,6 +232,30 @@ plot(sp2, x.idx.offset=length(sp1), add=TRUE)
 
 
 ##
+## demonstrate horizon designation shrinkage
+##
+
+data("jacobs2000")
+
+# shrink "long" horizon names
+plotSPC(
+  jacobs2000, 
+  name.style = 'center-center', 
+  shrink = TRUE, 
+  cex.names = 0.8
+)
+
+# shrink horizon names in "thin" horizons
+plotSPC(
+  jacobs2000, 
+  name.style = 'center-center', 
+  shrink = TRUE, 
+  shrink.thin = 15,
+  cex.names = 0.8,
+)
+
+
+##
 ## demonstrate adaptive legend
 ##
 
@@ -244,6 +274,67 @@ plot(sp3, color='fake.data', name='fake.data', cex.names=0.8)
 
 # make enough room in a single legend row
 plot(sp3, color='fake.data', name='fake.data', cex.names=0.8, n.legend=15)
+
+
+##
+## demonstrate y.offset argument
+## must be of length 1 or length(x)
+##
+
+# example data and local copy
+data("jacobs2000")
+x <- jacobs2000
+
+# y-axis offsets, simulating a elevation along a hillslope sequence
+# same units as horizon depths in `x`
+y.offset <- c(-5, -10, 22, 65, 35, 15, 12)
+
+par(mar = c(0, 0, 2, 2))
+
+# y-offset at 0
+plotSPC(x, color = 'matrix_color', cex.names = 0.66)
+
+# constant adjustment to y-offset
+plotSPC(x, color = 'matrix_color', cex.names = 0.66, y.offset = 50)
+
+# attempt using invalid y.offset
+# warning issued and default value of '0' used
+# plotSPC(x, color = 'matrix_color', cex.names = 0.66, y.offset = 1:2)
+
+# variable y-offset
+par(mar = c(0, 0, 2, 0))
+plotSPC(
+  x, 
+  y.offset = y.offset, 
+  color = 'matrix_color', 
+  cex.names = 0.66, 
+  hz.depths = TRUE, 
+  name.style = 'center-center'
+)
+
+
+
+# random y-axis offsets
+yoff <- runif(n = length(x), min = 1, max = 100)
+# random gradient of x-positions
+xoff <- runif(n = length(x), min = 1, max = length(x))
+
+# align / adjust relative x positions
+set.seed(111)
+pos <- alignTransect(xoff, x.min = 1, x.max = length(x))
+
+par(mar = c(0.5, 0.5, 0.5, 0.5))
+plotSPC(x, 
+        plot.order = pos$order, 
+        relative.pos = pos$relative.pos, 
+        y.offset = y.offset, 
+        color = 'matrix_color', 
+        cex.names = 0.66, 
+        hz.depths = TRUE, 
+        name.style = 'center-center'
+)
+
+box()
 }
 \references{
 Beaudette, D.E., Roudier P., and A.T. O'Geen. 2013. Algorithms for Quantitative Pedology: A Toolkit for

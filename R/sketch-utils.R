@@ -1,4 +1,6 @@
 
+## generalize and make into an exported function
+
 .interpretHorizonColor <- function(h, color, default.color, col.palette, col.palette.bias, n.legend) {
 
   # this is optionally replaced with real data when using thematic colors
@@ -32,8 +34,10 @@
       if(!requireNamespace("scales", quietly = TRUE))
         stop("package `scales` is required", call.=FALSE)
 
-      # note that this may contain NAs
-      c.rgb <- cr(scales::rescale(h[[color]]))
+      
+      # re-scale to [0,1]
+      # may contain NAs
+      c.rgb <- cr(.rescaleRange(h[[color]], x0 = 0, x1 = 1))
       cc <- which(complete.cases(c.rgb))
       h$.color <- NA
 
@@ -58,7 +62,7 @@
       # put into a list for later
       color.legend.data <- list(
         legend = leg.pretty.vals,
-        col = rgb(cr(scales::rescale(pretty.vals)), maxColorValue=255),
+        col = rgb(cr(.rescaleRange(pretty.vals, x0 = 0, x1 = 1)), maxColorValue=255),
         multi.row.legend = multi.row.legend,
         leg.row.indices = leg.row.indices
       )
@@ -84,6 +88,7 @@
         if(!requireNamespace("scales", quietly = TRUE))
           stop("package `scales` is required", call.=FALSE)
 
+        ## TODO: replace with native function
         color.mapper <- scales::col_factor(
           palette = colorRampPalette(col.palette, bias = col.palette.bias)(length(color.levels)),
           domain = color.levels,

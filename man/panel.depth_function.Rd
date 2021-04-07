@@ -3,7 +3,6 @@
 \name{panel.depth_function}
 \alias{panel.depth_function}
 \alias{prepanel.depth_function}
-\alias{make.segments}
 \title{Lattice Panel Function for Soil Profiles}
 \usage{
 panel.depth_function(
@@ -55,12 +54,13 @@ see below}
 \description{
 Panel function for plotting grouped soil property data, along with upper and
 lower estimates of uncertainty.
-}
-\details{
+
 This function can be used to replace \code{panel.superpose} when plotting
 depth function data. When requested, contributing fraction data are printed
 using colors the same color as corresponding depth function lines unless a
 single color value is given via \code{cf.col}.
+
+This function is not able to apply transformations (typically \code{log = 10}) applied in the \code{scales} argument to \code{xyplot} to  upper/lower bounds. These will have to be manually applied. See examples.
 }
 \examples{
 
@@ -103,14 +103,137 @@ xyplot(
     'Orange', 'RoyalBlue'
   )))
 )
+
+
+# more complex examples, using step functions with grouped data
+# better looking figures with less customization via tactile package
+if(requireNamespace('tactile')) {
+  
+  library(data.table)
+  library(lattice)
+  library(tactile)
+  
+  # example data
+  data(sp6)
+  
+  # a single profile
+  x <- sp6[1:5, ]
+  
+  # wide -> long format
+  x.long <- melt(
+    data.table(x), 
+    id.vars = c('id', 'top', 'bottom'), 
+    measure.vars = c('sand', 'silt', 'clay')
+  )
+  
+  # (optional) convert back to data.frame
+  x.long <- as.data.frame(x.long)
+  
+  # three variables sharing a common axis
+  # factor levels set by melt()
+  xyplot(
+    cbind(top, bottom) ~ value | id,
+    groups = variable,
+    data = x.long,
+    id = x.long$id,
+    ylim = c(200, -5), xlim = c(10, 60),
+    scales = list(alternating = 1, y = list(tick.number = 10)),
+    par.settings = tactile.theme(superpose.line = list(lwd = 2)),
+    xlab = 'Sand, Silt, Clay (\%)',
+    ylab = 'Depth (cm)',
+    panel = panel.depth_function,
+    auto.key = list(columns = 3, lines = TRUE, points = FALSE),
+    asp = 1.5
+  )
+  
+  
+  # all profiles
+  x <- sp6
+  
+  # wide -> long format
+  x.long <- melt(
+    data.table(x), 
+    id.vars = c('id', 'top', 'bottom'), 
+    measure.vars = c('sand', 'silt', 'clay')
+  )
+  
+  # (optional) convert back to data.frame
+  x.long <- as.data.frame(x.long)
+  
+  # three variables sharing a common axis
+  # factor levels set by melt()
+  xyplot(
+    cbind(top, bottom) ~ value | id,
+    groups = variable,
+    data = x.long,
+    id = x.long$id,
+    ylim = c(200, -5), xlim = c(0, 70),
+    scales = list(alternating = 1, y = list(tick.number = 10)),
+    par.settings = tactile.theme(superpose.line = list(lwd = 2)),
+    xlab = 'Sand, Silt, Clay (\%)',
+    ylab = 'Depth (cm)',
+    panel = panel.depth_function,
+    auto.key = list(columns = 3, lines = TRUE, points = FALSE),
+    as.table = TRUE
+  )
+  
+  xyplot(
+    cbind(top, bottom) ~ value,
+    groups = variable,
+    data = x.long,
+    id = x.long$id,
+    ylim = c(200, -5), xlim = c(0, 70),
+    scales = list(alternating = 1, y = list(tick.number = 10)),
+    par.settings = tactile.theme(superpose.line = list(lwd = 2)),
+    xlab = 'Sand, Silt, Clay (\%)',
+    ylab = 'Depth (cm)',
+    panel = panel.depth_function,
+    auto.key = list(columns = 3, lines = TRUE, points = FALSE),
+    as.table = TRUE
+  )
+  
+  xyplot(
+    cbind(top, bottom) ~ value | variable,
+    groups = variable,
+    data = x.long,
+    id = x.long$id,
+    ylim = c(200, -5), xlim = c(0, 70),
+    scales = list(alternating = 1, y = list(tick.number = 10)),
+    par.settings = tactile.theme(superpose.line = list(lwd = 2)),
+    xlab = 'Sand, Silt, Clay (\%)',
+    ylab = 'Depth (cm)',
+    panel = panel.depth_function,
+    auto.key = list(columns = 3, lines = TRUE, points = FALSE),
+    as.table = TRUE
+  )
+  
+  
+  xyplot(
+    cbind(top, bottom) ~ value | variable,
+    data = x.long,
+    id = x.long$id,
+    ylim = c(200, -5), xlim = c(0, 70),
+    scales = list(alternating = 1, y = list(tick.number = 10)),
+    par.settings = tactile.theme(superpose.line = list(lwd = 2)),
+    xlab = 'Sand, Silt, Clay (\%)',
+    ylab = 'Depth (cm)',
+    panel = panel.depth_function,
+    auto.key = list(columns = 3, lines = TRUE, points = FALSE),
+    as.table = TRUE
+  )
+  
+  
 }
-\references{
-http://casoilresource.lawr.ucdavis.edu/
+
+
+
+
+
 }
 \seealso{
 \code{\link{sp1}}, \code{\link{slice}}, \code{\link{slab}}
 }
 \author{
-Dylan E. Beaudette
+D.E. Beaudette
 }
 \keyword{hplot}

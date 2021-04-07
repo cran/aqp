@@ -29,11 +29,22 @@ test_that("checkHzDepthLogic() works as expected", {
   expect_true(nrow(res) == length(sp3))
 
   # all clear
-  expect_true(all( ! res$depthLogic))
-  expect_true(all( ! res$sameDepth))
-  expect_true(all( ! res$missingDepth))
-  expect_true(all( ! res$overlapOrGap))
+  expect_true(all(!res$depthLogic))
+  expect_true(all(!res$sameDepth))
+  expect_true(all(!res$missingDepth))
+  expect_true(all(!res$overlapOrGap))
   expect_true(all(res$valid))
+  
+  # works on a horizons()-like data.frame
+  h <- horizons(sp3)
+  h$foo <- h$id
+  h$id <- NULL
+  h$hzdept <- h$top
+  h$top <- NULL
+  h$hzdepb <- h$bottom
+  h$bottom <- NULL
+  expect_true(all(checkHzDepthLogic(h, c("hzdept","hzdepb"), "foo", fast = TRUE)$valid))
+  expect_true(all(checkHzDepthLogic(h, c("hzdept","hzdepb"), "foo", fast = TRUE, byhz = TRUE)$valid))
 })
 
 
@@ -47,6 +58,10 @@ test_that("checkHzDepthLogic() depth logic errors", {
   # errors only affect the first profile in this set
   expect_true(res$depthLogic[1])
   expect_false(res$valid[1])
+  
+  res2 <- checkHzDepthLogic(x, byhz = TRUE)
+  expect_true(res2$depthLogic[1])
+  expect_false(res2$valid[1])
 })
 
 test_that("checkHzDepthLogic() same top / bottom depths", {
@@ -59,6 +74,10 @@ test_that("checkHzDepthLogic() same top / bottom depths", {
   # errors only affect the first profile in this set
   expect_true(res$sameDepth[1])
   expect_false(res$valid[1])
+  
+  res2 <- checkHzDepthLogic(x, byhz = TRUE)
+  expect_true(res2$sameDepth[3])
+  expect_false(res2$valid[3])
 })
 
 
@@ -72,6 +91,10 @@ test_that("checkHzDepthLogic() NA in depths", {
   # errors only affect the first profile in this set
   expect_true(res$missingDepth[1])
   expect_false(res$valid[1])
+  
+  res2 <- checkHzDepthLogic(x, byhz = TRUE)
+  expect_true(res2$missingDepth[3])
+  expect_false(res2$valid[3])
 })
 
 
@@ -86,6 +109,11 @@ test_that("checkHzDepthLogic() gap", {
   # errors only affect the first profile in this set
   expect_true(res$overlapOrGap[1])
   expect_false(res$valid[1])
+  
+  # NOTE: OVERLAP OR GAP NOT MEANINGFUL FOR byhz=TRUE
+  res2 <- checkHzDepthLogic(x, byhz = TRUE)
+  expect_false(res2$overlapOrGap[1])
+  expect_true(res2$valid[1])
 })
 
 
@@ -100,6 +128,11 @@ test_that("checkHzDepthLogic() overlap", {
   # errors only affect the first profile in this set
   expect_true(res$overlapOrGap[1])
   expect_false(res$valid[1])
+  
+  # NOTE: OVERLAP OR GAP NOT MEANINGFUL FOR byhz=TRUE
+  res2 <- checkHzDepthLogic(x, byhz = TRUE)
+  expect_false(res2$overlapOrGap[1])
+  expect_true(res2$valid[1])
 })
 
 test_that("splitLogicErrors", {

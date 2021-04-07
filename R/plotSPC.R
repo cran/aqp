@@ -2,7 +2,7 @@
 
 
 
-# TODO: behavior not defined for horizons with an indefinate lower boundary
+# TODO: behavior not defined for horizons with an indefinite lower boundary
 # TODO: move some of the processing outside of the main loop: column names, etc.
 
 #' Create Soil Profile Sketches
@@ -51,23 +51,25 @@
 #'
 #' @param scaling.factor vertical scaling of profile depths, useful for adding profiles to an existing figure
 #'
-#' @param y.offset vertical offset for top of profiles, useful for adding profiles to an existing figure
+#' @param y.offset numeric vector of vertical offset for top of profiles in depth units of `x`, can either be a single numeric value or vector of length = `length(x)`
 #'
 #' @param x.idx.offset integer specifying horizontal offset from 0 (left-hand edge)
 #'
-#' @param n integer describing amount of space along x-axis to allocate, defaults to \code{length(x)}
+#' @param n integer describing amount of space along x-axis to allocate, defaults to `length(x)`
 #'
 #' @param max.depth suggested lower depth boundary of plot
 #'
 #' @param n.depth.ticks suggested number of ticks in depth scale
 #'
-#' @param shrink logical, reduce character scaling for 'long' horizon by 80%?
+#' @param shrink logical, reduce character scaling for 'long' horizon by 80%
 #'
 #' @param shrink.cutoff character length defining 'long' horizon names
+#' 
+#' @param shrink.thin integer, horizon thickness threshold for shrinking horizon names by 80%, only activated when `shrink = TRUE` (`NULL` = no shrinkage)
 #'
-#' @param abbr logical, abbreviate \code{label}?
+#' @param abbr logical, abbreviate `label`
 #'
-#' @param abbr.cutoff suggested minimum length for abbreviated \code{label}
+#' @param abbr.cutoff suggested minimum length for abbreviated `label`
 #'
 #' @param divide.hz logical, divide horizons with line segment? (TRUE), see details
 #'
@@ -82,6 +84,8 @@
 #' @param plot.depth.axis logical, plot depth axis? (default is TRUE)
 #'
 #' @param density fill density used for horizon color shading, either a single integer or a quoted column name (horizon-level attribute) containing integer values (default is NULL, no shading)
+#'
+#' @param show.legend logical, show legend? (default is TRUE)
 #'
 #' @param col.label thematic legend title
 #'
@@ -184,6 +188,30 @@
 #'
 #'
 #' ##
+#' ## demonstrate horizon designation shrinkage
+#' ##
+#' 
+#' data("jacobs2000")
+#' 
+#' # shrink "long" horizon names
+#' plotSPC(
+#'   jacobs2000, 
+#'   name.style = 'center-center', 
+#'   shrink = TRUE, 
+#'   cex.names = 0.8
+#' )
+#' 
+#' # shrink horizon names in "thin" horizons
+#' plotSPC(
+#'   jacobs2000, 
+#'   name.style = 'center-center', 
+#'   shrink = TRUE, 
+#'   shrink.thin = 15,
+#'   cex.names = 0.8,
+#' )
+#' 
+#'
+#' ##
 #' ## demonstrate adaptive legend
 #' ##
 #'
@@ -202,6 +230,68 @@
 #'
 #' # make enough room in a single legend row
 #' plot(sp3, color='fake.data', name='fake.data', cex.names=0.8, n.legend=15)
+#' 
+#' 
+#' ##
+#' ## demonstrate y.offset argument
+#' ## must be of length 1 or length(x)
+#' ##
+#' 
+#' # example data and local copy
+#' data("jacobs2000")
+#' x <- jacobs2000
+#' 
+#' # y-axis offsets, simulating a elevation along a hillslope sequence
+#' # same units as horizon depths in `x`
+#' y.offset <- c(-5, -10, 22, 65, 35, 15, 12)
+#' 
+#' par(mar = c(0, 0, 2, 2))
+#' 
+#' # y-offset at 0
+#' plotSPC(x, color = 'matrix_color', cex.names = 0.66)
+#' 
+#' # constant adjustment to y-offset
+#' plotSPC(x, color = 'matrix_color', cex.names = 0.66, y.offset = 50)
+#' 
+#' # attempt using invalid y.offset
+#' # warning issued and default value of '0' used
+#' # plotSPC(x, color = 'matrix_color', cex.names = 0.66, y.offset = 1:2)
+#' 
+#' # variable y-offset
+#' par(mar = c(0, 0, 2, 0))
+#' plotSPC(
+#'   x, 
+#'   y.offset = y.offset, 
+#'   color = 'matrix_color', 
+#'   cex.names = 0.66, 
+#'   hz.depths = TRUE, 
+#'   name.style = 'center-center'
+#' )
+#' 
+#' 
+#' 
+#' # random y-axis offsets
+#' yoff <- runif(n = length(x), min = 1, max = 100)
+#' # random gradient of x-positions
+#' xoff <- runif(n = length(x), min = 1, max = length(x))
+#' 
+#' # align / adjust relative x positions
+#' set.seed(111)
+#' pos <- alignTransect(xoff, x.min = 1, x.max = length(x))
+#' 
+#' par(mar = c(0.5, 0.5, 0.5, 0.5))
+#' plotSPC(x, 
+#'         plot.order = pos$order, 
+#'         relative.pos = pos$relative.pos, 
+#'         y.offset = y.offset, 
+#'         color = 'matrix_color', 
+#'         cex.names = 0.66, 
+#'         hz.depths = TRUE, 
+#'         name.style = 'center-center'
+#' )
+#' 
+#' box()
+
 
 plotSPC <- function(
   x,
@@ -223,31 +313,33 @@ plotSPC <- function(
   relative.pos=1:length(x),
   add=FALSE,
   scaling.factor=1,
-  y.offset=0,
+  y.offset = rep(0, times = length(x)),
   x.idx.offset=0,
   n=length(x),
   max.depth=ifelse(is.infinite(max(x)), 200, max(x)),
-  n.depth.ticks=5,
-  shrink=FALSE,
-  shrink.cutoff=3,
-  abbr=FALSE,
-  abbr.cutoff=5,
-  divide.hz=TRUE,
-  hz.distinctness.offset=NULL,
-  hz.topography.offset=NULL,
-  hz.boundary.lty=NULL,
-  axis.line.offset=-2.5,
-  plot.depth.axis=TRUE,
-  density=NULL,
-  col.label=color,
+  n.depth.ticks = 5,
+  shrink = FALSE,
+  shrink.cutoff = 3,
+  shrink.thin = NULL,
+  abbr = FALSE,
+  abbr.cutoff = 5,
+  divide.hz = TRUE,
+  hz.distinctness.offset = NULL,
+  hz.topography.offset = NULL,
+  hz.boundary.lty = NULL,
+  axis.line.offset = -2.5,
+  plot.depth.axis = TRUE,
+  density = NULL,
+  show.legend = TRUE,
+  col.label = color,
   col.palette = c("#5E4FA2", "#3288BD", "#66C2A5","#ABDDA4", "#E6F598",
                   "#FEE08B","#FDAE61", "#F46D43", "#D53E4F","#9E0142"),
-  col.palette.bias=1,
-  col.legend.cex=1,
-  n.legend=8,
-  lwd=1,
-  lty=1,
-  default.color=grey(0.95),
+  col.palette.bias = 1,
+  col.legend.cex = 1,
+  n.legend = 8,
+  lwd = 1,
+  lty = 1,
+  default.color = grey(0.95),
   ...
 ) {
 
@@ -303,7 +395,27 @@ plotSPC <- function(
     if(! is.numeric(x[[hz.boundary.lty]]))
       stop('`hz.boundary.lty` must be numeric', call. = FALSE)
   }
-
+  
+  # length of y.offset must length(x) or 1
+  if(length(y.offset) == 1) {
+    y.offset <- rep(y.offset, times = length(x))
+  }
+  
+  if(length(y.offset) != length(x)) {
+    warning('length of `y.offset` must be `length(x)` or 1, using `0`', call. = FALSE)
+    y.offset <- rep(0, times = length(x))
+  }
+  
+  
+  ###################
+  ## SPC cleanup ? ##
+  ###################
+  
+  # tempting, but I don't like the auto-magical nature of this
+  # easy to miss important horizon logic errors
+  # creates the possibility for new errors based on unexpected results
+  # x <- repairMissingHzDepths(x)
+  
 
   ###################
   ## fudge factors ##
@@ -369,7 +481,7 @@ plotSPC <- function(
   # get horizons
   h <- horizons(x)
 
-  # get column names from horizon dataframe
+  # get column names from horizon data
   nm <- names(h)
   
   ## TODO: there has to be a clear mechanism for suppressing labeling of horizon names
@@ -388,6 +500,12 @@ plotSPC <- function(
   ####################
   ## horizon colors ##
   ####################
+  
+  # .interpretHorizonColors() expects numeric | categorical data
+  # convert logical to factor
+  if(is.logical(h[[color]])) {
+    h[[color]] <- factor(h[[color]])
+  }
   
   # results contain:
   # vector of horizon colors, row-order preserved
@@ -431,9 +549,19 @@ plotSPC <- function(
   # note that we are using some fudge-factors to get the plotting region just right
   if(!add) {
     # margins are set outside of this function
-	  plot(0, 0, type='n', xlim=c(width * x_left_space_mult, n+(extra_x_space)),
-	       ylim=c(max(depth_axis_intervals), -extra_y_space),
-	       axes=FALSE, xlab='', ylab='')
+    
+    ## TODO: this seems to extend too far... review
+    # y-limits also include y.offset range
+    ylim.range <- c(
+      max(depth_axis_intervals) + max(y.offset), 
+      -extra_y_space
+    )
+    
+	  plot(x = 0, y = 0, type='n', 
+	       xlim = c(width * x_left_space_mult, n+(extra_x_space)),
+	       ylim = ylim.range,
+	       axes=FALSE, xlab='', ylab=''
+	  )
   }
 
 
@@ -504,8 +632,8 @@ plotSPC <- function(
     x0 <- x.idx.offset + relative.pos[i]
 
 	  # get vectors of horizon boundaries, and scale
-	  y0 <- (this_profile_data[[bcol]] * scaling.factor) + y.offset
-	  y1 <- (this_profile_data[[tcol]] * scaling.factor) + y.offset
+	  y0 <- (this_profile_data[[bcol]] * scaling.factor) + y.offset[i]
+	  y1 <- (this_profile_data[[tcol]] * scaling.factor) + y.offset[i]
 
 
 	  
@@ -541,9 +669,11 @@ plotSPC <- function(
 	  }
 	  
 	  
+	  
 	  # empty list for storing y-coordinates
 	  coords.list <- vector(mode = 'list', length = nh)
 	  
+	  # iterate over horizons
 	  for(j in 1:nh) {
 	    
 	    ## rectangle for reference
@@ -601,7 +731,7 @@ plotSPC <- function(
 	      
 	    } else if(j < nh) {
 	      # next horizons, except bottom-most horizon
-	      y.ll <- pmin(y0[j] + hdo[j], y0[j+1]) # cannot exceed y.ll of next horizon
+	      y.ll <- pmin(y0[j] + hdo[j], y0[j+1], na.rm = TRUE) # cannot exceed y.ll of next horizon
 	      y.lr <- pmax(y0[j] - hdo[j], y0[j-1]) # cannot exceed y.lr of previous horizon
 	      y.ur <- pmax(y1[j] - hdo[j-1], y1[j-1]) # cannot exceed y.ur of previous horizon
 	      y.ul <- pmin(y1[j] + hdo[j-1], y0[j]) # cannot exceed y.ul of previous horizon
@@ -625,6 +755,10 @@ plotSPC <- function(
 	      y.lc <- y0[j] # truncate to lower depth of last horizon
 	      y.uc <- pmax(y1[j] - hto[j-1], y1[j-1]) # cannot exceed top of previous horizon
 	      
+	      # https://github.com/ncss-tech/aqp/issues/189
+	      # NA lower horizon depths ll, lc, lr to all be NA
+	      # this will break divide.hz functionality
+	      
 	      # assemble y-coords and plot last horizon polygon, without borders
 	      yy <- c(y.ll, y.lc, y.lr, y.ur, y.uc, y.ul)
 	      polygon(x = xx, y = yy, col=this_profile_colors[j], border=NA, density=this_profile_density[j], lwd=lwd, lty=lty, lend=1)
@@ -633,7 +767,9 @@ plotSPC <- function(
 	    
 	    # save current iteration of coordinates and line type
 	    coords.list[[j]] <- list(xx=xx, yy=yy, lty=ht.lty[j])
-	  }
+	    
+	  } # end looping over horizons
+	  
 	  
 	  ## note: have to do this after the polygons, otherwise the lines are over-plotted
 	  # optionally divide horizons with line segment
@@ -643,7 +779,9 @@ plotSPC <- function(
 	    # coordinate logic: ll, lc, lr, ur, uc, ul
 	    # line style included
 	    lapply(coords.list, function(seg) {
+	      # lower left -> lower center
 	      segments(x0 = seg$xx[1], y0 = seg$yy[1], x1 = seg$xx[2], y1 = seg$yy[2], lwd=lwd, lty=seg$lty, lend=1)
+	      # lower center -> lower right
 	      segments(x0 = seg$xx[2], y0 = seg$yy[2], x1 = seg$xx[3], y1 = seg$yy[3], lwd=lwd, lty=seg$lty, lend=1)
 	    })
 	  }
@@ -652,7 +790,17 @@ plotSPC <- function(
 	  # note: when manually specifying n > length(SPC)
 	  # x0,x1,y0,y1 are NA
 	  # using `na.rm = TRUE` in the following calls to min() or max() will generate warnings
-	  rect(xleft = x0 - width, ybottom = min(y1), xright = x0 + width, ytop = max(y0), lwd = lwd, lty = lty, lend = 2)
+	  suppressWarnings(
+	    rect(
+	      xleft = x0 - width, 
+	      ybottom = min(y1, na.rm = TRUE), 
+	      xright = x0 + width, 
+	      ytop = max(y0, na.rm = TRUE), 
+	      lwd = lwd, 
+	      lty = lty, 
+	      lend = 2
+	    )
+	  )
 	  
 	  
 	  
@@ -674,8 +822,6 @@ plotSPC <- function(
 	  # }
 	  # 
 	  
-	  
-
 	  ##################################
 	  ## horizon designations (names) ##
 	  ##################################
@@ -733,34 +879,88 @@ plotSPC <- function(
 	  )
 
 
+	  ########################################
+	  
+	  ## TODO:use find/fixOverlap() to adjust horizon designations in the presence of collisions (PARDEE)
+	  # print(hzname.y0)
+	  # 
+	  ## eval reasonable limit
+	  # determine cex.names influence
+	  # tr <- abs(strheight('W')) * 1.5 * (cex.names * 1)
+	  # 
+	  # print(tr)
+	  # print(findOverlap(hzname.y0, thresh = tr))
+	  # print(fixOverlap(hzname.y0, thresh = tr))
+	  # 
+	  ## this requires way more evaluation
+	  ## may require element-level bounds
+	  ## requires min(deviation-from-original)
+	  ## adj should be based on tr
+	  #
+	  # hzname.y0 <- fixOverlap(hzname.y0, thresh = tr, adj = 1)
 
+	  ########################################
+	  
 	  # optionally shrink the size of names if they are longer than a given thresh
 	  if(shrink) {
-		  names.to.shrink <- which(nchar(this_profile_names) > shrink.cutoff)
-		  cex.names.shrunk <- rep(cex.names, length(this_profile_data[, tcol]))
-		  cex.names.shrunk[names.to.shrink] <- cex.names.shrunk[names.to.shrink] * 0.8
-
-		  text(hzname.x0, hzname.y0, labels = this_profile_names, cex=cex.names.shrunk, adj=hzname.adj, col=hzname.col)
+	    
+	    # identify affected horizon names
+		  names.wide <- which(nchar(this_profile_names) > shrink.cutoff)
+		  cex.names.shrunk <- rep(cex.names, length(this_profile_data[[tcol]]))
+		  cex.names.shrunk[names.wide] <- cex.names.shrunk[names.wide] * 0.8
+		  
+		  # optionally shrink based on horizon thickness threshold
+		  if(!is.null(shrink.thin)) {
+		    
+		    # identify affected horizon names
+		    names.thin <- which((y0 - y1) < shrink.thin)
+		    # only apply shrinkage to those not already shrunk above
+		    names.thin <- names.thin[which(! names.thin %in% names.wide)]
+		    # apply shrinkage
+		    cex.names.shrunk[names.thin] <- cex.names.shrunk[names.thin] * 0.8
+		  }
+		  
+		  # add horizon names
+		  text(
+		    x = hzname.x0, 
+		    y = hzname.y0, 
+		    labels = this_profile_names, 
+		    cex = cex.names.shrunk, 
+		    adj = hzname.adj, 
+		    col = hzname.col
+		  )
+		  
 		  } else {
 	    # standard printing of names, all at the same size
-	    text(hzname.x0, hzname.y0, labels = this_profile_names, cex=cex.names, adj=hzname.adj, col=hzname.col)
-
-	    ## old approach: label rigth-center, left justified, 0.1 charwidth offset
-	    # text(x0 + width, hzname.y0, this_profile_names, offset=0.1, cex=cex.names, pos=4)
+	    text(
+	      x = hzname.x0, 
+	      y = hzname.y0, 
+	      labels = this_profile_names, 
+	      cex = cex.names, 
+	      adj = hzname.adj, 
+	      col = hzname.col
+	    )
+		    
 		  }
 
 
 	  ##################################
-	  ## horizon top depth annotation ##
+	  ## horizon depth annotation     ##
 	  ##################################
 	  if(hz.depths) {
 	    ## TODO: consider use of unicode arrow markers
 	    # hzd.txt <- sprintf('\u25c4%s', this_profile_data[, tcol])
 	    # text(x = x0 + width, y = y1, labels = hzd.txt, cex = cex.names * 0.9, pos = 4, offset = 0, font = 1)
-
-	    # just labels
-	    hzd.txt <- this_profile_data[, tcol]
+      
+	    ## TODO: consider top-align for first horizon depth and bottom-align for last
+	    
+	    # all horizon top depths
+	    hzd.txt <- this_profile_data[[tcol]]
 	    text(x = x0 + width, y = y1, labels = hzd.txt, cex = cex.names * 0.9, pos = 4, offset = 0.1, font = 1)
+	    
+	    # last horizon bottom depth
+	    hzd.txt <- this_profile_data[[bcol]][nh]
+	    text(x = x0 + width, y = y0[nh], labels = hzd.txt, cex = cex.names * 0.9, pos = 4, offset = 0.1, font = 1)
 	  }
 
 
@@ -768,6 +968,9 @@ plotSPC <- function(
 	  #################
 	  ## profile IDs ##
 	  #################
+	  
+	  # profile is placed relative to the y-offset vector
+	  
 	  if(print.id) {
 			# optionally abbreviate
 			if(abbr)
@@ -779,19 +982,26 @@ plotSPC <- function(
 
 			# add the text: according to style
 			if(id.style == 'top')
-				text(x0, y.offset, id.text, pos=3, font=font.id, cex=cex.id)
+				text(x0, y.offset[i], id.text, pos=3, font=font.id, cex=cex.id)
 
 			if(id.style == 'side')
-				text(x0 - (width+0.025), y.offset, id.text, adj=c(1, -width), font=font.id, cex=cex.id, srt=90)
+				text(x0 - (width+0.025), y.offset[i], id.text, adj=c(1, -width), font=font.id, cex=cex.id, srt=90)
 			}
-	  }
+	  
+	  } # end looping over profiles
 
 
   ################
   ## depth axis ##
   ################
+  
+  # suppress legend when there are multiple y.offsets
+  if(length(unique(y.offset)) > 1) {
+    plot.depth.axis <- FALSE 
+  }
+  
   if(plot.depth.axis) {
-    depth_axis_tick_locations <- (depth_axis_intervals * scaling.factor) + y.offset
+    depth_axis_tick_locations <- (depth_axis_intervals * scaling.factor) + y.offset[1]
     depth_axis_labels <- paste(depth_axis_intervals, depth_units(x))
 
     axis(side=4, line=axis.line.offset, las=2, at=depth_axis_tick_locations, labels=depth_axis_labels, cex.axis=cex.depth.axis, col.axis=par('fg'))
@@ -812,58 +1022,64 @@ plotSPC <- function(
   ########################################
   ## legend for thematic profile sketch ##
   ########################################
-  # extract from interpretation of horizon colors
-  cld <- hz.color.interpretation$color.legend.data
   
-  if(! is.null(cld)) {
-    # if no title given, set col.label to name of column containing thematic information
-    mtext(side=3, text=col.label, font=2, line=1.6)
-
-    # gracefully handle all-NA in thematic variable
-    if(length(cld$legend) > 0) {
-
-      # possibly split legend across multiple rows
-      if(cld$multi.row.legend) {
-
-        # compute max space required for legend items
-        # better formatting
-        # note: must be called AFTER high level plot()
-        leg.text.width <- (max(strwidth(cld$legend, cex = col.legend.cex)))
-
-        # row 1
-        legend('bottom', inset = c(0, 0.99),
-               legend = cld$legend[cld$leg.row.indices$row.1],
-               col = cld$col[cld$leg.row.indices$row.1],
-               text.width = leg.text.width,
-               bty = 'n', pch = 15, horiz = TRUE, xpd = TRUE, cex = col.legend.cex, x.intersp = 1
-               )
-
-        # row 2
-        legend('bottom', inset = c(0, 0.94),
-               legend = cld$legend[cld$leg.row.indices$row.2],
-               col = cld$col[cld$leg.row.indices$row.2],
-               text.width = leg.text.width,
-               bty = 'n', pch = 15, horiz = TRUE, xpd = TRUE, cex = col.legend.cex, x.intersp = 1
-        )
-
-      } else {
-        # standard invocation
-        legend(
-          'bottom', 
-          legend = cld$legend, 
-          col = cld$col,
-          bty = 'n',
-          pch = 15,
-          horiz = TRUE,
-          xpd = TRUE,
-          inset = c(0, 0.99),
-          cex = col.legend.cex,
-          x.intersp = 1
+  # optionally show legend
+  if(show.legend) {
+    # extract from interpretation of horizon colors
+    cld <- hz.color.interpretation$color.legend.data
+    
+    if(! is.null(cld)) {
+      # if no title given, set col.label to name of column containing thematic information
+      mtext(side=3, text=col.label, font=2, line=1.6)
+      
+      # gracefully handle all-NA in thematic variable
+      if(length(cld$legend) > 0) {
+        
+        # possibly split legend across multiple rows
+        if(cld$multi.row.legend) {
+          
+          # compute max space required for legend items
+          # better formatting
+          # note: must be called AFTER high level plot()
+          leg.text.width <- (max(strwidth(cld$legend, cex = col.legend.cex)))
+          
+          # row 1
+          legend('bottom', inset = c(0, 0.99),
+                 legend = cld$legend[cld$leg.row.indices$row.1],
+                 col = cld$col[cld$leg.row.indices$row.1],
+                 text.width = leg.text.width,
+                 bty = 'n', pch = 15, horiz = TRUE, xpd = TRUE, cex = col.legend.cex, x.intersp = 1
           )
+          
+          # row 2
+          legend('bottom', inset = c(0, 0.94),
+                 legend = cld$legend[cld$leg.row.indices$row.2],
+                 col = cld$col[cld$leg.row.indices$row.2],
+                 text.width = leg.text.width,
+                 bty = 'n', pch = 15, horiz = TRUE, xpd = TRUE, cex = col.legend.cex, x.intersp = 1
+          )
+          
+        } else {
+          # standard invocation
+          legend(
+            'bottom', 
+            legend = cld$legend, 
+            col = cld$col,
+            bty = 'n',
+            pch = 15,
+            horiz = TRUE,
+            xpd = TRUE,
+            inset = c(0, 0.99),
+            cex = col.legend.cex,
+            x.intersp = 1
+          )
+        }
       }
+      
     }
-
   }
+  
+  
 
 
   }

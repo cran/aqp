@@ -51,7 +51,7 @@ test_that("plotSPC: figure settings", {
   # check adjustments
   expect_equal(lsp$scaling.factor, 0.5)
   expect_equal(lsp$width, 0.8)
-  expect_equal(lsp$y.offset, 8)
+  expect_equal(lsp$y.offset, rep(8, times = length(sp1)))
   expect_equal(lsp$n, 15)
   expect_equal(lsp$max.depth, 100)
 })
@@ -70,6 +70,18 @@ test_that("plotSPC: re-ordering of profiles", {
   # plotting order should be saved
   expect_equal(new.order, lsp$plot.order)
 })
+
+# output is purely graphical, testing to make sure no errors / warnings are generated
+test_that("plotSPC: shrinking horizon names", {
+  
+  # make sure these work
+  plotSPC(sp1, name.style = 'center-center', shrink.thin = NULL, shrink = TRUE, cex.names = 0.8)
+  plotSPC(sp1, name.style = 'center-center', shrink.thin = 5, shrink = TRUE, cex.names = 0.8)
+  # test
+  lsp <- explainPlotSPC(sp1, name.style = 'center-center', shrink.thin = 15, shrink = TRUE, cex.names = 0.8)
+  expect_true(is.list(lsp))
+})
+
 
 
 test_that("plotSPC: relative spacing", {

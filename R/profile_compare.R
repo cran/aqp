@@ -345,9 +345,15 @@ plot.depth.matrix=FALSE, rescale.result=FALSE, verbose=FALSE) {
 	options(warn=-1)
 
 	d <- llply(depth_slice_seq, .parallel=getOption('AQP_parallel', default=FALSE), .progress=progress, .fun=function(i, su=s.unrolled) {
-
+    
+	  
+	  ## 2021-03-03
+	  ## this approach breaks when using a single variable for the distance calc
+	  ## sp is a 1-row matrix which returns an empty distance matrix
+	  ## solution: don't attempt to fix here, re-write the entire thing
+	  
 	  ## this could be a source of slowness, esp. the t()
-	  ## TODO: new implementatoin will require drop=FALSE
+	  ## TODO: new implementation will require drop=FALSE
 	  ps <- sapply(su, function(dz, z_i=depth_slice_seq[i]) { dz[z_i,] })
 	  sp <- t(ps)
 
@@ -548,7 +554,9 @@ pc.SPC <- function(s, vars, rescale.result=FALSE, ...){
 
 		message(paste('site-level variables included:', paste(site.vars, collapse=', ')))
 		d.site <- daisy(s.site[, site.vars, drop=FALSE], metric='gower')
-		d.site <- scales::rescale(d.site)
+		
+		# re-scale to [0,1]
+		d.site <- .rescaleRange(d.site, x0 = 0, x1 = 1)
 
 		# reset default behavior of hz-level D
 		rescale.result=TRUE
@@ -585,7 +593,7 @@ pc.SPC <- function(s, vars, rescale.result=FALSE, ...){
 	if(inherits(d.site, 'dist')) {
 		res <- 	(res + d.site) / 2
 		# re-scale to [0,1]
-		res <- scales::rescale(res)
+		res <- .rescaleRange(res, x0 = 0, x1 = 1)
 	}
 
 	## fail-safe check on ordering of input profile IDs vs. labels

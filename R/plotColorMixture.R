@@ -5,25 +5,42 @@
 #' 
 #' @author D.E. Beaudette
 #' 
-#' @param x vector of colors in Munsell notation
+#' @param x vector of colors in Munsell notation, should not contain duplicates
 #' 
 #' @param w vector of proportions, can sum to any number
+#' 
+#' @param n number of closest mixture candidates (see [`mixMunsell`]), results can be hard to interpret 
 #' 
 #' @param swatch.cex scaling factor for color swatch
 #' 
 #' @param label.cex scaling factor for swatch labels
 #' 
-#' @return lattice graphics object
+#' @param showMixedSpec show weighted geometric mean (mixed) spectra as dotted line
 #' 
-plotColorMixture <- function(x, w = rep(1, times = length(x)) / length(x), swatch.cex = 6, label.cex = 0.85) {
+#' @param overlapFix attempt to "fix" overlapping chip labels via [`fixOverlap`]
+#' 
+#' @return `lattice` graphics object
+#' 
+plotColorMixture <- function(x, w = rep(1, times = length(x)) / length(x), n = 1, swatch.cex = 6, label.cex = 0.85, showMixedSpec = FALSE, overlapFix = TRUE) {
   
-  # TODO sanity checks
+  # TODO plot will be incorrect if duplicate Munsell chips are specified
+  
+  # TODO: feedback on spectral distance is required
+  
+  # TODO: ideas on styling legend (size, placement, etc.)
   
   # mix colors
-  m <- suppressMessages(mixMunsell(x = x, w = w))
+  mx <- suppressMessages(mixMunsell(x = x, w = w, n = n, keepMixedSpec = showMixedSpec))
+  
+  # make local copy of the mixed colors when asking for the mixed spectra too
+  if(showMixedSpec) {
+    m <- mx$mixed
+  } else {
+    m <- mx
+  }
   
   # sanity check: it could be that reference spectra aren't available for requested colors
-  if(is.na(m$munsell)) {
+  if(all(is.na(m$munsell))) {
     stop('reference spectra not available', call. = FALSE)
   }
   
@@ -43,10 +60,11 @@ plotColorMixture <- function(x, w = rep(1, times = length(x)) / length(x), swatc
     z <- munsell.spectra[which(munsell.spectra$munsell == colors[i]), ]
     
     # assign an ID for plotting
-    if( i < length(colors)) {
+    if( i <= length(x)) {
       z$ID <- sprintf('color %s', i)
     } else {
-      z$ID <- 'mixture'
+      # reset counter to mix color ranks
+      z$ID <- sprintf('mix #%s', i - length(x))
     }
     
     return(z)
@@ -54,6 +72,7 @@ plotColorMixture <- function(x, w = rep(1, times = length(x)) / length(x), swatc
   
   s <- do.call('rbind', s)
 
+  ## TODO: enforce this beyond alpha-sorting
   # set ID factor levels
   # sorting is automatic because "color X" always comes before "mixture"
   s$ID <- factor(s$ID)
@@ -63,17 +82,36 @@ plotColorMixture <- function(x, w = rep(1, times = length(x)) / length(x), swatc
   
   # plotting style, colors sorted by mixing logic
   cols <- parseMunsell(colors)
-  col.lty <- c(rep(1, times = length(x)), 4)
-  tps <- list(superpose.line = list(col = cols, lwd = 5, lty = col.lty))
+  
+  # line style
+  #  1: colors-to-mix
+  #  4: mixture results (n)
+  col.lty <- c(
+    rep(1, times = length(x)), 
+    rep(4, times = nrow(m))
+  )
+  
+  # compile line styles
+  tps <- list(
+    superpose.line = list(
+      col = cols, 
+      lwd = 5, 
+      lty = col.lty
+    ))
   
   # labels for figure
+  #  all colors
   munsell.labels <- colors
-  wt.labels <- round((w / sum(w)) * 100)
-  lab.text <- sprintf('%s\n%s%%', munsell.labels, c(wt.labels, 100))
+  # weights
+  wt.labels <- sprintf('%s%%', round((w / sum(w)) * 100))
+  # ranked matches
+  match.rank <- sprintf("#%s", seq(from = 1, to = nrow(m)))
+  # combined labels
+  lab.text <- sprintf('%s\n%s', munsell.labels, c(wt.labels, match.rank))
   
   # final figure
   pp <- xyplot(
-    reflectance ~ wavelength, groups=ID, data=s, 
+    reflectance ~ wavelength, groups = ID, data = s, 
     type = c('l', 'g'),
     ylab = 'Reflectance',
     xlab = 'Wavelength (nm)',
@@ -89,11 +127,56 @@ plotColorMixture <- function(x, w = rep(1, times = length(x)) / length(x), swatc
       # split spectra by groups
       d <- split(y, groups)
       
+      # get last y-coordinate by group
+      last.y.coords <- sapply(d, function(i) {
+        i[length(i)]
+      })
+      
+      # attempt to fix overlap
+      if(overlapFix) {
+        
+        ## TODO: this should be computed from screen space
+        #        or adjustable by argument
+        
+        # this is about right (units are reflectance)
+        # adjust according to ratio of swatch size to default size (6)
+        ov.thresh <- 0.04 * (swatch.cex / 6)
+        
+        # attempt to find overlap using the above threshold
+        ov <- findOverlap(last.y.coords, thresh = ov.thresh)
+        
+        # if present, iteratively find suitable alternatives
+        # search is bounded to the min/max of all spectra
+        # consider set.seed() for consistent output
+        if(length(ov) > 0) {
+          message('fixing overlap')
+          
+          # set boundary conditions for overlap adjustment
+          # max(min of the last y coords or min y of all spectra)
+          adj.min.x <- pmax(min(last.y.coords) - 0.08, min(y))
+          # min(max of last y coords or max y of all spectra)
+          adj.max.x <- pmin(max(last.y.coords) + 0.08, max(y))
+          
+          last.y.coords <- fixOverlap(
+            last.y.coords, 
+            thresh = ov.thresh, 
+            adj = ov.thresh * 1/3,
+            min.x = adj.min.x,
+            max.x = adj.max.x
+          )
+        }
+      }
+      
+      
+      
       # iterate over groups and put munsell chip next to last data point
       for(i in seq_along(d)) {
         # last spectral value
         yy <- d[[i]]
-        last.y <- yy[length(yy)]
+        
+        # last y-value in this group
+        last.y <- last.y.coords[i]
+        
         # current color
         this.col <- tps$superpose.line$col[i]
         # current label
@@ -121,6 +204,10 @@ plotColorMixture <- function(x, w = rep(1, times = length(x)) / length(x), swatc
           )
           
         )
+      }
+      
+      if(showMixedSpec){
+        panel.lines(x = unique(s$wavelength), y = mx$spec, lty = 3, col = 'black')
       }
       
       
