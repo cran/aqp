@@ -3,7 +3,7 @@
 ##
 ## depths<- setter method - to create AQP objects: sorts based on ID and top depth
 ##
-if (!isGeneric('depths<-'))
+# if (!isGeneric('depths<-'))
   setGeneric('depths<-', function(object, value) standardGeneric('depths<-'))
 
 
@@ -109,7 +109,7 @@ setReplaceMethod("depths", "data.frame",
 ##
 ## initialize SP/SPC objects from a model.frame
 ##
-.initSPCfromMF <- function(data, mf, use_class){
+.initSPCfromMF <- function(data, mf, use_class) {
   # get column names containing id, top, bottom
   nm <- names(mf)
 
@@ -125,42 +125,30 @@ setReplaceMethod("depths", "data.frame",
     data[[nm[1]]] <- as.character(data[[nm[1]]])
   }
 
-  # depths
+  # depth column names
   depthcols <- c(nm[2], nm[3])
 
   # enforce numeric depths and provide QC warnings as needed
   data[[depthcols[1]]] <- .checkNAdepths(data[[depthcols[1]]], "top")
   data[[depthcols[2]]] <- .checkNAdepths(data[[depthcols[2]]], "bottom")
 
-  iddata <- data[[nm[1]]]
+  # get column containing IDs
+  data_id <- data[[nm[1]]]
 
-  if (all(is.na(data[[depthcols[1]]]) |
-          all(is.na(data[[depthcols[2]]]) ))) {
-      warning("Dropping profile IDs: ", paste0(iddata, collapse = ","),
-              "; all top and/or bottom depths missing!", call. = FALSE)
+  # check for all depths NA or 0-length
+  if (all(is.na(data[[depthcols[1]]])) || all(is.na(data[[depthcols[2]]]))) {
+      warning("all top and/or bottom depths missing from input data", call. = FALSE)
+      # return a empty (0-length) SPC prototype using id and depthcols
       return(.prototypeSPC(nm[1], depthcols))
   }
 
   tdep <- data[[depthcols[1]]]
 
-  usortid <- sort(iddata)
-
-  idtdepord <- order(as.character(iddata), tdep)
-  ditd <- data[idtdepord,]
-  hsorttdep <- !all(ditd[[depthcols[1]]] == tdep)
-
-  # re-sort horizon data
-  t12 <- any(iddata != usortid) | hsorttdep
-
-  if (is.na(t12)) {
-    return(.prototypeSPC(nm[1], depthcols))
-  } else if (t12) {
-    ## note: forced character sort on ID -- need to impose some order to check depths
-    data <- ditd
-  }
+  # calculate ID-top depth order, re-order input data
+  id_tdep_order <- order(as.character(data_id), tdep)
+  data <- data[id_tdep_order,]
 
   # create a site table with just IDs
-  # d'OH need to do this AFTER re-sorting!!!
   nusite <- .as.data.frame.aqp(data.frame(.coalesce.idx(data[[nm[1]]]),
                                           stringsAsFactors = FALSE), class(data)[1])
   names(nusite) <- nm[1]
@@ -255,7 +243,7 @@ setReplaceMethod("depths", "data.frame",
 #' # inspect site table: holocene & lower riverbank have values
 #' site(sp2)
 #'
-if (!isGeneric('site<-'))
+# if (!isGeneric('site<-'))
   setGeneric('site<-', function(object, value)
     standardGeneric('site<-'))
 
@@ -305,19 +293,18 @@ setReplaceMethod("site", signature(object = "SoilProfileCollection"),
       # existing site data (may be absent == 0-row data.frame)
       s <- object@site
 
-      if(any(s[[idname(object)]] != ids.coalesce)) {
-        warning("site and horizon data are out of sync!")
-      }
-
-      # join to existing data: by default it will only be idname(object)
+      # join to existing data: by default it will only be on idname(object)
 
       ## an appropriate ID must exist in 'value' AND @site for this to work
       # LEFT JOIN
-      suppressMessages(site.new <- merge(s, value, all.x = TRUE, sort = FALSE))
+     site.new <- merge(s, value, all.x = TRUE, sort = FALSE)
 
       new.id.order <- site.new[[idname(object)]]
-      if(any(new.id.order != ids.coalesce)) {
+      if(length(new.id.order) != length(ids.coalesce) ||
+         any(new.id.order != ids.coalesce)) {
         # message("join condition resulted in sorting of sites, re-applying original order")
+        if (any(is.na(ids.coalesce)))
+          message("profile IDs derived from horizon data contain NA!")
         site.new <- site.new[match(ids.coalesce, new.id.order),]
       }
 
@@ -421,7 +408,7 @@ setReplaceMethod("site", signature(object = "SoilProfileCollection"),
 #' # inspect result (a clean slate)
 #' horizons(p)
 #'
-if (!isGeneric('replaceHorizons<-'))
+# if (!isGeneric('replaceHorizons<-'))
   setGeneric('replaceHorizons<-', function(object, value)
     standardGeneric('replaceHorizons<-'))
 
@@ -499,7 +486,7 @@ setReplaceMethod("replaceHorizons",
 #' #  with top depth equal to zero
 #' horizons(sp2)
 #'
-if (!isGeneric('horizons<-'))
+# if (!isGeneric('horizons<-'))
   setGeneric('horizons<-', function(object, value)
     standardGeneric('horizons<-'))
 
@@ -559,12 +546,16 @@ setReplaceMethod("horizons", signature(object = "SoilProfileCollection"),
                                         value,
                                         #by = c(idname(object), hzidname(object)),
                                         all.x = TRUE, sort = FALSE))
-
-  new.horizon.order <- match(names(original.horizon.order),
-                             horizon.new[[hzidname(object)]])
+  
+  # TODO: data.table merge() would fix the need for re-sorting, but would check data types
+  #       which might cause some backwards compatibility problems (requiring type conversion)
+  #       this is a problem because the join is completely open ended -- not just based on ID
+  
   chnew <- .coalesce.idx(horizon.new[[idname(object)]])
   if (length(chnew) != length(original.site.order) |
      suppressWarnings(any(original.site.order != chnew))) {
+    new.horizon.order <- order(horizon.new[[idname(object)]], 
+                               horizon.new[[horizonDepths(object)[1]]])
     # message("join condition resulted in sorting of horizons, re-applying original order")
     horizon.new <- horizon.new[new.horizon.order,]
   }
@@ -623,7 +614,7 @@ setReplaceMethod("horizons", signature(object = "SoilProfileCollection"),
 #' #  with top depth equal to zero
 #' diagnostic_hz(sp2)
 #'
-if (!isGeneric('diagnostic_hz<-'))
+# if (!isGeneric('diagnostic_hz<-'))
   setGeneric('diagnostic_hz<-', function(object, value)
     standardGeneric('diagnostic_hz<-'))
 
@@ -708,7 +699,7 @@ setReplaceMethod("diagnostic_hz",
 #' #  with top depth equal to zero
 #' restrictions(sp2)
 #'
-if (!isGeneric('restrictions<-'))
+# if (!isGeneric('restrictions<-'))
   setGeneric('restrictions<-', function(object, value)
     standardGeneric('restrictions<-'))
 

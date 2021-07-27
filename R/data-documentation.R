@@ -1138,9 +1138,9 @@ NULL
 #' \item{uncoated colors: }{\url{https://github.com/ajesma/Pantoner/raw/gh-pages/csv/pantone-uncoated.csv}}
 #' }
 #'
-#' @details For now, lookup is performed by manual subset (see examples 1 and 2 below) or implicit subset by way of a join (example 3). Reverse lookup (Munsell -> Pantone) will not always result in a matching color, see example 3 below.
+#' @details Conversion from PMS to Munsell is performed by [`PMS2Munsell`] or manual subset of the lookup table (see examples 1 and 2 below) or implicit subset by way of a join (example 3). Conversion from Munsell to PMS will not always result in a matching color, see example 3 below.
 #'
-#' @note The lookup table contains entries for both coated and un-coated colors, these are identified by a '-c' or '-u' suffix. For example, Pantone code '100-c' is associated with '10Y 9/9'.
+#' @note The lookup table contains entries for both coated and un-coated colors, these are identified by a '-c' or '-u' suffix. For example, PMS code '100-c' is associated with '10Y 9/9'.
 #'
 #'
 #' Several Munsell chips are matched by multiple Pantone spot colors, e.g. 5YR 5/5.
@@ -1153,7 +1153,7 @@ NULL
 #' # load LUT
 #' data(pms.munsell.lut)
 #'
-#' ## 1. Pantone -> Munsell
+#' ## 1. Munsell -> Pantone
 #'
 #' # colors to match
 #' colors <- c('10YR 3/3', '7.5YR 4/6')
@@ -1165,40 +1165,16 @@ NULL
 #' # simple display
 #' colorContrastPlot(m1 = m$munsell[1], m2 = m$munsell[2], labels = m$code)
 #'
-#' ## 2. Munsell -> Pantone
-#' colors <- c('723-c', '451-c')
+#' ## 2. Pantone -> Munsell
+#' codes <- c('723-c', '451-c')
 #'
 #' # index / subset match
-#' idx <- pms.munsell.lut$code %in% colors
-#' m <- pms.munsell.lut[idx, ]
+#' m <- PMS2Munsell(codes)
 #'
 #' # simple display
 #' colorContrastPlot(m1 = m$munsell[1], m2 = m$munsell[2], labels = m$code)
 
-#' ## 3. integration with SPC
-#' data(pms.munsell.lut)
-#' data(sp6)
-#' depths(sp6) <- id ~ top + bottom
-#'
-#' # get the closest Munsell chip from color meter data
-#' sp6$munsell <- getClosestMunsellChip(sp6$color, convertColors = FALSE)
-#'
-#' # prepare an intermediate data.frame for performing join to LUT
-#' h <- horizons(sp6)[, c(hzidname(sp6), 'munsell')]
-#'
-#' # left join
-#' # not all Munsell colors have a paired Pantone color
-#' m <- merge(h, pms.munsell.lut, by = 'munsell', all.x = TRUE, sort = FALSE)
-#'
-#' # splice into original SPC
-#' horizons(sp6) <- m
-#'
-#' # graphical check
-#' par(mar = c(0, 0, 2, 1))
-#' plotSPC(sp6, color = 'hex')
-#'
-#'
-#' ## 4. multiple Pantone colors matching a single Munsell color
+#' ## 3. multiple Pantone colors matching a single Munsell color
 #' #
 #' colors <- pms.munsell.lut[pms.munsell.lut$munsell == '5YR 5/5', ]
 #' colors <- colors[order(colors$dE00), ]
@@ -1206,6 +1182,28 @@ NULL
 #' par(mar = c(0, 0, 2, 0), fg = 'white', bg = 'black')
 #' soilPalette(colors$hex, lab = colors$code)
 #' title('Pantone Colors Roughly Matching 5YR 5/5', col.main = 'white', line = 0)
+#' 
+#' ## 4. integration with SPC
+#' data(pms.munsell.lut)
+#' data(sp6)
+#' depths(sp6) <- id ~ top + bottom
+#'
+#' # get the closest Munsell chip from color meter data
+#' sp6$munsell <- getClosestMunsellChip(sp6$color, convertColors = FALSE)
+#' 
+#' # prepare a subset of the PMS lookup table where we take the first match to a Munsell chip
+#' #  this ensures the relationship between munsell chip and Pantone color is 1:1
+#' pms.munsell.first <- do.call('rbind', lapply(split(pms.munsell.lut, 
+#'                                                    pms.munsell.lut$munsell), 
+#'                                              function(x) x[1, ]))
+#' 
+#' # LEFT JOIN PMS table to existing horizons in SPC (on 'munsell' column)
+#' horizons(sp6) <- pms.munsell.first
+#'
+#' # graphical check
+#' par(mar = c(0, 0, 2, 1))
+#' plotSPC(sp6, color = 'hex')
+#'
 #'
 "pms.munsell.lut"
 
@@ -1222,8 +1220,6 @@ NULL
 #'   \item{series}{soil series name}
 #' }
 #'
-#'
-#'
 "us.state.soils"
 
 #' Munsell to sRGB Lookup Table for Common Soil Colors
@@ -1231,7 +1227,7 @@ NULL
 #' A lookup table of interpolated Munsell color chips for common soil colors.
 #'
 #' See \code{munsell2rgb} for conversion examples. Note that this table does
-#' not currently have entires for values of 2.5--common in most soil color
+#' not currently have entries for values of 2.5--common in most soil color
 #' books. These chips should be added in the next major release of aqp. Values
 #' are referenced to the D65 standard illuminant.
 #'
@@ -1380,14 +1376,14 @@ NULL
 #' }
 "munsell.spectra"
 
-#' @title Indices of "equivalent" Munsell chips in \code{munsell} data set
+#' @title Indices of "equivalent" Munsell chips in the `munsell` data set
 #'
 #' @description
-#' A pre-calculated lookup list (made with \code{farver::compare_colour}) based on pair-wise CIE2000 color contrast (\code{dE00}) of LAB colors with D65 illuminant for all whole value/chroma "chips" in the \code{aqp::munsell} data set.
+#' A pre-calculated lookup list (made with `farver::compare_colour`) based on pair-wise color contrast (`CIE2000` or `dE00`) evaluated over all "chips" in the `aqp::munsell` data set.
 #'
 #' The intention is to identify Munsell chips that may be "functionally equivalent" to some other given whole chip elsewhere in the Munsell color space -- as discretized in the \code{aqp::munsell} lookup table.
 #'
-#' "Equivalent" chips are based (fairly arbitrarily) on the 0.001 probability level of dE00 (default Type 7 \code{quantile}) within the upper triangle of the 8467x8467 contrast matrix. This corresponds to a \code{dE00} contrast threshold of approximately 2.15.
+#' "Equivalent" chips are based (fairly arbitrarily) on the 0.001 probability level of `dE00` (default Type 7 `quantile`) within the upper triangle of the 8467x8467 contrast matrix. This corresponds to a `dE00` threshold of approximately 2.15.
 #'
 #' This is a naive (to the subtleties of human color perception, and overall magnitude of contrast between some of the "chips") but computationally consistent approach. Using the lookup list, as opposed to manual contrast via e.g. \code{farver::compare_colour} may have some benefits for efficiency in certain applications where the exact contrast value is not as important as the concept of having some threshold that is non-zero, but very small.
 #'
@@ -1406,8 +1402,103 @@ NULL
 #'
 #' @keywords datasets
 #'
-#' @format A named list with 8467 elements, each containing a numeric vector of indices corresponding to the \code{munsell} data set, which has 8467 rows (unique, whole-number chips). Names have the format \code{HUE VALUE/CHROMA}, eg. \code{"7.5YR 4/4"}
+#' @format A named list with 8467 elements, each containing a numeric vector of indices corresponding to the \code{munsell} data set, which has 8467 rows (unique, whole-number chips). Names have the format \code{HUE VALUE/CHROMA}, e.g. \code{"7.5YR 4/4"}
 #'
 #' @examples
 #' data(equivalent_munsell)
 "equivalent_munsell"
+
+
+
+#'
+#' @title Standard Illuminants and Observers
+#' 
+#' @description D65 and F2 standard illuminant spectral power distributions, CIE1931 Standard Observer (2 degree), and CIE1964 Supplemental Standard Observer (10 degree)
+#'
+#'
+#'
+#' @keywords datasets
+#' @usage data(spectral.reference)
+#' 
+#' @references 
+#' 
+#' Marcus, R.T. (1998). The Measurement of Color. In K. Nassau (Ed.), Color for Science, Art, and Technology (pp. 32-96). North-Holland.
+#' 
+#' CIE Colorimetry – Part 1: CIE standard colorimetric observers. CIES014-1/E:2006 – ISO 11664-1:2007(E)
+#' 
+#' CIE. (n.d.). CIE 15:2004 Tables Data. Retrieved from https://law.resource.org/pub/us/cfr/ibr/003/cie.15.2004.tables.xls
+#' 
+#' @examples 
+#' 
+#' data("spectral.reference")
+#' 
+#' matplot(
+#'   x = spectral.reference[, 1],
+#'   y = spectral.reference[, c('xbar_2', 'ybar_2', 'zbar_2')],
+#'   ylim = c(0, 2),
+#'   type = 'l',
+#'   lwd = 2, 
+#'   lty = 1,
+#'   las = 1,
+#'   xlab = 'Wavelength (nm)',
+#'   ylab = 'Weight | Intensity',
+#'   main = "CIE1931 (2\u00B0) and CIE1964 (10\u00B0) Standard Observers
+#'   D65 and F2 Illuminant Power Spectrum (rescaled / offset for clarity)",
+#'   cex.main = 0.9
+#' )
+#' 
+#' matlines(
+#'   x = spectral.reference[, 1],
+#'   y = spectral.reference[, c('xbar_10', 'ybar_10', 'zbar_10')],
+#'   type = 'l',
+#'   lwd = 2, 
+#'   lty = 2,
+#'   las = 1,
+#'   xlab = 'Wavelength (nm)',
+#'   ylab = 'Weight | Intensity',
+#'   main = 'CIE1931 Standard Observer Weights\nD65 Standard Illuminant'
+#' )
+#' 
+#' lines(
+#'   x = spectral.reference$w,
+#'   y = (spectral.reference$D65 / 100) + 0.33,
+#'   lty = 1,
+#'   col = 'royalblue'
+#' )
+#' 
+#' lines(
+#'   x = spectral.reference$w,
+#'   y = (spectral.reference$F2 / 25) + 0.4,
+#'   lty = 1,
+#'   col = 'violet'
+#' )
+#' 
+#' legend(
+#'   'topright',
+#'   legend = c('X_2', 'Y_2', 'Z_2', 'X_10', 'Y_10', 'Z_10', 'D65', 'F2'),
+#'   col = c(1, 2, 3, 1, 2, 3, 'royalblue', 'violet'),
+#'   lwd = c(2, 2, 2, 2, 2, 2, 1, 1),
+#'   lty = c(1, 1, 1, 2, 2, 2, 1, 1),
+#'   bty = 'n',
+#'   cex = 0.85
+#' )
+#'
+"spectral.reference"
+
+
+
+#'
+#' @title Traditional Soil Color Names
+#' 
+#' @description Traditional soil color names associated with select Munsell colors.
+#' 
+#' @references 
+#' 
+#' Sourced from the "colorconverter" NASIS property script.
+#'
+#' @keywords datasets
+#' @usage data(traditionalColorNames)
+#' 
+"traditionalColorNames"
+
+

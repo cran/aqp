@@ -54,15 +54,19 @@
 
 #' @title Parse Munsell Color Notation
 #' 
-#' @description Split Munsell color notation into "hue", "value", and "chroma", with optional conversion to sRGB hex notation, sRGB coordinates, and CIELAB coordinates. Conversion is performed by \code{munsell2rgb}.
+#' @description Split Munsell color notation into "hue", "value", and "chroma", with optional conversion to sRGB hex notation, sRGB coordinates, and CIELAB coordinates. Conversion is performed by [`munsell2rgb`].
 #'
-#' @param munsellColor character vector of Munsell colors (e.g. \code{c('10YR 3/4', '5YR 4/6')})
+#' @param munsellColor character vector of Munsell colors (e.g. `c('10YR 3/4', '5YR 4/6')`)
 #' @param convertColors logical, convert colors to sRGB hex notation, sRGB coordinates, CIELAB coordinates
-#' @param ... additional arguments to \code{munsell2rgb}
+#' @param delim optional, specify the type of delimiter used between value and chroma parts of the Munsell code. By default ":", ",:, "'", and "/" are supported.
+#' @param ... additional arguments to [`munsell2rgb`]
 #'
-#' @return a \code{data.frame} object
+#' @return a `data.frame` object
 #' 
+#' @importFrom stringr str_extract_all str_length str_trim
 #' @export
+#'
+#' @author P. Roudier and D.E. Beaudette
 #'
 #' @examples
 #' 
@@ -75,32 +79,109 @@
 #' # CIELAB only
 #' parseMunsell("10YR 3/5", return_triplets = FALSE, returnLAB = TRUE)
 #' 
-
-## TODO: this will not correctly parse gley
-## TODO: re-write with REGEX for extraction from within other text
-## TODO: return NA for obviously wrong Munsell codes
-
-parseMunsell <- function(munsellColor, convertColors=TRUE, ...) {
-  # sanity check:
-  if(all(is.na(munsellColor)) | all(is.null(munsellColor)) | all(munsellColor == ''))
-    return(rep(NA, times=length(munsellColor)))
+#' 
+#' 
+parseMunsell <- function(munsellColor, convertColors = TRUE, delim = NA, ...) {
   
-  # split color into pieces, first at hue[space]value/chroma
-  pieces <- strsplit(munsellColor, ' ', fixed=TRUE)
-  # then value/chroma into pieces
-  pieces.2 <- sapply(pieces, function(i) strsplit(i[2], '/', fixed=TRUE))
-  
-  # extract pieces
-  hue <- sapply(pieces, FUN = '[', 1)
-  value <- sapply(pieces.2, FUN = '[', 1)
-  chroma <- sapply(pieces.2, FUN = '[', 2)
-  
-  # parse, without conversion to numeric / munsell
-  if(convertColors == FALSE)
-    return(data.frame(hue, value, chroma, stringsAsFactors = FALSE))
+  # now fully vectorized, no wrangling of tiny data.frames
+  # https://github.com/ncss-tech/aqp/issues/230
 
-  # otherwise convert
-  res <- munsell2rgb(hue, value, chroma, ...)
+  # empty result set for convertColors = FALSE
+  empty <- data.frame(
+    hue = NA_character_, 
+    value = NA_real_, 
+    chroma = NA_real_, 
+    stringsAsFactors = FALSE
+  )
+  
+  # sanity check: all NA
+  if(all(is.na(munsellColor)) | all(is.null(munsellColor)) | all(munsellColor == '')) {
+    # return empty data.frame for each entry
+    if(convertColors) {
+      res <- empty[rep(1, times = length(munsellColor)), ]
+      row.names(res) <- NULL
+      return(res)
+      
+    } else {
+      # return NA for each entry
+      res <- rep(NA, times = length(munsellColor))
+      return()
+    }
+  }
+    
+  
+  # ensure colours are all upper case
+  munsellColor <- toupper(munsellColor)
+  
+  # total number of records, used to NA-padding
+  n <- length(munsellColor)
+  
+  # Munsell notation validation
+  
+  # If the very first character of the Munsell string is not numeric OR 'N'
+  not.numeric.idx <- grep('^[0-9|N]', munsellColor, invert = TRUE)
+  if(length(not.numeric.idx) > 0) {
+    # can't do anything with this value
+    munsellColor[not.numeric.idx] <- NA
+  }
+  
+  # index non-NA values
+  not.na.idx <- which(!is.na(munsellColor))
+  mn <- munsellColor[not.na.idx]
+  
+  
+  ## split pieces
+  
+  # Extract hue number
+  hue_number <- str_trim(sub("[A-Z].*", "", mn), side = "both")
+  remaining <- substr(mn, str_length(hue_number) + 1, str_length(mn))
+  hue_letter <- str_trim(sub("[0-9].*", "", remaining), side = "both") 
+  remaining <- substr(remaining, str_length(hue_letter) + 1, str_length(remaining))
+  remaining <- str_trim(remaining, side = "both")
+  
+  # re-constitute hue
+  hue <- paste0(hue_number, hue_letter)
+  
+  # list, of typically 2-element vectors
+  if (is.na(delim)) {
+    value_chroma <- strsplit(remaining, "[:,'/_]")
+  } else {
+    value_chroma <- strsplit(remaining, delim)
+  }
+  
+  # attempt to extract value and chroma
+  value <- sapply(value_chroma, '[', 1)
+  chroma <- sapply(value_chroma, '[', 2)
+  
+  # clean any remaining whitespace
+  value <- str_trim(value, side = "both")
+  chroma <- str_trim(chroma, side = "both")
+  
+  ## TODO: this breaks the notion that chroma is numeric
+  #
+  # # convert NA chroma (should be limited to N hue) -> empty string
+  # chroma <- ifelse(is.na(chroma), '', chroma)
+  
+  # init empty data.frame
+  res <- empty[rep(1, times = length(munsellColor)), ]
+  row.names(res) <- NULL
+  
+  # insert non-NA values
+  # always character
+  res$hue[not.na.idx] <- hue
+  # always numeric
+  res$value[not.na.idx] <- as.numeric(value)
+  # always numeric
+  res$chroma[not.na.idx] <- as.numeric(chroma)
+  
+  # parsed into columns within a data.frame, but not converted to colors
+  if(convertColors == FALSE) {
+    return(res)
+  }
+
+  # otherwise convert using NA-padded data.frame
+  res <- munsell2rgb(res$hue, res$value, res$chroma, ...)
+  
   return(res)
 }
 
@@ -398,20 +479,29 @@ munsell2rgb <- function(the_hue, the_value, the_chroma, alpha = 1, maxColorValue
 	if(length(unique( c(length(the_hue), length(the_value), length(the_chroma)))) != 1)
 		stop('All inputs must be vectors of equal length.')
   
-  ## TODO: depricate this
-  ## plyr <= 1.6 : check to make sure hue is a character
+  # in case of factors, why would anyone do this?
   if(is.factor(the_hue)) {
-    cat('Notice: converting hue to character\n')
     the_hue <- as.character(the_hue)
   }
-
-
-  # This is a hack to avoid munsell2rgb: "no visible binding for global variable munsell" at package R CMD check
-  munsell <- NULL
-
+  if(is.factor(the_value)) {
+    the_value <- as.character(the_value)
+  }
+  if(is.factor(the_chroma)) {
+    the_chroma <- as.character(the_chroma)
+  }
+  
+  # expected data types
+  # hue: character
+  the_hue <- as.character(the_hue)
+  
+  # value and chroma: numeric
+  the_value <- as.numeric(the_value)
+  the_chroma <- as.numeric(the_chroma)
+  
   # note: this is incompatible with LazyData: true
   # load look-up table from our package
   # This should be moreover more foolproof than data(munsell) c/o PR
+  munsell <- NULL
   load(system.file("data/munsell.rda", package="aqp")[1])
 
   ## 2016-03-07: "fix" neutral hues
@@ -429,11 +519,11 @@ munsell2rgb <- function(the_hue, the_value, the_chroma, alpha = 1, maxColorValue
   ## temporary fix for #44 (https://github.com/ncss-tech/aqp/issues/44)
   # round non integer value and chroma
   if ( !isTRUE(all.equal(as.character(the_value), as.character(as.integer(the_value)) )) ) {
-    the_value <- round(as.numeric(the_value))
+    the_value <- round(the_value)
     warning("'the_value' has been rounded to the nearest integer.", call. = FALSE)
   }
   if ( !isTRUE(all.equal(as.character(the_chroma), as.character(as.integer(the_chroma)) )) ) {
-    the_chroma <- round(as.numeric(the_chroma))
+    the_chroma <- round(the_chroma)
     warning("'the_chroma' has been rounded to the nearest integer.", call. = FALSE)
   }
   
@@ -442,8 +532,8 @@ munsell2rgb <- function(the_hue, the_value, the_chroma, alpha = 1, maxColorValue
   # note that value / chroma must be same data type as in `munsell` (numeric)
   d <- data.frame(
     hue = the_hue, 
-    value = as.numeric(the_value), 
-    chroma = as.numeric(the_chroma), 
+    value = the_value, 
+    chroma = the_chroma, 
     stringsAsFactors = FALSE
   )
   
@@ -505,7 +595,7 @@ munsell2rgb <- function(the_hue, the_value, the_chroma, alpha = 1, maxColorValue
 }
 
 
-if (!isGeneric("munsell2spc"))
+# if (!isGeneric("munsell2spc"))
   setGeneric("munsell2spc", function(object, ...) standardGeneric("munsell2spc"))
 
 #' @title Merge Munsell Hue, Value, Chroma converted to sRGB & CIELAB into a SoilProfileCollection

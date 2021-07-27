@@ -3,25 +3,58 @@
 #' 
 #' @description Lattice visualization demonstrating subtractive mixtures of colors in Munsell notation and associated spectra.
 #' 
+#' @details If present, `names` attribute of `x` is used for the figure legend.
+#' 
 #' @author D.E. Beaudette
 #' 
 #' @param x vector of colors in Munsell notation, should not contain duplicates
 #' 
-#' @param w vector of proportions, can sum to any number
+#' @param w vector of weights, can sum to any number
 #' 
-#' @param n number of closest mixture candidates (see [`mixMunsell`]), results can be hard to interpret 
+#' @param mixingMethod approach used to simulate a mixture: 
+#'    * `reference`  : simulate a subtractive mixture of pigments, selecting `n` closest reference spectra
+#'    
+#'    * `exact`: simulate a subtractive mixture of pigments, color conversion via CIE1931 color-matching functions (see [`mixMunsell`])
+#' 
+#' @param n number of closest mixture candidates when `mixingMethod = 'reference'` (see [`mixMunsell`]), results can be hard to interpret when `n > 2`
 #' 
 #' @param swatch.cex scaling factor for color swatch
 #' 
 #' @param label.cex scaling factor for swatch labels
 #' 
-#' @param showMixedSpec show weighted geometric mean (mixed) spectra as dotted line
+#' @param showMixedSpec show weighted geometric mean (mixed) spectra as dotted line (only when `mixingMethod = 'reference'`)
 #' 
 #' @param overlapFix attempt to "fix" overlapping chip labels via [`fixOverlap`]
 #' 
-#' @return `lattice` graphics object
+#' @return a `lattice` graphics object
 #' 
-plotColorMixture <- function(x, w = rep(1, times = length(x)) / length(x), n = 1, swatch.cex = 6, label.cex = 0.85, showMixedSpec = FALSE, overlapFix = TRUE) {
+#' @examples 
+#' 
+#' # color chips
+#' chips <- c('5B 5/10', '5Y 8/8')
+#' names(chips) <- chips
+#' 
+#' # weights
+#' wt <- c(1, 1)
+#' 
+#' plotColorMixture(
+#' x = chips, 
+#' w = wt, 
+#' swatch.cex = 4, 
+#' label.cex = 0.65, 
+#' showMixedSpec = TRUE, 
+#' mixingMethod = 'reference'
+#' )
+#' 
+#' plotColorMixture(
+#'   x = chips, 
+#'   w = wt, 
+#'   swatch.cex = 4, 
+#'   label.cex = 0.65, 
+#'   mixingMethod = 'exact'
+#' )
+#' 
+plotColorMixture <- function(x, w = rep(1, times = length(x)) / length(x), mixingMethod = c('reference', 'exact'), n = 1, swatch.cex = 6, label.cex = 0.85, showMixedSpec = FALSE, overlapFix = TRUE) {
   
   # TODO plot will be incorrect if duplicate Munsell chips are specified
   
@@ -29,8 +62,24 @@ plotColorMixture <- function(x, w = rep(1, times = length(x)) / length(x), n = 1
   
   # TODO: ideas on styling legend (size, placement, etc.)
   
+  # mixture method sanity checks
+  mixingMethod <- match.arg(mixingMethod)
+  
+  # can't use n > 1 with mixingMethod = 'exact'
+  if(mixingMethod == 'exact') {
+    
+    if(n > 1 ) {
+      stop('cannot request multiple matches with `mixingMethod = "exact"`', call. = FALSE)
+    }
+   
+    # must retain mixed spectra
+    showMixedSpec <- TRUE
+  }
+  
   # mix colors
-  mx <- suppressMessages(mixMunsell(x = x, w = w, n = n, keepMixedSpec = showMixedSpec))
+  mx <- suppressMessages(
+    mixMunsell(x = x, w = w, n = n, mixingMethod = mixingMethod, keepMixedSpec = showMixedSpec)
+    )
   
   # make local copy of the mixed colors when asking for the mixed spectra too
   if(showMixedSpec) {
@@ -54,14 +103,45 @@ plotColorMixture <- function(x, w = rep(1, times = length(x)) / length(x), n = 1
   # vector of colors to mix and result
   colors <- c(x, m$munsell)
   
+  ## TODO: this will fail if a color is not in the spectral library
+  #        -> possibly when mixingMethod = 'exact'
+  #        solution: provide a template data.frame
+  
   # select spectra from reference library and assign an ID
+  # IDs should use names(x) if !NULL
+  # otherwise generate an ID
+  nm <- names(x)
+  if(is.null(nm)) {
+    IDs <- sprintf('color %s', 1:length(x))
+  } else {
+    IDs <- nm
+  }
+  
+  # iteration over colors to-mix + mixture(s)
   s <- lapply(seq_along(colors), function(i) {
     # select current color + spectra
-    z <- munsell.spectra[which(munsell.spectra$munsell == colors[i]), ]
+    if(mixingMethod == 'reference') {
+      # all colors selected from library
+      z <- munsell.spectra[which(munsell.spectra$munsell == colors[i]), ]
+      
+    } else {
+      # exact mixing, last color is mixed spectrum
+      z <- munsell.spectra[which(munsell.spectra$munsell == colors[i]), ]
+      
+      # last color is the mixture, 
+      # replace reference spectra / munsell chip with actual mixture
+      if(i == length(colors)) {
+        z$reflectance <- mx$spec
+        z$munsell <- mx$mixed$munsell
+      }
+      
+    }
+    
     
     # assign an ID for plotting
     if( i <= length(x)) {
-      z$ID <- sprintf('color %s', i)
+      # current ID
+      z$ID <- IDs[i]
     } else {
       # reset counter to mix color ranks
       z$ID <- sprintf('mix #%s', i - length(x))
@@ -71,11 +151,20 @@ plotColorMixture <- function(x, w = rep(1, times = length(x)) / length(x), n = 1
   })
   
   s <- do.call('rbind', s)
+  row.names(s) <- NULL
 
-  ## TODO: enforce this beyond alpha-sorting
-  # set ID factor levels
-  # sorting is automatic because "color X" always comes before "mixture"
-  s$ID <- factor(s$ID)
+  # create sensible levels for plotting / legend
+  # names + mixtures
+  all.names <- unique(s$ID)
+  
+  # mixtures, sorted
+  mix.names <- sort(setdiff(all.names, nm))
+  
+  # original chip names + mixtures
+  color.chip.levels <- c(nm, mix.names)
+  
+  # encode chips names + mixture names as into factor
+  s$ID <- factor(s$ID, levels = color.chip.levels)
   
   # convert into colors for plotting
   s$color <- parseMunsell(s$munsell)
@@ -108,6 +197,8 @@ plotColorMixture <- function(x, w = rep(1, times = length(x)) / length(x), n = 1
   match.rank <- sprintf("#%s", seq(from = 1, to = nrow(m)))
   # combined labels
   lab.text <- sprintf('%s\n%s', munsell.labels, c(wt.labels, match.rank))
+  
+  ## TODO: use grid::grid.layout() / grid viewports to manage a multi-panel figure
   
   # final figure
   pp <- xyplot(
@@ -206,7 +297,8 @@ plotColorMixture <- function(x, w = rep(1, times = length(x)) / length(x), n = 1
         )
       }
       
-      if(showMixedSpec){
+      # the mixed spectra is only shown as a dotted line when mixingMethod = 'reference'
+      if(showMixedSpec & mixingMethod != 'exact'){
         panel.lines(x = unique(s$wavelength), y = mx$spec, lty = 3, col = 'black')
       }
       

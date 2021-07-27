@@ -1,4 +1,19 @@
+# aqp 1.30 (2021-07-14)
+ * `unique` method for `SoilProfileCollection` objects now returns a `SoilProfileCollection` by default
+   - this may break existing code! use the new argument `SPC = FALSE` for previous behavior (https://github.com/ncss-tech/aqp/issues/159)
+ * `aggregateColor()` now uses `mixMunsell` for the estimation of soil color mixtures
+ * `plotColorMixture()` will respect "names" attribute of colors-to-mix, without erroneous alpha-sorting
+ * `parseMunsell()` now more robust and faster, c/o P. Roudier
+ * `mixMunsell`:
+    - new method `exact` for direct conversion of mixture spectra to sRGB or closest Munsell chip (via `spec2Munsell()`)
+ * new convenience function `PMS2Munsell()` for converting PMS codes -> closest Munsell chip (https://github.com/ncss-tech/aqp/issues/124)
+ * `glom()` `z1` and `z2` arguments vectorized to allow for profile-specific intervals
+   *  `z1` and `z2` support non-standard evaluation based on column names in `siteNames(p)`, and also can take character vector (length 1) with column names in `siteNames(p)`
+ * `depthOf()`, `minDepthOf()`, `maxDepthOf()`, `getSurfaceHorizonDepth()`, `getMineralSoilSurfaceDepth()`, `getPlowLayerDepth()` can now be applied to multiple profiles.
+   *  If the input _SoilProfileCollection_ has more than one profile then result is a _data.frame_ containing profile ID, top or bottom depths, horizon designation and pattern
+
 # aqp 1.29 (2021-04-05)
+ * CRAN release
  * Several `SoilProfileCollection` methods that conflict with {dplyr} 1.0+ have been deprecated:
     * `filter`, `mutate`, `group_by`, `summarize`
     * New overloaded {base} names:
@@ -15,8 +30,9 @@
  * new function `alignTransect()` for simplifying relative positioning of profile sketches
  * `plotMultipleSPC()` gains ability to automatically merge thematic legends
  * `coordinates<-` will check formula terms (_unique_ coordinates) in the `@horizons` slot, if needed.
+ * new function `spec2Munsell()` for converting reflectance spectra into sRGB coordinates or closest Munsell chip
  * `mixMunsell`:
-    - gains argument for performing mixture estimation via wt. mean of CIELAB coordinates
+    - new `mixingMethod` argument for selecting several mixing strategies
     - suggestions on interpreting spectral distances, message printed when greater than reasonable threshold
  * minor bug-fix in `panel.depth_function` when plotting grouped step-functions
  
@@ -129,7 +145,7 @@
   * `SoilProfileCollection` object gains new slot: `@restrictions`, fix old objects with `rebuildSPC()`
 
 # aqp 1.18.3 (2019-12-19)
-  * `evalMissingData()` gets new argument for relative vs. absolute evalulation of missing data
+  * `evalMissingData()` gets new argument for relative vs. absolute evaluation of missing data
   * `horizonColorIndices()`, `harden.rubification()`, `harden.melanization()`, `thompson.bell.darkness()` and associated functions in soilColorIndices.R
   * fix for https://github.com/ncss-tech/aqp/issues/44
   * fix for https://github.com/ncss-tech/aqp/issues/66
@@ -492,7 +508,7 @@
 
 # aqp 0.99-9.4 (2012-01-09)
    * `site(SCP) <- d` now tries to merge data from SPC@site with 'd' via left join
-      + this means that all new SPC objects will have a single column of @site data, containin profile IDs
+      + this means that all new SPC objects will have a single column of @site data, containing profile IDs
    * plot-SoilProfileCollection now tries to guess the best orientation of IDs
       + override with id.style='top' or id.style='side'
    * slice-SoilProfileCollection now accepts '.' to define all columns should be returned at requested slices
