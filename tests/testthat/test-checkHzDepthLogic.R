@@ -48,6 +48,43 @@ test_that("checkHzDepthLogic() works as expected", {
 })
 
 
+test_that("preservation of hzID", {
+  
+  # modify hzID in-place
+  hzID(sp3) <- sprintf("%04d", as.integer(sp3$hzID))
+  
+  res <- checkHzDepthLogic(sp3, byhz = TRUE, fast = FALSE)
+  
+  expect_true(
+    all(hzID(sp3) == res$hzID)
+  )
+  
+  res <- checkHzDepthLogic(sp3, byhz = TRUE, fast = TRUE)
+  
+  expect_true(
+    all(hzID(sp3) == res$hzID)
+  )
+  
+  # data.frame interface
+  
+  res <- checkHzDepthLogic(horizons(sp3), idname = idname(sp3),
+                           hzdepths = horizonDepths(sp3),
+                           byhz = TRUE, fast = FALSE)
+  
+  # data.frame interface always returns calculated integer hzID
+  expect_true(
+    all(1:nrow(sp3) == res$hzID)
+  )
+  
+  res <- checkHzDepthLogic(horizons(sp3), idname = idname(sp3), 
+                           hzdepths = horizonDepths(sp3),
+                           byhz = TRUE, fast = TRUE)
+  
+  expect_true(
+    all(1:nrow(sp3) == res$hzID)
+  )
+})
+
 test_that("checkHzDepthLogic() depth logic errors", {
 
   # local copy

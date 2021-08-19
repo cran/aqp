@@ -83,8 +83,14 @@ checkHzDepthLogic <- function(x,
       res <- h[, list(tests = list(tests = data.frame(t(hzDepthTests(.SD))))), .SDcols = hzd, by = c(eval(hby))][,
                  list(tests = tests, valid = all(!tests[[1]])), by = c(eval(hby))]
     } else {
-      res <- h[, list(tests = list(tests = data.frame(t(hzDepthTests(.SD))))), .SDcols = hzd, by = list(hzID=seq_len(nrow(h)))][,
-                 list(tests = tests, valid = all(!tests[[1]])), by = list(hzID=seq_len(nrow(h)))]
+      res <- h[, list(tests = list(tests = data.frame(t(hzDepthTests(.SD))))), .SDcols = hzd, by = list(.hzID = seq_len(nrow(h)))][,
+                 list(tests = tests, valid = all(!tests[[1]])), by = list(.hzID = seq_len(nrow(h)))]
+      if (inherits(x, 'SoilProfileCollection')) {
+        res[[hzidname(x)]] <- hzID(x)
+      } else {
+        res$hzID <- res$.hzID
+      }
+      res$.hzID <- NULL
     }
     res <- cbind(res, data.table::rbindlist(res$tests))
     res$tests <- NULL
@@ -95,10 +101,16 @@ checkHzDepthLogic <- function(x,
       res <- h[, all(!hzDepthTests(.SD)), .SDcols = hzd, by = c(eval(hby))]
       colnames(res) <- c(idn, "valid")
     } else {
-      res <- h[, all(!hzDepthTests(.SD)), .SDcols = hzd, by = list(hzID=seq_len(nrow(h)))]
-      colnames(res) <- c("hzID", "valid")
+      res <- h[, all(!hzDepthTests(.SD)), .SDcols = hzd, by = list(.hzID = seq_len(nrow(h)))]
+      if (inherits(x, 'SoilProfileCollection')) {
+        res[[hzidname(x)]] <- hzID(x)
+        colnames(res) <- c(".hzID", "valid", hzidname(x))
+      } else {
+        res$hzID <- res$.hzID
+        colnames(res) <- c(".hzID", "valid", "hzID")
+      }
+      res$.hzID <- NULL
     }
-
   }
   # add profile ID and top/bottom depth for byhz==TRUE
   if (byhz) {

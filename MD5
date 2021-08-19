@@ -1,6 +1,6 @@
-20b2693e6ce4a87f5c5f8c5cbcfe9919 *DESCRIPTION
-8ebb5a5ff37baee35785943faaade8b5 *NAMESPACE
-0a2c733a3c8113b5e6b950cc6c69d714 *NEWS.md
+089a57b5ef44a2456a9227803be8b835 *DESCRIPTION
+3ee9da8efa3627bbb5658bb50df9ca1c *NAMESPACE
+b0d1aaba9ba83f5aeda0c106191cebc8 *NEWS.md
 023695241480505a12cb829a3e1fa263 *R/AAAA.R
 5e4690028f865dcda20660363442e652 *R/Class-SoilProfileCollection.R
 b67bba09de496da2dd2eb215ff9a515d *R/HzDepthLogicSubset.R
@@ -17,20 +17,21 @@ cb20bbeb84135ae7a7d652f236b466c3 *R/SoilProfileCollection-setters.R
 8ea64a877ffb03119c31da29ea3ab9b6 *R/accuracy_uncertainty.R
 868652f1c9866a74d33e436e7770746b *R/addBracket.R
 56cb29d82da7b6e946778ca787fc67b3 *R/addVolumeFraction.R
-adc9ac42009d3a98361f9c9fbad75e4b *R/aggregateColor.R
+9685ffea0865524b668486bec1602779 *R/aggregateColor.R
 c0dfd4d0dfda5952cbd91a637f3eae8f *R/aggregateSoilDepth.R
 52c11ff247d1143e3c7925257460cbbe *R/alignTransect.R
 167173b69c5f2b9684243ad1c0e07e18 *R/allocate.R
 df32a71b9411269275cc94aba90e1480 *R/aqp-package.R
 283a2c88cb8bd2eb5f9b07c4f9bef57b *R/bootstrapSoilTexture.R
-dcfc31da1c092db48c21fade88aaa65c *R/checkHzDepthLogic.R
+b1b53dacf41f9fd290941f03fa05aa6a *R/checkHzDepthLogic.R
 d6a4db434321ea64610d0c369326d6ac *R/checkSPC.R
+1910ff4fa35424c7a600b0735bf8b910 *R/colorChart.R
 def3fcbf22dcdd799c127925328aee22 *R/colorContrast.R
 1742bd6b16a5476449a4713a2624ea0d *R/colorContrastPlot.R
 30eb2a44dd98e82dcc1b04ab919c7018 *R/colorQuantiles.R
 86b50cef4ce33b5d7e76303886d62a8d *R/combine.R
 696083d2cc9d89f4550767732db9022b *R/compositeSPC.R
-6c70c716d5428419e3103e7cd0ead968 *R/contrastChart.R
+19bdf75947d68681e19f23fefb0b46a7 *R/contrastChart.R
 38eb0d683b8555ba4a33ec44db2777e4 *R/contrastClass.R
 19a23f0f870adab5391a5825e2f6a7bc *R/data-documentation.R
 aef72e0d74c474ed37133c309e7fc856 *R/datadots.R
@@ -48,7 +49,7 @@ cda1d2164e09935d7e7286710e633661 *R/estimateSoilDepth.R
 0930215e9c2889416ad16ef354a036e5 *R/explainPlotSPC.R
 6f1e6fa3826584d9727f924d33483d8b *R/f.noise.R
 f3892991ebf396d476bafaf62ad2609c *R/factor-level-setters.R
-e9f098008ac11550ec7cc2472e300d27 *R/fillHzGaps.R
+32d2dffc8ef55b5885d98042b7769dbe *R/fillHzGaps.R
 37b0c42bc0c899eb5b628d161950f3f8 *R/findOverlap-fixOverlap.R
 6f6485d3de6ccf886c80f202b441c155 *R/genSlabLabels.R
 f72cd40fda68feb034129ecdb627f586 *R/generalize.hz.R
@@ -79,7 +80,7 @@ f2bfcd48b4e6c747599c94989cdb344a *R/mostLikelyHzSequence.R
 e53a5fe1445d9a444f69a14b0a4d50e6 *R/munsell2rgb.R
 6fe733be8ad1f01887aea9ae2d07e336 *R/mutate_profile.R
 4c9f08805ac49bec4968892b464a29a7 *R/panel.depth_function.R
-1a5ec1cd2f09a540969d13ae6fdfa1ad *R/perturb.R
+be23a3212aa3ab146e41e8adfd9b1e14 *R/perturb.R
 e9dabfc4ce328d9807710f5b958dd4ee *R/plotColorMixture.R
 a702f00089d70ae3692a7f7a1597b1a0 *R/plotMultipleSPC.R
 79c80e92593818f5f59aa44b9722a24e *R/plotSPC.R
@@ -94,6 +95,7 @@ ee871f97cec188e7aa6bcfac865a6935 *R/prepanel.depth_function.R
 33cafdb4fbaa72c73fe9e4ed4752715c *R/segment.R
 514caa252a5f80549727f46036cd5028 *R/sim.R
 9750178cea1c67b3ca5384f1ea86db47 *R/similarMunsellChips.R
+d40b0b66183caae45290e13d79789596 *R/simulateColor.R
 3f078e07b095147199748b4435cf6397 *R/sketch-utils.R
 dd676dca0ae996b456bbc6bc255b1258 *R/slab.R
 bd9896b543805c2a74253be1ee2491ad *R/slicedHSD.R
@@ -112,7 +114,7 @@ bdf8da4fe1f8db1e01ff948a936fa9bf *R/textureTriangleSummary.R
 199b971047b3c251745c33b9ac2785cc *R/transform.R
 46b82845ab4a70d9e5bf204d14412e57 *R/unroll.R
 5558cf47865d1638aaf2c7b64b665e43 *R/zzz.R
-dea610ed5487c7a51c96f2421882d88b *build/partial.rdb
+5888ad4f053cefcd2c30e429d52bc67d *build/partial.rdb
 90c3afbe4886dee5301a7bb7e2794ae5 *data/ROSETTA.centroids.rda
 acf6620e808231531e5b7952623a63e5 *data/ca630.rda
 068a9a89445d994f71f18b98cbaec2a5 *data/datalist
@@ -168,6 +170,7 @@ e7daa44ec12daf78b139f116f40adfeb *man/buntley.westin.index.Rd
 dae78631fee0fea986ded7d625d074b7 *man/checkHzDepthLogic.Rd
 93eca3be760db6b4ba0a7ce807f6e19c *man/checkSPC.Rd
 3c372c2d03e6155725c611636a1966d3 *man/coercion-methods.Rd
+0a4c303fe46e15bdc789f239b1f35619 *man/colorChart.Rd
 fcb7f407a874aa5ba817436951592077 *man/colorContrast.Rd
 b0a5ebcfe021d8f5e63b53664d28ebb9 *man/colorContrastPlot.Rd
 824d81e6625e15405479cd8e2cc62d94 *man/colorQuantiles.Rd
@@ -273,7 +276,7 @@ b29beaad8a6f7951735db29f1b1d0ca1 *man/panel.depth_function.Rd
 8693ee8618b89ecc63eed613e685d483 *man/parseMunsell.Rd
 bb08620c349a9fcf56df5770c5af7010 *man/pbindlist.Rd
 a24bd0a57071d75b6d17e8d431177a9d *man/pc.Rd
-1d809eb0b2b8c513f207aeb372680217 *man/perturb.Rd
+04c9c9096fcfa98e9380dd8a669e7c28 *man/perturb.Rd
 439bf41032b1e74e54404ddb23a7c9dd *man/plotColorMixture.Rd
 a0ffa00bd8d4c576a725b833ac2fa804 *man/plotColorQuantiles.Rd
 601c065ab80c3846178cb72ff02cb834 *man/plotMultipleSPC.Rd
@@ -301,6 +304,7 @@ e60a00eede77d350567c6db907d45956 *man/segment.Rd
 d611abc56ec0825c8b67747d68cf7729 *man/show.Rd
 71041f40b1ca83eb2a5aee5072448abc *man/sierraTransect.Rd
 4cbe28ca936344572ff1e0fe098a3e51 *man/sim.Rd
+2990478f4323ebb52f834ce8b7bba648 *man/simulateColor.Rd
 40d773c0d128357d820e8c5ffde53a2b *man/singlebracket.Rd
 9af9bdb0a0416f4990d28fda95ccb967 *man/site.Rd
 f72d22a1bac48c0ab80053378257455f *man/siteNames.Rd
@@ -341,7 +345,7 @@ fa6620a4e9f6392a950aa9370fd65d02 *man/unique.Rd
 27882e758e397347000cc65dad6410a0 *man/validSpatialData.Rd
 f5431745f7c56cb71e4ca0f9f54643d3 *man/xtableTauW.Rd
 4264e65a73ef9b993f54786e0b99788c *tests/testthat.R
-310dafa7c0b3382c4388a35522cdf302 *tests/testthat/Rplots.pdf
+fa05c0f2055eef510e0c3b2de0e9d4e6 *tests/testthat/Rplots.pdf
 68ab51379d88a34e0ccfa90344a75cb9 *tests/testthat/test-DT-tbl.R
 dc6b474778282ebe15d6723333f3070f *tests/testthat/test-L1_profiles.R
 3aa46083e25990165815b533f1e00db2 *tests/testthat/test-PMS2Munsell.R
@@ -357,7 +361,7 @@ c40e76271fd40295ec497ad62472dc4a *tests/testthat/test-argillic.R
 561afe491aec2ed3d51a9deeaedae92f *tests/testthat/test-awc.R
 3eaa2667c1883c58f2adee0bb13ef5d2 *tests/testthat/test-bootstrapSoilTexture.R
 2ee0b3284673a04c2547298e10894ffa *tests/testthat/test-cambic.R
-adb12f8f9da3811fe6da9502d8463339 *tests/testthat/test-checkHzDepthLogic.R
+241bd2720b0c1e0f1297187d07fe707c *tests/testthat/test-checkHzDepthLogic.R
 2f59a877447c13849d69895f79724386 *tests/testthat/test-color-conversion.R
 fffe36ef3cf743037e3b88946b027ce3 *tests/testthat/test-color-signature.R
 5001721c4a7b4298cd6b62c6b2b397f5 *tests/testthat/test-colorContrast.R
@@ -390,6 +394,7 @@ b6cad95ee644732a7d3e31fdfa87bc57 *tests/testthat/test-repairMissingHzDepths.R
 10add01202e3dfa8401a33b709a42d30 *tests/testthat/test-segment.R
 7dea36cba89d8af2e8294ecf0096a581 *tests/testthat/test-sim.R
 db7ae3205624305252ac349d3c4470e1 *tests/testthat/test-similarMunsellChips.R
+5ebf67c9e6e99f9616607878aa3e6669 *tests/testthat/test-simulateColor.R
 991d25f5f67707c21976c4d44fe8cafb *tests/testthat/test-slab.R
 ee8c44409e59bf34a9b0b3440cd4e071 *tests/testthat/test-slabPlot.R
 e11c283af4406a60d351c7c454af3ffe *tests/testthat/test-slice.R
