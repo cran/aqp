@@ -11,9 +11,10 @@ colorChart(
   annotate = FALSE,
   chip.cex = 3,
   chip.cex.min = 0.1,
-  chip.cex.max = 1,
+  chip.cex.max = 1.5,
   chip.border.col = "black",
-  annotate.cex = chip.cex * 0.25
+  annotate.cex = chip.cex * 0.25,
+  annotate.type = c("count", "percentage")
 )
 }
 \arguments{
@@ -34,6 +35,8 @@ colorChart(
 \item{chip.border.col}{color for chip borders (outline)}
 
 \item{annotate.cex}{scaling factor for chip frequency annotation}
+
+\item{annotate.type}{character, within-group \code{count} or \code{percentage}}
 }
 \value{
 a \code{trellis} object
@@ -63,13 +66,14 @@ if(!requireNamespace('latticeExtra')) {
   # annotation of frequency
   colorChart(ric, chip.cex = 4, annotate = TRUE)
   
+  
   # bootstrap to larger size
   ric.big <- sample(ric, size = 100, replace = TRUE)
   
   # frequency can be encoded in size
   colorChart(ric.big, chip.cex = 3)
   colorChart(ric.big, chip.cex = 5, annotate = TRUE)
-  
+     
   # constant size
   colorChart(ric.big, chip.cex = 3, size = FALSE)
   colorChart(ric.big, chip.cex = 3, size = FALSE, chip.border.col = 'NA')
@@ -87,6 +91,13 @@ if(!requireNamespace('latticeExtra')) {
   
   # increase the possible range of color chip sizes
   colorChart(s[[1]], chip.cex = 4, chip.cex.min = 0.01, chip.cex.max = 2)
+  
+  # slightly funky support for neutral hues
+  N <- sprintf('N \%s/', 2:8)
+  cols <- c(rep(N, times = 5), ric.big)
+  
+  # note special panel used to show neutral hues
+  colorChart(cols, size = FALSE, annotate = TRUE)
   
 }
 

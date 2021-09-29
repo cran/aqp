@@ -6,23 +6,6 @@ m2 <- c('5YR 3/4', '7.5YR 4/4', '2.5YR 2/2', '7.5YR 6/3')
 
 ## tests
 
-
-## tests
-
-test_that("huePosition works as expected", {
-
-  x <- c('2.5YR', '7.5YR', '10YR', '5BG')
-  z <- huePosition(x)
-
-  # manually counted on the Munsell wheel
-  # https://www.nrcs.usda.gov/wps/portal/nrcs/detail/soils/ref/?cid=nrcs142p2_053569
-  expect_equal(z, c(4, 6, 7, 21))
-
-  # bogus input should result in NA
-  expect_true(is.na(huePosition('10YR 3/3')))
-
-})
-
 test_that("contrastClass works as expected", {
 
   ## hand-done tests
@@ -89,7 +72,7 @@ test_that("colorContrast fails as expected", {
   expect_true(is.na(d$dE00))
 
   # bogus Munsell colors, all NA
-  d <- colorContrast('123sdf', '345gg')
+  d <- colorContrast(m1 = '123sdf', m2 = '345gg')
   expect_true(all(is.na(d[, -c(1:2)])))
 })
 
@@ -108,4 +91,50 @@ test_that("valid results", {
   ## TODO add some less-common colors
 
 })
+
+
+
+test_that("neutral colors", {
+  
+  # contrast metrics
+  d <- colorContrast(m1 = 'N 3/', m2 = 'N 6/')
+  
+  # hand-checked
+  expect_equal(d$dH, 0)
+  expect_equal(d$dV, 3)
+  expect_equal(d$dC, 0)
+  expect_equal(as.character(d$cc), 'Distinct')
+
+  # more complex examples
+  m1 <- c('10YR 6/3', '7.5YR 3/3', '10YR 2/2', 'N 3/')
+  m2 <- c('5YR 3/4', '7.5YR 4/4', 'N 2/', 'N 4/')
+  
+  d <- colorContrast(m1, m2)
+  
+  # N vs N    -> dH == 0
+  # N vs. HUE -> dH == 1
+  expect_true(
+    all(
+      d$dH == c(2L, 0L, 1L, 0L)
+    )
+  )
+  
+  # N vs N    -> dV == standard
+  # N vs. HUE -> dV == standard
+  expect_true(
+    all(
+      d$dV == c(3L, 1L, 0L, 1L)
+    )
+  )
+   
+  # N vs N    -> dC == 0
+  # N vs. HUE -> dC == chroma of real hue
+  expect_true(
+    all(
+      d$dC == c(1L, 1L, 2L, 0L)
+    )
+  )
+   
+})
+
 
