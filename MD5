@@ -1,6 +1,6 @@
-d1b11ad5d0acdc1b112620611cc7ea0e *DESCRIPTION
-2159b9daa72fb4145fb58258446d19af *NAMESPACE
-9748454452f0998777e9b897f76cd280 *NEWS.md
+8d3a8008eb313e78fcbe761a02a76862 *DESCRIPTION
+7151f9245019851b32862bd2788aad46 *NAMESPACE
+bcad4cf71fa724e74bf5561acab67da6 *NEWS.md
 023695241480505a12cb829a3e1fa263 *R/AAAA.R
 3c10bfb71ec375bd8d16b6301285f7be *R/Class-SoilProfileCollection.R
 b67bba09de496da2dd2eb215ff9a515d *R/HzDepthLogicSubset.R
@@ -15,7 +15,7 @@ fa34dd7dbaebb8aac8669ac520fa18d9 *R/SoilProfileCollection-iterators.R
 7af7457abc7946cf5bcf27744189301f *R/SoilProfileCollection-setters.R
 bbf848aa2765b50388c3c1c215005efc *R/SoilProfileCollection-slice-methods.R
 2ac3c42c4f61b9d4541d4979cc548753 *R/SoilProfileCollection-spatial.R
-2986aa133df555b8e9bf22fd506261c3 *R/accumulateDepths.R
+a5c55b4876779d74af4a405767ebc6f5 *R/accumulateDepths.R
 8ea64a877ffb03119c31da29ea3ab9b6 *R/accuracy_uncertainty.R
 868652f1c9866a74d33e436e7770746b *R/addBracket.R
 56cb29d82da7b6e946778ca787fc67b3 *R/addVolumeFraction.R
@@ -38,7 +38,7 @@ e6bbd2f0fb697c098d6767c519c65fd3 *R/colorContrast.R
 76a6d242aa7b8c7ed46a9fb58a8cd27e *R/data-documentation.R
 aef72e0d74c474ed37133c309e7fc856 *R/datadots.R
 560f4371b5fc927417d0a1eff6ba346f *R/denormalize.R
-fcefbbf1d788975b8820f1318246a530 *R/depthOf.R
+5e0e741e0d165964c3b75e8c6d76510b *R/depthOf.R
 37e0df78fed9de2d93ab3531bdd6a32b *R/depthWeights.R
 e4cb76062a82861eb315b55645276c39 *R/dice.R
 62405d49a21d76c13b008ba150922740 *R/duplicate.R
@@ -71,7 +71,7 @@ fd23e7d702b56ed465af96184d0da597 *R/glomApply.R
 4e1cf5427cb1a852ad183e92307c4504 *R/harmonize.R
 644f770dba9a69d3d7f79cb7b47fd7f9 *R/huePosition.R
 12fbcc31b73e451cd1d3045fd34f3e58 *R/huePositionCircle.R
-2ebc2b7e7c198a6d7f48473329adcac6 *R/hzBoundary.R
+dc3e4550921fe1b394ebf05cf0525b04 *R/hzBoundary.R
 9e3ff1b4779e2b35e5c6c2b6709832f6 *R/hzOffset.R
 b73f5d5df6b7e5bc9d6543fb886bddda *R/hzTransitionProbabilities.R
 849b15dfef48d24530a91c953ea27f7f *R/invertLabelColor.R
@@ -87,7 +87,7 @@ f82008be779168a4f0017f82dd5fc021 *R/mutate_profile.R
 071f29c398ad03325784021496671206 *R/perturb.R
 e9dabfc4ce328d9807710f5b958dd4ee *R/plotColorMixture.R
 a702f00089d70ae3692a7f7a1597b1a0 *R/plotMultipleSPC.R
-3e335bdffe0dcec72c6b204f0ace8d8b *R/plotSPC.R
+e5f084340eacf2c5fb31c9eacbd42bc3 *R/plotSPC.R
 fe071c89d9d93814cbda94984925bafc *R/plot_distance_graph.R
 ee871f97cec188e7aa6bcfac865a6935 *R/prepanel.depth_function.R
 09f94f6eda4fbf2ef0b6e147e41839af *R/previewColors.R
@@ -98,13 +98,13 @@ d5abb3ffdde7b06abc7f6ef8d11e4a2e *R/profileInformationIndex.R
 69ca815656810304d279a3d6821001d7 *R/repairMissingHzDepths.R
 33cafdb4fbaa72c73fe9e4ed4752715c *R/segment.R
 514caa252a5f80549727f46036cd5028 *R/sim.R
-9750178cea1c67b3ca5384f1ea86db47 *R/similarMunsellChips.R
+a0c6be1f7f73e7232ed323466289fe09 *R/similarMunsellChips.R
 6b87c8d977e106667d01c97868a32b0e *R/simulateColor.R
-3f078e07b095147199748b4435cf6397 *R/sketch-utils.R
-78f6311e84a0c8dc2e943ef0893cf4ba *R/slab.R
-bd9896b543805c2a74253be1ee2491ad *R/slicedHSD.R
+ca0bdb5c29572986035429e5efb4eab6 *R/sketch-utils.R
+af1489ce871e0ad5a00f89709625ae80 *R/slab.R
+95df5fbd80dd41a4cc23ff3791857e8f *R/slicedHSD.R
 2066166f16175c10ae2df0f38d12a9dc *R/soilColorIndices.R
-fbbf673b371c1d2162db5b11b4f58e1e *R/soilColorSignature.R
+4bd5f4795f5d449a5c7a867dbce09c90 *R/soilColorSignature.R
 6e1d176c2a9f1759200f3a78e5fc2174 *R/soilPalette.R
 3fc75f96f4cf2085a15ae7dc0690e766 *R/soiltexture.R
 e9981e620ce16ca9d95c8eb41124ddc0 *R/spc2mpspline.R
@@ -118,7 +118,7 @@ bdf8da4fe1f8db1e01ff948a936fa9bf *R/textureTriangleSummary.R
 ac2d0b06ea5b430d1a87898b23623626 *R/transform.R
 46b82845ab4a70d9e5bf204d14412e57 *R/unroll.R
 5558cf47865d1638aaf2c7b64b665e43 *R/zzz.R
-9d2cf54b6aaddff6552f3f5fb3a43eab *build/partial.rdb
+24eecdb52b6a6648acd8e7dfbe07adec *build/partial.rdb
 90c3afbe4886dee5301a7bb7e2794ae5 *data/ROSETTA.centroids.rda
 acf6620e808231531e5b7952623a63e5 *data/ca630.rda
 71c364bf55058f2b0abbc93c8018567f *data/datalist
@@ -155,7 +155,7 @@ d2e6fa60f36faf4ce11a42697ee0963f *man/L1_profiles.Rd
 7cfe9624ebd6a82c2c2939357b6fe8e4 *man/PMS2Munsell.Rd
 6c116fc52e1463b127180a6b2f265374 *man/ROSETTA.centroids.Rd
 659b54baf9c6898b2abfcd18b71c3452 *man/SoilProfileCollection-class.Rd
-35ec7ce50f53df71f79c97423a5f426b *man/SoilProfileCollection-plotting-methods.Rd
+2a0c895e8f7a846ecd5f6a7242eb2609 *man/SoilProfileCollection-plotting-methods.Rd
 d5dc023836c9e43249a8caba904cb9dc *man/SoilTextureLevels.Rd
 8393bf5ccdaf49373b7ce580369a9bb8 *man/accumulateDepths.Rd
 c7adf50d81404a707b186dc9af51ddc1 *man/addBracket.Rd
@@ -198,11 +198,8 @@ e2ce5b4f680a6119d39dbe92c3f23f15 *man/depthWeights.Rd
 51ef4f8aaf86a1ec77ef05be70fd1a27 *man/dice.Rd
 dc11a985c5f0cd07d9f7d8d35803f206 *man/dollarsign-set.Rd
 7a4ca8529be29291c0ad6a7d93ce8444 *man/dollarsign.Rd
-150960da2c97327d8dc1cf6e7c481ff0 *man/dot-HSD.Rd
 6cf60c7360c09456d4a2219f2a801f6d *man/dot-as.data.frame.aqp.Rd
 e0013f7eb1c6a5327fc7fbc72afdf006 *man/dot-data_dots.Rd
-009dd9e942a63027c86a2e0b7464aa89 *man/dot-makeEquivalentMunsellLUT.Rd
-6f12f52ca16c849a4bb6b16ee5543f73 *man/dot-parseGrouped_formula.Rd
 79343ed3d91743c721576a1152095c4a *man/doublebracket-set.Rd
 c64ec20a48e042a6c2299b0c001f1f6b *man/doublebracket.Rd
 f78e46b9078c45db9b3242b47690a243 *man/duplicate.Rd
@@ -247,11 +244,11 @@ b3db7d14c34c06d5bd60eca9829a6429 *man/huePosition.Rd
 ca1f04896fe7e25d7141a5700bced450 *man/hurst.redness.Rd
 6f653a95aad7f79cf93c7d4d29339c53 *man/hzDepthTests.Rd
 b6a7138d7d4d4a21b0b9058e77e34b50 *man/hzDesgn.Rd
-6cc622d9ccad317d12b186e9d23776df *man/hzDistinctnessCodeToOffset.Rd
+3879af528abb843787fe0b37808b6113 *man/hzDistinctnessCodeToOffset.Rd
 ab6ce74eebc180b452fe96bf754e8a86 *man/hzID.Rd
 fd8fe2867b014f1f24b9a7c626b27d64 *man/hzOffset.Rd
-5bcfa3151c1ee45a48912c36b9f8aad4 *man/hzTopographyCodeToLineType.Rd
-ee6102b8df13c399396ad9ecd904d6b5 *man/hzTopographyCodeToOffset.Rd
+c88352016acae28509cb94071b4dcb82 *man/hzTopographyCodeToLineType.Rd
+e6dfffa1bbb157e2ab1a7a477199af8e *man/hzTopographyCodeToOffset.Rd
 9093f0be4f8264cf4b9fd8f8865d5264 *man/hzTransitionProbabilities.Rd
 076d9f9b591b914be44be624196ff083 *man/hzdesgnname.Rd
 e5a1071d2689f0d783daa6c744659dc7 *man/hzidname.Rd
@@ -349,7 +346,7 @@ fa6620a4e9f6392a950aa9370fd65d02 *man/unique.Rd
 27882e758e397347000cc65dad6410a0 *man/validSpatialData.Rd
 f5431745f7c56cb71e4ca0f9f54643d3 *man/xtableTauW.Rd
 4264e65a73ef9b993f54786e0b99788c *tests/testthat.R
-fdebc5b7502b5b96a6e09fbf0ad14949 *tests/testthat/Rplots.pdf
+62f10a603494bdd758286efc12726593 *tests/testthat/Rplots.pdf
 68ab51379d88a34e0ccfa90344a75cb9 *tests/testthat/test-DT-tbl.R
 dc6b474778282ebe15d6723333f3070f *tests/testthat/test-L1_profiles.R
 3aa46083e25990165815b533f1e00db2 *tests/testthat/test-PMS2Munsell.R
@@ -359,7 +356,7 @@ f236b57e8842752c3ffa745d50937569 *tests/testthat/test-SPC-objects.R
 415df9515b419a0ba51ffba19d8348e5 *tests/testthat/test-SoilProfileCollection-metadata.R
 53e0abc083821955a530119ef75f85b2 *tests/testthat/test-SoilProfileCollection-setters.R
 da35c63c1cd194217743124357b2d468 *tests/testthat/test-acc-unc.R
-2a7bc0a45dac4c39b82ace92fadaf5d1 *tests/testthat/test-accumulateDepths.R
+599066dd716c0216fce95550c275752b *tests/testthat/test-accumulateDepths.R
 dbd6ff45b161fd54e2e9eb3491a918d9 *tests/testthat/test-aggregateColor.R
 5cb362ce88cf464e6060649d384d336b *tests/testthat/test-aggregateSoilDepth.R
 0d79ecdd73e6f5b7ace7f33558ec31a7 *tests/testthat/test-alignTransect.R
@@ -389,6 +386,7 @@ d30d8c721c81d0e64fe489a1f48baec2 *tests/testthat/test-glom.R
 f0a8fe5f86f19aca5580b823a0ee02f9 *tests/testthat/test-guessColumnNames.R
 0c657e2de3bc8aa685d28a0178027677 *tests/testthat/test-harmonize.R
 d85f00a45ad07ba0dac138bec7f5f5fd *tests/testthat/test-huePosition.R
+97aee5739fa31d4c99a138234ed7a24c *tests/testthat/test-hzBoundary.R
 1908aa320fcd68f229c9f8b8c0f36fc3 *tests/testthat/test-hzOffset.R
 d9893c864a58c9d6e22d3be0fa91b8dd *tests/testthat/test-invertLabelColor.R
 2126617d9c83ac0f6f72f010669b98ad *tests/testthat/test-lunique.R
@@ -396,7 +394,7 @@ a740f7c0ad1ae998d4462c90e01967d1 *tests/testthat/test-missingDataGrid.R
 34e5e4fc5718fda00083be2c9f0569a1 *tests/testthat/test-mixMunsell.R
 ada4f3dd02b329c68fd42329f07d1238 *tests/testthat/test-mollic.R
 6cb7c9e617837d873a35a7a7a97016e7 *tests/testthat/test-overlap.R
-bd83013abfff2c11c61b6d31e1fac81b *tests/testthat/test-plotSPC.R
+25660d19ba7aa5200c1d2243f5b25900 *tests/testthat/test-plotSPC.R
 0704f8fa109c5ce6d394eadc432fa215 *tests/testthat/test-profileApply.R
 9bde411d40a9cadb8292f5d83d5868c9 *tests/testthat/test-profileInformationIndex.R
 7285af95768ecca8d8acae283c01bc97 *tests/testthat/test-profile_compare.R
@@ -409,7 +407,7 @@ db7ae3205624305252ac349d3c4470e1 *tests/testthat/test-similarMunsellChips.R
 991d25f5f67707c21976c4d44fe8cafb *tests/testthat/test-slab.R
 ee8c44409e59bf34a9b0b3440cd4e071 *tests/testthat/test-slabPlot.R
 e11c283af4406a60d351c7c454af3ffe *tests/testthat/test-slice.R
-2120935352e26594ba13e19390a37720 *tests/testthat/test-soil-depth.R
+b03c9c84f22add8e322c6a2547f7b11f *tests/testthat/test-soil-depth.R
 31d9b4e50493b3c3d8c599720a773cb8 *tests/testthat/test-spc2mpspline.R
 3788d82f9256f5338aa4b878673830e3 *tests/testthat/test-spec2Munsell.R
 6c84d34cb58d98def78c5a6274dc081d *tests/testthat/test-split.R
