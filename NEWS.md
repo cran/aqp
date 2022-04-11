@@ -1,11 +1,21 @@
-# aqp 1.41 (2022-02-09)
+# aqp 1.42 (2022-04-08)
+ * CRAN release
+ * `getArgillicBounds()`, `getCambicBounds()`, `mollic.thickness.requirement()`, `getSurfaceHorizonDepth()` and related functions have been optimized and now work on SoilProfileCollection objects with length > 1
+ * Added `reduceSPC()` function for selecting a subset of minimal plus additional specified columns from a SoilProfileCollection
+ * Added new "k-keyword" `.NHZ` for use with `SoilProfileCollection` `[` method
+   * `object[,,.NHZ]` returns a vector with the number of horizons in each profile
+ * proper identification and conversion of Munsell value == 2.5
+ * interpolated reference spectra for Munsell value == 2.5 
+ * neutral color chips in the Munsell look-up table are now based on direct measurement vs. estimation
+
+# aqp 1.41 (2022-02-11)
  * `plotSPC()` gains new arguments for controlling horizon depth labels
  * `plotSPC()` gains horizon depth annotation collision fixes (https://github.com/ncss-tech/aqp/issues/240)
  * `plotSPC()` minor bugfix for cases when `n != length(x)`
  * `plotSPC()` important change! `y.offset` is now automatically re-ordered by `plot.order`
  * bugfix for R 4.2, related to named arguments passed to `base::aggregate` (thanks AGB)
  * `depthOf()` and related functions: better handling of `NA` results from `FUN`
- 
+
 # aqp 1.40 (2022-01-04)
  * CRAN release
  * fixed small bug in `panel.depth_function()` that affected plotting of grouped data, created by `slab()`

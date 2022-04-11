@@ -1,6 +1,5 @@
 Package: aqp
-Version: 1.41
-Date: 2022-02-09
+Version: 1.42
 Title: Algorithms for Quantitative Pedology
 Authors@R: c(person(given="Dylan", family="Beaudette", role = c("aut", "cre"), email = "dylan.beaudette@usda.gov"), person(given="Pierre", family="Roudier", email="roudierp@landcareresearch.co.nz", role = c("aut", "ctb")), person(given="Andrew", family="Brown", email="andrew.g.brown@usda.gov", role = c("aut", "ctb")))
 Author: Dylan Beaudette [aut, cre],
@@ -23,5 +22,5 @@ BugReports: https://github.com/ncss-tech/aqp/issues
 Encoding: UTF-8
 RoxygenNote: 7.1.2
 NeedsCompilation: no
-Packaged: 2022-02-11 18:18:33 UTC; Dylan.Beaudette
-Date/Publication: 2022-02-11 19:00:04 UTC
+Packaged: 2022-04-08 18:00:41 UTC; Dylan.Beaudette
+Date/Publication: 2022-04-11 23:12:33 UTC
