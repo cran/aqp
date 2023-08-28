@@ -10,10 +10,10 @@
 #' @param groups the name of a horizon or site attribute used to group horizons, see examples
 #' @param col the name of a horizon-level attribute with soil color specified in hexadecimal (i.e. "#rrggbb")
 #' @param colorSpace the name of color space or color distance metric to use for conversion of aggregate colors to Munsell; either CIE2000 (color distance metric), LAB, or sRGB. Default = 'CIE2000'
-#' @param k single integer specifying the number of colors discretized via PAM (cluster package), see details
+#' @param k single integer specifying the number of colors discretized via PAM ([cluster::pam()]), see details
 #' @param profile_wt the name of a site-level attribute used to modify weighting, e.g. area
 #' 
-#' @param mixingMethod method used to estimate "aggregate" soil colors, see [`mixMunsell`]
+#' @param mixingMethod method used to estimate "aggregate" soil colors, see [mixMunsell()]
 #'
 #' @return A list with the following components:
 #' 
@@ -28,10 +28,13 @@
 #' 
 #' @author D.E. Beaudette
 #' 
-#' @seealso \code{\link{generalize.hz}}
+#' @seealso [generalize.hz()]
 #' 
 #' 
 #' @examples
+#' 
+#' # keep examples from using more than 2 cores
+#' data.table::setDTthreads(Sys.getenv("OMP_THREAD_LIMIT", unset = 2))
 #' 
 #' # load some example data
 #' data(sp1, package='aqp')
@@ -49,6 +52,10 @@
 #' # aggregate colors over horizon-level attribute: 'genhz'
 #' a <- aggregateColor(sp1, groups = 'genhz', col = 'soil_color')
 #' 
+#' # check results
+#' str(a)
+#' 
+#' \dontrun{
 #' # aggregate colors over site-level attribute: 'group'
 #' a <- aggregateColor(sp1, groups = 'group', col = 'soil_color')
 #' 
@@ -57,19 +64,16 @@
 #' a <- aggregateColor(sp1, groups = 'group', col = 'soil_color', k = 4)
 #' 
 #' # aggregate colors over depth-slices
-#' s <- slice(sp1, c(5, 10, 15, 25, 50, 100, 150) ~ soil_color)
+#' s <- dice(sp1, c(5, 10, 15, 25, 50, 100, 150) ~ soil_color)
 #' s$slice <- paste0(s$top, ' cm')
 #' s$slice <- factor(s$slice, levels=guessGenHzLevels(s, 'slice')$levels)
 #' a <- aggregateColor(s, groups = 'slice', col = 'soil_color')
 #' 
-#' \dontrun{
 #'   # optionally plot with helper function
 #'   if(require(sharpshootR))
 #'     aggregateColorPlot(a)
-#' }
 #' 
 #' # a more interesting example
-#' \dontrun{
 #'   data(loafercreek, package = 'soilDB')
 #'   
 #'   # generalize horizon names using REGEX rules
@@ -201,7 +205,7 @@ aggregateColor <- function(x, groups = 'genhz', col = 'soil_color', colorSpace =
       
       # clustering from distance matrix
       # TODO: save clustering results for later
-      v.pam <- pam(dE00, k = k.adj, diss = TRUE, pamonce=5)
+      v.pam <- cluster::pam(dE00, k = k.adj, diss = TRUE, pamonce=5)
       
       # put clustering vector into LUT
       lut$cluster <- v.pam$clustering
@@ -219,7 +223,7 @@ aggregateColor <- function(x, groups = 'genhz', col = 'soil_color', colorSpace =
     # aggregate depth by unique soil color
     # this assumes that thickness > 0, otherwise NaN is returned
     # convert to data.table for summary
-    i <- as.data.table(i)
+    i <- data.table::as.data.table(i)
     
     # not sure about most readable style
     res <- i[, 

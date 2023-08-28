@@ -29,6 +29,7 @@
 #' @author D.E. Beaudette
 #' @seealso \code{\link{generalize.hz}}
 #' @keywords manip
+#' @export
 #' @examples
 #'
 #' data(sp4)
@@ -74,7 +75,7 @@
 #' steadyStates(mc)
 #' }
 #'
-hzTransitionProbabilities <- function(x, name, loopTerminalStates=FALSE) {
+hzTransitionProbabilities <- function(x, name = GHL(x, required = TRUE), loopTerminalStates = FALSE) {
 
   # get all horizons
   h <- horizons(x)

@@ -9,18 +9,22 @@ harden.melanization(value, value_ref)
 \arguments{
 \item{value}{numeric vector containing Munsell values}
 
-\item{value_ref}{A numeric vector containingMunsell value(s) for reference material}
+\item{value_ref}{A numeric vector containing Munsell value(s) for reference material}
 }
 \value{
 A numeric vector reflecting horizon darkening relative to a reference (e.g. parent) material.
 }
 \description{
-Calculate Melanization component of Profile Development Index after Harden (1982) "A quantitative index of soil development from field descriptions: Examples from a chronosequence in central California". Accepts vectorized inputs for value and reference value to produce vector output. A convenient use case would be to apply this on a profile-specific basis, where the \code{value_ref} has a single value, and \code{value} is a vector of length equal to the number of horizons within the upper 100 cm.
+Calculate "melanization" component of "Profile Development Index" after Harden (1982) "A quantitative index of soil development from field descriptions: Examples from a chronosequence in central California". Accepts vectorized inputs for value and reference value to produce vector output. A convenient use case would be to apply this on a profile-specific basis, where the \code{value_ref} has a single value, and \code{value} is a vector of length equal to the number of horizons within the upper 100 cm.
 }
 \details{
-In Harden (1982), melanization is calculated relative to a reference parent material for all horizons within 100cm of the soil surface. In addition, several other non-color components are normalized relative to a maximum value and summed to obtain the overall Profile Development Index.
+In Harden (1982), "melanization" is calculated relative to a reference parent material for all horizons within 100cm of the soil surface. In addition, several other non-color components are normalized relative to a maximum value and summed to obtain the overall Profile Development Index.
 }
 \examples{
+
+# keep examples from using more than 2 cores
+data.table::setDTthreads(Sys.getenv("OMP_THREAD_LIMIT", unset = 2))
+
 library(aqp)
 data("jacobs2000", package="aqp")
 
@@ -60,12 +64,20 @@ jacobs2000$melanorder <- order(jacobs2000$melan)
 
 # Plot in order of increasing Melanization index
 
-plotSPC(jacobs2000, axis.line.offset = -1,
+plotSPC(jacobs2000, 
         color = "matrix_color",
         label = "melan",
-        plot.order = jacobs2000$melanorder)
+        plot.order = jacobs2000$melanorder,
+        max.depth = 250
+        )
 
-abline(h = c(0,100,150,200), lty = 2)
+segments(
+  x0 = 0.5, 
+  x1 = length(jacobs2000) + 0.5, 
+  y0 = c(0,100,150,200), 
+  y1 = c(0,100,150,200), 
+  lty = 2
+)
 
 # Add [estimated] parent material color swatches
 lapply(seq_along(jacobs2000$c_horizon_color), function(i) {

@@ -1,19 +1,20 @@
 ## 2019-07-16: moved util functions to `sketch-utils.R`
 
-
-
 # TODO: behavior not defined for horizons with an indefinite lower boundary
 # TODO: move some of the processing outside of the main loop: column names, etc.
 
-#' Create Soil Profile Sketches
+#' @title Create Soil Profile Sketches
 #' @name plotSPC
 #' @rdname SoilProfileCollection-plotting-methods
 #' @docType methods
 #' @aliases plot,SoilProfileCollection,ANY-method,plot.SoilProfileCollection
 #'
-#' @description Generate a diagram of soil profile sketches from a \code{SoilProfileCollection} object. The \href{https://ncss-tech.github.io/AQP/aqp/aqp-intro.html}{Introduction to SoilProfileCollection Objects tutorial} contains many examples and discussion of the large number of arguments to this function.
+#' @description Generate a diagram of soil profile sketches from a `SoilProfileCollection` object. The [Introduction to SoilProfileCollection Objects Vignette](http://ncss-tech.github.io/aqp/articles/Introduction-to-SoilProfileCollection-Objects.html) contains many examples and discussion of the large number of arguments to this function. The [Soil Profile Sketches](https://ncss-tech.github.io/AQP/aqp/sketches.html) tutorial has longer-form discussion and examples pertaining to suites of related arguments.
 #'
-#' @param x a \code{SoilProfileCollection} object
+#' Options can be used to conveniently specify sets of arguments that will be used in several calls to `plotSPC()` within a single R session. For example, arguments can be specified in a named list (`.a`) and set using: `options(.aqp.plotSPC.args = .a)`. Reset these options via `options(.aqp.plotSPC.args = NULL)`. Arguments explicitly passed to `plotSPC()` will override arguments set via [options()].
+#'
+#'
+#' @param x a `SoilProfileCollection` object
 #'
 #' @param color quoted column name containing R-compatible color descriptions, or numeric / categorical data to be displayed thematically; see details
 #'
@@ -21,15 +22,24 @@
 #'
 #' @param name quoted column name of the (horizon-level) attribute containing horizon designations or labels, if missing `hzdesgnname(x)` is used. Suppress horizon name printing by setting `name = NA` or `name = ''`.
 #'
-#' @param name.style one of several possible horizon designations labeling styles: 'right-center' (aqp default), 'left-top', 'left-center'
+#' @param name.style one of several possible horizon designations labeling styles: `c('right-center', 'left-center', 'left-top', 'center-center', 'center-top')`
 #'
 #' @param label quoted column name of the (site-level) attribute used to identify profile sketches
+#' 
+#' @param raggedBottom either quoted column name of the (site-level) attribute (logical) used to mark profiles with a truncated lower boundary, or `FALSE` suppress ragged bottom depths when `max.depth < max(x)`
 #'
-#' @param hz.depths logical, annotate horizon top depths to the right of each sketch (FALSE)
+#' @param hz.depths logical, annotate horizon top depths to the right of each sketch (`FALSE`)
 #' 
 #' @param hz.depths.offset numeric, user coordinates for left-right adjustment for horizon depth annotation; reasonable values are usually within 0.01-0.05 (default: 0)
 #' 
 #' @param hz.depths.lines logical, draw segments between horizon depth labels and actual horizon depth; this is useful when including horizon boundary distinctness and/or `fixLabelCollisions = TRUE`
+#'
+#' @param depth.axis logical or list. Use a logical to suppress (`FALSE`) or add depth axis using defaults (`TRUE`). Use a list to specify one or more of: 
+#'  - `style`: character, one of 'traditional', 'compact', or 'tape'
+#'  - `line`: numeric, negative values move axis to the left (does not apply to `style = 'tape'`)
+#'  - `cex`: numeric, scaling applied to entire depth axis
+#'  - `interval`: numeric, axis interval
+#' See examples.
 #'
 #' @param alt.label quoted column name of the (site-level) attribute used for secondary annotation
 #'
@@ -37,21 +47,19 @@
 #'
 #' @param cex.names baseline character scaling applied to all text labels
 #'
-#' @param cex.depth.axis character scaling applied to depth scale
-#'
-#' @param cex.id character scaling applied to \code{label}
+#' @param cex.id character scaling applied to `label`
 #'
 #' @param font.id font style applied to `label`, default is 2 (bold)
 #' 
 #' @param srt.id rotation applied to `label`, only when `id.style = 'top'`
 #'
-#' @param print.id logical, print \code{label} above/beside each profile? (TRUE)
+#' @param print.id logical, print `label` above/beside each profile? (`TRUE`)
 #'
-#' @param id.style \code{label} printing style: 'auto' (default) = simple heuristic used to select from: 'top' = centered above each profile, 'side' = 'along the top-left edge of profiles'
+#' @param id.style `label` printing style: 'auto' (default) = simple heuristic used to select from: 'top' = centered above each profile, 'side' = 'along the top-left edge of profiles'
 #'
 #' @param plot.order integer vector describing the order in which individual soil profiles should be plotted
 #'
-#' @param relative.pos vector of relative positions along the x-axis, within \{1, n\}, ignores \code{plot.order} see details
+#' @param relative.pos vector of relative positions along the x-axis, within \{1, n\}, ignores `plot.order` see details
 #'
 #' @param add logical, add to an existing figure
 #'
@@ -63,7 +71,7 @@
 #'
 #' @param n integer describing amount of space along x-axis to allocate, defaults to `length(x)`
 #'
-#' @param max.depth suggested lower depth boundary of plot
+#' @param max.depth numeric. The lower depth for all sketches, deeper profiles are truncated at this depth. Use larger values to arbitrarily extend the vertical dimension, convenient for leaving extract space for annotation.
 #'
 #' @param n.depth.ticks suggested number of ticks in depth scale
 #'
@@ -77,27 +85,24 @@
 #'
 #' @param abbr.cutoff suggested minimum length for abbreviated `label`
 #'
-#' @param divide.hz logical, divide horizons with line segment? (TRUE), see details
+#' @param divide.hz logical, divide horizons with line segment? (`TRUE`), see details
 #'
-#' @param hz.distinctness.offset NULL, or quoted column name (horizon-level attribute) containing vertical offsets used to depict horizon boundary distinctness (same units as profiles), see details and code{\link{hzDistinctnessCodeToOffset}}; consider setting `hz.depths.lines = TRUE` when used in conjunction with `hz.depths = TRUE`
+#' @param hz.distinctness.offset `NULL`, or quoted column name (horizon-level attribute) containing vertical offsets used to depict horizon boundary distinctness (same units as profiles), see details and [hzDistinctnessCodeToOffset()]; consider setting `hz.depths.lines = TRUE` when used in conjunction with `hz.depths = TRUE`
 #' 
-#' @param hz.topography.offset NULL, or quoted column name (horizon-level attribute) containing offsets used to depict horizon boundary topography (same units as profiles), see details and code{\link{hzTopographyCodeToOffset}}
+#' @param hz.topography.offset `NULL`, or quoted column name (horizon-level attribute) containing offsets used to depict horizon boundary topography (same units as profiles), see details and [hzTopographyCodeToOffset()]
 #'
 #' @param hz.boundary.lty quoted column name (horizon-level attribute) containing line style (integers) used to encode horizon topography
 #'
-#' @param axis.line.offset horizontal offset applied to depth axis (default is -2.5, larger numbers move the axis to the right)
 #'
-#' @param plot.depth.axis logical, plot depth axis? (default is TRUE)
+#' @param density fill density used for horizon color shading, either a single integer or a quoted column name (horizon-level attribute) containing integer values (default is `NULL`, no shading)
 #'
-#' @param density fill density used for horizon color shading, either a single integer or a quoted column name (horizon-level attribute) containing integer values (default is NULL, no shading)
-#'
-#' @param show.legend logical, show legend? (default is TRUE)
+#' @param show.legend logical, show legend? (default is `TRUE`)
 #'
 #' @param col.label thematic legend title
 #'
-#' @param col.palette color palette used for thematic sketches (default is \code{rev(brewer.pal(10, 'Spectral'))})
+#' @param col.palette color palette used for thematic sketches (default is `rev(brewer.pal(10, 'Spectral'))`)
 #'
-#' @param col.palette.bias color ramp bias (skew), see \code{\link{colorRamp}}
+#' @param col.palette.bias color ramp bias (skew), see [colorRamp()]
 #'
 #' @param col.legend.cex scaling of thematic legend
 #'
@@ -107,30 +112,40 @@
 #'
 #' @param lty line style used for sketches
 #'
-#' @param default.color default horizon fill color used when \code{color} attribute is \code{NA}
+#' @param default.color default horizon fill color used when `color` attribute is `NA`
 #' 
-#' @param fixLabelCollisions use `aqp::fixOverlap()` to attempt fixing hz depth labeling collisions, will slow plotting of large collections; enabling fixes also sets `hz.depths.lines = TRUE`
+#' @param fixLabelCollisions use [fixOverlap()] to attempt fixing hz depth labeling collisions, will slow plotting of large collections; enabling also sets `hz.depths.lines = TRUE`. Additional arguments to [fixOverlap()] can be passed via `fixOverlapArgs`. Overlap collisions cannot be fixed within profiles containing degenerate or missing horizon depths (e.g. top == bottom).
+#' 
+#' @param fixOverlapArgs a named list of arguments to [fixOverlap()]. Overlap adjustments are attempted using electrostatic simulation with arguments: `list(method = 'E', q = 1)`. Alternatively, select adjustment by simulated annealing via `list(method = 'S')`. See [electroStatics_1D()] and [SANN_1D()] for details.
 #'
 #' @param \dots other arguments passed into lower level plotting functions
 #'
 #'
+#' @param axis.line.offset (deprecated, use `depth.axis` instead) horizontal offset applied to depth axis (default is -2, larger numbers move the axis to the right)
+#'
+#' @param plot.depth.axis (deprecated, use `depth.axis` instead) logical, plot depth axis?
+#'
+#' @param cex.depth.axis (deprecated, use `depth.axis` instead) character scaling applied to depth scale
+#' 
+#'
 #' @details
-#' Depth limits (\code{max.depth}) and number of depth ticks (\code{n.depth.ticks}) are *suggestions* to the \code{\link{pretty}} function. You may have to tinker with both parameters to get what you want.
+#' Depth limits (`max.depth`) and number of depth ticks (`n.depth.ticks`) are *suggestions* to the [pretty()] function. You may have to tinker with both parameters to get what you want.
 #'
-#' The 'side' \code{id.style} is useful when plotting a large collection of profiles, and/or, when profile IDs are long.
+#' The 'side' `id.style` is useful when plotting a large collection of profiles, and/or, when profile IDs are long.
 #'
-#' If the column containing horizon designations is not specified (the \code{name} argument), a column (presumed to contain horizon designation labels) is guessed based on regular expression matching of the pattern 'name'-- this usually works, but it is best to manual specify the name of the column containing horizon designations.
+#' If the column containing horizon designations is not specified (the `name` argument), a column (presumed to contain horizon designation labels) is guessed based on regular expression matching of the pattern 'name'--this usually works, but it is best to manual specify the name of the column containing horizon designations.
 #'
-#' The \code{color} argument can either name a column containing R-compatible colors, possibly created via \code{\link{munsell2rgb}}, or column containing either numeric or categorical (either factor or character) values. In the second case, values are converted into colors and displayed along with a simple legend above the plot. Note that this functionality makes several assumptions about plot geometry and is most useful in an interactive setting.
+#' The `color` argument can either name a column containing R-compatible colors, possibly created via [munsell2rgb()], or column containing either numeric or categorical (either factor or character) values. In the second case, values are converted into colors and displayed along with a simple legend above the plot. Note that this functionality makes several assumptions about plot geometry and is most useful in an interactive setting.
 #'
-#' Adjustments to the legend can be specified via \code{col.label} (legend title), \code{col.palette} (palette of colors, automatically expanded), \code{col.legend.cex} (legend scaling), and \code{n.legend} (approximate number of classes for numeric variables, or, maximum number of legend items per row for categorical variables). Currently, \code{plotSPC} will only generate two rows of legend items. Consider reducing the number of classes if two rows isn't enough room.
+#' Adjustments to the legend can be specified via `col.label` (legend title), `col.palette` (palette of colors, automatically expanded), `col.legend.cex` (legend scaling), and `n.legend` (approximate number of classes for numeric variables, or, maximum number of legend items per row for categorical variables). Currently, `plotSPC` will only generate two rows of legend items. Consider reducing the number of classes if two rows isn't enough room.
 #'
-#' Profile sketches can be added according to relative positions along the x-axis (vs. integer sequence) via \code{relative.pos} argument. This should be a vector of positions within \{1,n\} that are used for horizontal placement. Default values are \code{1:length(x)}. Care must be taken when both \code{plot.order} and \code{relative.pos} are used simultaneously: \code{relative.pos} specifies horizontal placement after sorting. \code{addDiagnosticBracket} and \code{addVolumeFraction} use the \code{relative.pos} values for subsequent annotation.
+#' Profile sketches can be added according to relative positions along the x-axis (vs. integer sequence) via `relative.pos` argument. This should be a vector of positions within \{1,n\} that are used for horizontal placement. Default values are `1:length(x)`. Care must be taken when both `plot.order` and `relative.pos` are used simultaneously: `relative.pos` specifies horizontal placement after sorting. [addDiagnosticBracket()] and [addVolumeFraction()] use the `relative.pos` values for subsequent annotation.
 #'
-#' Relative positions that are too close will result in overplotting of sketches. Adjustments to relative positions such that overlap is minimized can be performed with \code{fixOverlap(pos)}, where \code{pos} is the original vector of relative positions.
+#' Relative positions that are too close will result in overplotting of sketches. Adjustments to relative positions such that overlap is minimized can be performed with `fixOverlap(pos)`, where `pos` is the original vector of relative positions.
 #'
-#' The \code{x.idx.offset} argument can be used to shift a collection of pedons from left to right in the figure. This can be useful when plotting several different \code{SoilProfileCollection} objects within the same figure. Space must be pre-allocated in the first plotting call, with an offset specified in the second call. See examples below.
-#'
+#' The `x.idx.offset` argument can be used to shift a collection of pedons from left to right in the figure. This can be useful when plotting several different `SoilProfileCollection` objects within the same figure. Space must be pre-allocated in the first plotting call, with an offset specified in the second call. See examples below.
+#' 
+#' Horizon depths (e.g. cm) are converted to figure y-coordinates via: y = (depth * scaling.factor) + y.offset. 
 #'
 #'
 #' @note A new plot of soil profiles is generated, or optionally added to an existing plot.
@@ -141,15 +156,20 @@
 #' Soil Scientists. Computers & Geosciences. 52:258 - 268.
 #'
 #' @keywords hplots
+#' @export
 #'
-#' @seealso \code{\link{fixOverlap}, \link{explainPlotSPC}, \link{SoilProfileCollection-class}, \link{pretty}, \link{hzDistinctnessCodeToOffset}, \link{addBracket}, \link{profileGroupLabels}}
+#' @seealso [fixOverlap()], [explainPlotSPC()], [SoilProfileCollection-class], [pretty()], [hzDistinctnessCodeToOffset()], [addBracket()], [profileGroupLabels()]
 #'
 #' @examples
 #'
+#' # keep examples from using more than 2 cores
+#' data.table::setDTthreads(Sys.getenv("OMP_THREAD_LIMIT", unset = 2))
+#' 
+#' 
 #' # example data
 #' data(sp1)
 #' # usually best to adjust margins
-#' par(mar=c(0,0,3,0))
+#' par(mar = c(0,0,3,0))
 #'
 #' # add color vector
 #' sp1$soil_color <- with(sp1, munsell2rgb(hue, value, chroma))
@@ -161,13 +181,13 @@
 #' hzdesgnname(sp1) <- 'name'
 #' 
 #' # plot profiles
-#' plotSPC(sp1, id.style='side')
+#' plotSPC(sp1, id.style = 'side')
 #'
 #' # title, note line argument:
-#' title('Sample Data 1', line=1, cex.main=0.75)
+#' title('Sample Data 1', line = 1, cex.main = 0.75)
 #'
 #' # plot profiles without horizon-line divisions
-#' plotSPC(sp1, divide.hz=FALSE)
+#' plotSPC(sp1, divide.hz = FALSE)
 #'
 #' # diagonal lines encode horizon boundary distinctness
 #' sp1$hzD <- hzDistinctnessCodeToOffset(sp1$bound_distinct)
@@ -177,7 +197,7 @@
 #' data(sp4)
 #' depths(sp4) <- id ~ top + bottom
 #' hzdesgnname(sp4) <- 'name'
-#' plotSPC(sp4, color='clay')
+#' plotSPC(sp4, color = 'clay')
 #'
 #' # another example
 #' data(sp2)
@@ -185,21 +205,24 @@
 #' hzdesgnname(sp2) <- 'name'
 #' site(sp2) <- ~ surface
 #'
-#' # label with site-level attribute: `surface`
-#' plotSPC(sp2, label='surface', plot.order=order(sp2$surface))
+#' # some of these profiles are very deep, truncate plot at 400cm
+#' # label / re-order with site-level attribute: `surface`
+#' plotSPC(sp2, label = 'surface', plot.order = order(sp2$surface), 
+#' max.depth = 400)
 #'
 #' # example using a categorical attribute
-#' plotSPC(sp2, color = "plasticity")
+#' plotSPC(sp2, color = "plasticity", 
+#' max.depth = 400)
 #'
 #' # plot two SPC objects in the same figure
-#' par(mar=c(1,1,1,1))
-#' # plot the first SPC object and
+#' par(mar = c(1,1,1,1))
 #' 
+#' # plot the first SPC object and
 #' # allocate space for the second SPC object
-#' plotSPC(sp1, n=length(sp1) + length(sp2))
+#' plotSPC(sp1, n = length(sp1) + length(sp2))
 #' 
 #' # plot the second SPC, starting from the first empty space
-#' plotSPC(sp2, x.idx.offset=length(sp1), add=TRUE)
+#' plotSPC(sp2, x.idx.offset = length(sp1), add = TRUE)
 #'
 #'
 #' ##
@@ -284,6 +307,7 @@
 #'   y.offset = y.offset, 
 #'   color = 'matrix_color', 
 #'   cex.names = 0.75, 
+#'   shrink = TRUE,
 #'   hz.depths = TRUE, 
 #'   hz.depths.offset = 0.05,
 #'   fixLabelCollisions = TRUE,
@@ -298,7 +322,7 @@
 #' # random gradient of x-positions
 #' xoff <- runif(n = length(x), min = 1, max = length(x))
 #' 
-#' 
+#' # note profiles overlap
 #' plotSPC(x, 
 #'         relative.pos = xoff, 
 #'         y.offset = yoff, 
@@ -311,7 +335,7 @@
 #' 
 #' # align / adjust relative x positions
 #' set.seed(111)
-#' pos <- alignTransect(xoff, x.min = 1, x.max = length(x), thresh = 0.5)
+#' pos <- alignTransect(xoff, x.min = 1, x.max = length(x), thresh = 0.65)
 #' 
 #' # y-offset is automatically re-ordered according to
 #' # plot.order
@@ -328,65 +352,135 @@
 #' )
 #' 
 #' box()
-
-
+#' 
 plotSPC <- function(
-  x,
-  color = 'soil_color',
-  width = ifelse(length(x) < 2, 0.15, 0.25),
-  name = hzdesgnname(x),
-  name.style = 'right-center',
-  label = idname(x),
-  hz.depths = FALSE,
-  hz.depths.offset = 0,
-  hz.depths.lines = fixLabelCollisions,
-  alt.label = NULL,
-  alt.label.col = 'black',
-  cex.names = 0.5,
-  cex.depth.axis = cex.names,
-  cex.id = cex.names + (0.2 * cex.names),
-  font.id = 2,
-  srt.id = 0, 
-  print.id = TRUE,
-  id.style = 'auto',
-  plot.order = 1:length(x),
-  relative.pos = 1:length(x),
-  add = FALSE,
-  scaling.factor = 1,
-  y.offset = rep(0, times = length(x)),
-  x.idx.offset = 0,
-  n = length(x),
-  max.depth = ifelse(is.infinite(max(x)), 200, max(x)),
-  n.depth.ticks = 5,
-  shrink = FALSE,
-  shrink.cutoff = 3,
-  shrink.thin = NULL,
-  abbr = FALSE,
-  abbr.cutoff = 5,
-  divide.hz = TRUE,
-  hz.distinctness.offset = NULL,
-  hz.topography.offset = NULL,
-  hz.boundary.lty = NULL,
-  axis.line.offset = -2.5,
-  plot.depth.axis = TRUE,
-  density = NULL,
-  show.legend = TRUE,
-  col.label = color,
-  col.palette = c("#5E4FA2", "#3288BD", "#66C2A5","#ABDDA4", "#E6F598",
-                  "#FEE08B","#FDAE61", "#F46D43", "#D53E4F","#9E0142"),
-  col.palette.bias = 1,
-  col.legend.cex = 1,
-  n.legend = 8,
-  lwd = 1,
-  lty = 1,
-  default.color = grey(0.95),
-  fixLabelCollisions = FALSE,
-  ...
+    x,
+    color = 'soil_color',
+    width = ifelse(length(x) < 2, 0.15, 0.25),
+    name = hzdesgnname(x),
+    name.style = 'right-center',
+    label = idname(x),
+    raggedBottom = NULL,
+    hz.depths = FALSE,
+    hz.depths.offset = ifelse(fixLabelCollisions, 0.03, 0),
+    hz.depths.lines = fixLabelCollisions,
+    depth.axis = list(style = 'traditional', cex = cex.names * 1.15),
+    alt.label = NULL,
+    alt.label.col = 'black',
+    cex.names = 0.5,
+    cex.id = cex.names + (0.2 * cex.names),
+    font.id = 2,
+    srt.id = 0, 
+    print.id = TRUE,
+    id.style = 'auto',
+    plot.order = 1:length(x),
+    relative.pos = 1:length(x),
+    add = FALSE,
+    scaling.factor = 1,
+    y.offset = rep(0, times = length(x)),
+    x.idx.offset = 0,
+    n = length(x),
+    max.depth = ifelse(is.infinite(max(x)), 200, max(x)),
+    n.depth.ticks = 10,
+    shrink = FALSE,
+    shrink.cutoff = 3,
+    shrink.thin = NULL,
+    abbr = FALSE,
+    abbr.cutoff = 5,
+    divide.hz = TRUE,
+    hz.distinctness.offset = NULL,
+    hz.topography.offset = NULL,
+    hz.boundary.lty = NULL,
+    density = NULL,
+    show.legend = TRUE,
+    col.label = color,
+    col.palette = c("#5E4FA2", "#3288BD", "#66C2A5","#ABDDA4", "#E6F598",
+                             "#FEE08B","#FDAE61", "#F46D43", "#D53E4F","#9E0142"),
+                             col.palette.bias = 1,
+    col.legend.cex = 1,
+    n.legend = 8,
+    lwd = 1,
+    lty = 1,
+    default.color = grey(0.95),
+    fixLabelCollisions = hz.depths,
+    fixOverlapArgs = list(method = 'E', q = 1),
+    
+    cex.depth.axis = cex.names,
+    axis.line.offset = -2,
+    plot.depth.axis = TRUE,
+    ...
 ) {
+  
+  
+  ############################
+  ## make R CMD check happy ##
+  ############################
+  .LAST <- NULL
+  .BOTTOM <- NULL
+  
+  
+  ############################
+  ## arguments from options ##
+  ############################
+  
+  # specified as: options(.aqp.plotSPC.args = list())
+  
+  # get any options set, result is a list
+  # NULL otherwise
+  .opArgs <- getOption(".aqp.plotSPC.args", default = NULL)
+  
+  # process options
+  if(!is.null(.opArgs)) {
+    
+    # e.g. some of: names(formals('plotSPC'))
+    # not all arguments can be set via options
+    .argSet <- c("color", "width", "name", "name.style", "label", "raggedBottom", "hz.depths", 
+                 "hz.depths.offset", "hz.depths.lines", "depth.axis", "alt.label", "alt.label.col", 
+                 "cex.names", "cex.id", "font.id", "srt.id", 
+                 "print.id", "id.style", "plot.order", "relative.pos", "add", 
+                 "scaling.factor", "y.offset", "x.idx.offset", "n", "max.depth", 
+                 "n.depth.ticks", "shrink", "shrink.cutoff", "shrink.thin", "abbr", 
+                 "abbr.cutoff", "divide.hz", "hz.distinctness.offset", "hz.topography.offset", 
+                 "hz.boundary.lty", "density", 
+                 "show.legend", "col.label", "col.palette", "col.palette.bias", 
+                 "col.legend.cex", "n.legend", "lwd", "lty", "default.color", 
+                 "fixLabelCollisions", "fixOverlapArgs", "axis.line.offset", "plot.depth.axis", "cex.depth.axis"
+    )
+    
+    # iterate over all possible arguments that can be modified in this way
+    for(.arg in .argSet) {
+      
+      # test to see if the current argument has been explicitly provided
+      .missing <- do.call(missing, list(.arg))
+      
+      # consider only:
+      # specified via options AND NOT (XOR) given by function arguments
+      if(!is.null(.opArgs[[.arg]]) && .missing) {
+        # debug
+        # print(sprintf("using options: %s", .arg))
+        # set to local variable in place of default argument
+        assign(.arg, .opArgs[[.arg]])
+      }
+    }
+    
+  }
+  
   
   ###################
   ## sanity checks ##
   ###################
+  
+  # `x` should be a SoilProfileCollection
+  if (!inherits(x, 'SoilProfileCollection')) {
+    stop("Object `x` must be a SoilProfileCollection", call. = FALSE) 
+  }
+  
+  ## TODO: update plot.order and relative.pos when n != length(x)
+  
+  # don't plot an empty collection
+  if (nrow(x) == 0) {
+    stop("SoilProfileCollection `x` contains no horizon data", call. = FALSE)
+  }
   
   # horizon name style
   if(! name.style %in% c('right-center', 'left-center', 'left-top', 'center-center', 'center-top')) {
@@ -437,6 +531,21 @@ plotSPC <- function(
       stop('`hz.boundary.lty` must be numeric', call. = FALSE)
   }
   
+  # ragged bottom flag
+  if(!missing(raggedBottom)) {
+    
+    # valid type
+    if(! inherits(raggedBottom, c('logical', 'character'))) {
+      stop('`raggedBottom` must be logical or character', call. = FALSE)
+    }
+    
+    # valid name
+    if((is.character(raggedBottom)) & ! raggedBottom %in% siteNames(x)) {
+      stop('invalid `raggedBottom` column name', call. = FALSE)
+    }
+    
+  }
+  
   # length of y.offset must length(x) or 1
   if(length(y.offset) == 1) {
     y.offset <- rep(y.offset, times = length(x))
@@ -446,6 +555,44 @@ plotSPC <- function(
     warning('length of `y.offset` must be `length(x)` or 1, using `0`', call. = FALSE)
     y.offset <- rep(0, times = length(x))
   }
+  
+  # fixOverlap arguments
+  if(is.null(fixOverlapArgs)) {
+    fixOverlapArgs <- list()
+  }
+  
+  
+  #################################
+  ## SPC truncation and flagging ##
+  #################################
+  
+  # keep track of truncation by max.depth via special site-level attr
+  site(x)$.isTruncated <- FALSE
+  
+  if(!missing(max.depth)) {
+    
+    # keep track of original profile bottom depths
+    .pb0 <- x[, , .LAST, .BOTTOM]
+    
+    # truncate
+    x <- trunc(x, 0, max.depth)
+    
+    # truncated bottom depths
+    .pb1 <- x[, , .LAST, .BOTTOM]
+    
+    # flag
+    x$.isTruncated[which(.pb0 != .pb1)] <- TRUE
+  }
+  
+  # accommodate other flag specified in raggedBottom
+  if(!missing(raggedBottom)) {
+    truncation_flag <- x[['.isTruncated']] | x[[raggedBottom]]
+  } else {
+    truncation_flag <- x[['.isTruncated']]
+  }
+  
+  # ragged line characteristics depend on vertical scale
+  .raggedOffsets <- scaling.factor * max.depth * c(-0.01,  0.03) / 2
   
   
   ###################
@@ -469,7 +616,7 @@ plotSPC <- function(
   # roughly 10% of length(x)
   extra_x_space <- n * 0.1
   
-  # multiplier (width * x_left_spac_mult) used to set left-side space along x-axis
+  # multiplier (width * x_left_space_mult) used to set left-side space along x-axis
   x_left_space_mult <- 2
   
   # add a little extra x-space when n <= 5
@@ -487,14 +634,14 @@ plotSPC <- function(
   }
   
   # special cases
-  if(n == 1) {
+  if (n == 1) {
     extra_x_space <- extra_x_space + 0.5
     x_left_space_mult <- 3.5
   }
   
   # padding above profiles, ~ 15 is about right for n in {1,25} and max depth near 150cm
   # a sketch of shalllow profiles could benefit from ~ 5
-  if(max.depth <=50)
+  if(max.depth <= 50)
     extra_y_space <- 5
   if(max.depth > 50 & max.depth <= 100)
     extra_y_space <- 10
@@ -506,21 +653,6 @@ plotSPC <- function(
   
   # re-order y-offset according to plot.order
   y.offset <- y.offset[plot.order]
-  
-  # save arguments to aqp env
-  lsp <- list('width'=width,
-              'plot.order'=plot.order,
-              'x0'=relative.pos + x.idx.offset,
-              'pIDs'=pIDs[plot.order],
-              'idname'=idname(x),
-              'y.offset'=y.offset,
-              'scaling.factor'=scaling.factor,
-              'max.depth'=max.depth,
-              'n'=n,
-              'extra_x_space'=extra_x_space,
-              'extra_y_space'=extra_y_space)
-  
-  assign('last_spc_plot', lsp, envir=aqp.env)
   
   # get horizons
   h <- horizons(x)
@@ -536,7 +668,7 @@ plotSPC <- function(
   # hzdesgnname() does most of the work here, with sensible defaults when metadata are missing
   
   # code can safely run with all input except NULL
-  if(is.null(name)) {
+  if (is.null(name)) {
     # set to empty string
     name <- ''
   }
@@ -549,7 +681,7 @@ plotSPC <- function(
   
   # .interpretHorizonColors() expects numeric | categorical data
   # convert logical to factor
-  if(is.logical(h[[color]])) {
+  if (is.logical(h[[color]])) {
     h[[color]] <- factor(h[[color]])
   }
   
@@ -558,6 +690,23 @@ plotSPC <- function(
   # legend data if relevant, otherwise NULL
   hz.color.interpretation <- .interpretHorizonColor(h, color, default.color, col.palette, col.palette.bias, n.legend)
   h[['.color']] <- hz.color.interpretation$colors
+  
+  # sketch parameters for follow-up overlay / inspection
+  lsp <- list('width' = width,
+              'plot.order' = plot.order,
+              'x0' = relative.pos + x.idx.offset,
+              'pIDs' = pIDs[plot.order],
+              'idname' = idname(x),
+              'y.offset' = y.offset,
+              'scaling.factor' = scaling.factor,
+              'max.depth' = max.depth,
+              'n' = n,
+              'extra_x_space' = extra_x_space,
+              'extra_y_space' = extra_y_space,
+              'hz.depth.LAI' = rep(NA_real_, n),
+              'legend.colors' = hz.color.interpretation$colors,
+              'legend.data' = hz.color.interpretation$color.legend.data
+  )
   
   
   ####################
@@ -588,25 +737,25 @@ plotSPC <- function(
   }
   
   
-  # pre-compute nice range for depth axis, also used for plot init
-  depth_axis_intervals <- pretty(seq(from=0, to = max.depth, by = 1), n = n.depth.ticks)
   
-  # init plotting region, unless we are appending to an existing plot
+  ## init plotting region, unless we are appending to an existing plot
   # note that we are using some fudge-factors to get the plotting region just right
   if(!add) {
     # margins are set outside of this function
     
-    ## TODO: this seems to extend too far... review
     # y-limits also include y.offset range
     ylim.range <- c(
-      max(depth_axis_intervals) + max(y.offset), 
+      max.depth + max(y.offset), 
       -extra_y_space
     )
+
+    # x-limits
+    xlim.range <- c(width * x_left_space_mult, n + extra_x_space)
     
-    plot(x = 0, y = 0, type='n', 
-         xlim = c(width * x_left_space_mult, n+(extra_x_space)),
+    plot(x = 0, y = 0, type = 'n', 
+         xlim = xlim.range,
          ylim = ylim.range,
-         axes=FALSE, xlab='', ylab=''
+         axes = FALSE, xlab = '', ylab = ''
     )
   }
   
@@ -616,21 +765,36 @@ plotSPC <- function(
   
   ## TODO dynamically adjust `width` based on strwidth(longest.hz.name)
   ## TODO abstract single profile sketch code into a single function
-  ## TODO skip sketch rendering when i=`n` outside of length(SPC) (depths are NA)
+  ## TODO skip sketch rendering when i == `n` outside of length(SPC) (depths are NA)
   
-  ## TODO only iterate over real profiles, this will require testing of plot.order and relativePos
+  ## TODO: NO DATA template for empty profiles (now possible)
   
   ## iterate over profile index from 1 -> n
   ## note: there may not be `n` profiles
   for(i in 1:n) {
     # convert linear sequence into plotting order
+    # this is NA when accessing beyond length(SPC)
     profile_i <- plot.order[i]
+    
+    # get truncation flag
+    truncation_flag_i <- truncation_flag[profile_i]
+    
+    # fill NA with FALSE:
+    #  - if n > length(x)
+    #  - NA present in x$raggedBottom
+    truncation_flag_i[is.na(truncation_flag_i)] <- FALSE
     
     # extract the current profile's horizon data
     this_profile_label <- pLabels[profile_i]
     this_profile_id <- pIDs[profile_i]
+    this_profile_data <- h[which(h[[IDcol]] == this_profile_id), ]
     
-    this_profile_data <- h[h[[IDcol]] == this_profile_id, ]
+    ## TODO: use empty / template SPC
+    # this is an "empty" profile, site data only
+    # skip this iteration
+    if(nrow(this_profile_data) < 1){
+      next
+    }
     
     # extract column names
     cn <- names(this_profile_data)
@@ -676,6 +840,8 @@ plotSPC <- function(
     
     ## center of each sketch
     # 2019-07-15: added relative position feature, could use some more testing
+    #             y.offset is indexed to plot.order
+    #
     # x0 <- x.idx.offset + i
     x0 <- x.idx.offset + relative.pos[i]
     
@@ -713,7 +879,7 @@ plotSPC <- function(
       ht.lty <- this_profile_data[, hz.boundary.lty]
     } else {
       # use constant value
-      ht.lty <- rep(1, times=nh)
+      ht.lty <- rep(lty, times = nh)
     }
     
     
@@ -750,7 +916,12 @@ plotSPC <- function(
       # *  there is a "gap" between adjacent horizons (overlapOrGap = TRUE)
       
       if(j == 1 & nh == 1){
-        # first horizon of a single-horizon profile
+        ## first horizon of a single-horizon profile ##
+        
+        # ragged bottom place-holder
+        .r <- NULL
+        
+        # 
         y.ll <- pmin(y0[j] + hdo[j], y0[j]) # cannot exceed y.ll of next horizon
         y.lr <- pmax(y0[j] - hdo[j], y1[j]) # cannot exceed y.ur of this horizon
         y.ur <- y1[j] # use upper-right verbatim
@@ -759,12 +930,43 @@ plotSPC <- function(
         y.lc <- pmax(y0[j] - hto[j], y1[j]) # cannot exceed top depth of current horizon
         y.uc <- y1[j] # use upper-center verbatim
         
-        # assemble y-coords and plot first horizon polygon, without borders
-        yy <- c(y.ll, y.lc, y.lr, y.ur, y.uc, y.ul)
-        polygon(x = xx, y = yy, col=this_profile_colors[j], border=NA, density=this_profile_density[j], lwd=lwd, lty=lty, lend=1)
+        ## truncated bottom
+        # this is only possible when horizon geometry is available
+        # e.g. NOT:
+        #  - horizon-less SPC
+        #  - n > length(SPC)
+        if(truncation_flag_i & !all(is.na(xx))) {
+          
+          # must be an even number of oscillations
+          # computed as function of number of profiles
+          # adjusted to width (n.osc increases with width)
+          # min value of 4
+          .raggedN <- pmax(4, round((2.5 * width) * 32 / (n / 2)) * 2)
+          
+          # ragged bottom line segment: lr -> ll ordering
+          .r <- .raggedLines(x1 = x.ll, x2 = x.lr, y = y0[j], o = .raggedOffsets, n = .raggedN)
+          
+          # modify ragged x and y to include upper right, center, left coords
+          xx <- c(.r[, 1], x.ur, x.uc, x.ul)
+          yy <- c(.r[, 2], y.ur, y.uc, y.ul)
+        } else {
+          # place-holder for ragged bottom
+          .r <- NULL
+          
+          # assemble standard y-coords
+          yy <- c(y.ll, y.lc, y.lr, y.ur, y.uc, y.ul)
+        }
+        
+        # plot first horizon polygon, without borders
+        polygon(x = xx, y = yy, col = this_profile_colors[j], border = NA, density = this_profile_density[j], lend = 1)
         
       } else if(j == 1 & nh > 1){
-        # first horizon, of several
+        ## first horizon, of several ##
+        
+        # ragged bottom place-holder
+        .r <- NULL
+        
+        # 
         y.ll <- pmin(y0[j] + hdo[j], y0[j+1]) # cannot exceed y.ll of next horizon
         y.lr <- pmax(y0[j] - hdo[j], y1[j]) # cannot exceed y.ur of this horizon
         y.ur <- y1[j] # use upper-right verbatim
@@ -775,10 +977,15 @@ plotSPC <- function(
         
         # assemble y-coords and plot first horizon polygon, without borders
         yy <- c(y.ll, y.lc, y.lr, y.ur, y.uc, y.ul)
-        polygon(x = xx, y = yy, col=this_profile_colors[j], border=NA, density=this_profile_density[j], lwd=lwd, lty=lty, lend=1)
+        polygon(x = xx, y = yy, col = this_profile_colors[j], border = NA, density = this_profile_density[j], lend = 1)
         
       } else if(j < nh) {
-        # next horizons, except bottom-most horizon
+        ## next horizons, except bottom-most horizon ##
+        
+        # ragged bottom place-holder
+        .r <- NULL
+        
+        # 
         y.ll <- pmin(y0[j] + hdo[j], y0[j+1], na.rm = TRUE) # cannot exceed y.ll of next horizon
         y.lr <- pmax(y0[j] - hdo[j], y0[j-1]) # cannot exceed y.lr of previous horizon
         y.ur <- pmax(y1[j] - hdo[j-1], y1[j-1]) # cannot exceed y.ur of previous horizon
@@ -789,12 +996,17 @@ plotSPC <- function(
         
         # assemble y-coords and plot next n horizon's polygon, without borders
         yy <- c(y.ll, y.lc, y.lr, y.ur, y.uc, y.ul)
-        polygon(x = xx, y = yy, col=this_profile_colors[j], border=NA, density=this_profile_density[j], lwd=lwd, lty=lty, lend=1)
+        polygon(x = xx, y = yy, col=this_profile_colors[j], border=NA, density=this_profile_density[j], lend=1)
         ## debugging
         # polygon(x = xx, y = yy, col=NA, border='red', density=this_profile_density[j], lwd=lwd, lty=lty)
         
       } else {
-        # last horizon
+        ## last horizon ##
+        
+        # ragged bottom place-holder
+        .r <- NULL
+        
+        #
         y.ll <- y0[j] # user lower-left verbatim
         y.lr <- y0[j] # use lower-right verbatim
         y.ur <- pmax(y1[j] - hdo[j-1], y1[j-1]) # cannot exceed y.ur of previous horizon
@@ -807,14 +1019,43 @@ plotSPC <- function(
         # NA lower horizon depths ll, lc, lr to all be NA
         # this will break divide.hz functionality
         
-        # assemble y-coords and plot last horizon polygon, without borders
-        yy <- c(y.ll, y.lc, y.lr, y.ur, y.uc, y.ul)
-        polygon(x = xx, y = yy, col=this_profile_colors[j], border=NA, density=this_profile_density[j], lwd=lwd, lty=lty, lend=1)
+        ## truncated bottom
+        # this is only possible when horizon geometry is available
+        # e.g. NOT:
+        #  - horizon-less SPC
+        #  - n > length(SPC)
+        if(truncation_flag_i & !all(is.na(xx))) {
+          
+          # must be an even number of oscillations
+          # computed as function of number of profiles
+          # adjusted to width (n.osc increases with width)
+          # min value of 4
+          .raggedN <- pmax(4, round((2.5 * width) * 32 / (n / 2)) * 2)
+          
+          # ragged bottom line segment: lr -> ll ordering
+          .r <- .raggedLines(x1 = x.ll, x2 = x.lr, y = y0[j], o = .raggedOffsets, n = .raggedN)
+          
+          # modify ragged x and y to include upper right, center, left coords
+          xx <- c(.r[, 1], x.ur, x.uc, x.ul)
+          yy <- c(.r[, 2], y.ur, y.uc, y.ul)
+        } else {
+          # place-holder for ragged bottom
+          .r <- NULL
+          
+          # assemble standard y-coords
+          yy <- c(y.ll, y.lc, y.lr, y.ur, y.uc, y.ul)
+        }
         
-      }
+        # plot last horizon polygon, without borders
+        polygon(x = xx, y = yy, col = this_profile_colors[j], border = NA, density = this_profile_density[j], lend = 1)
+        
+        ## debugging
+        # polygon(x = xx, y = yy, col = NA, border = 'red', density=this_profile_density[j], lwd = 2)
+      } # end selecting horizon sequence class
       
       # save current iteration of coordinates and line type
-      coords.list[[j]] <- list(xx=xx, yy=yy, lty=ht.lty[j])
+      # also save ragged bottom coordinates, usually NULL
+      coords.list[[j]] <- list(xx = xx, yy = yy, lty = ht.lty[j], ragged = .r)
       
     } # end looping over horizons
     
@@ -827,48 +1068,95 @@ plotSPC <- function(
       # coordinate logic: ll, lc, lr, ur, uc, ul
       # line style included
       lapply(coords.list, function(seg) {
+        
         # lower left -> lower center
-        segments(x0 = seg$xx[1], y0 = seg$yy[1], x1 = seg$xx[2], y1 = seg$yy[2], lwd=lwd, lty=seg$lty, lend=1)
+        # segments(x0 = seg$xx[1], y0 = seg$yy[1], x1 = seg$xx[2], y1 = seg$yy[2], lwd = lwd, lty =  seg$lty, lend = 1)
         # lower center -> lower right
-        segments(x0 = seg$xx[2], y0 = seg$yy[2], x1 = seg$xx[3], y1 = seg$yy[3], lwd=lwd, lty=seg$lty, lend=1)
+        # segments(x0 = seg$xx[2], y0 = seg$yy[2], x1 = seg$xx[3], y1 = seg$yy[3], lwd = lwd, lty = seg$lty, lend = 1)
+        
+        # add line segments in order
+        lines(seg$xx, seg$yy, lwd = lwd, lty = seg$lty, lend = 1)
+        
       })
     }
     
-    ## final rectangle border around entire profile
+    
+    ## final border left-side, top, right-side
     # note: when manually specifying n > length(SPC)
     # x0,x1,y0,y1 are NA
     # using `na.rm = TRUE` in the following calls to min() or max() will generate warnings
-    suppressWarnings(
-      rect(
-        xleft = x0 - width, 
-        ybottom = min(y1, na.rm = TRUE), 
-        xright = x0 + width, 
-        ytop = max(y0, na.rm = TRUE), 
-        lwd = lwd, 
-        lty = lty, 
-        lend = 2
-      )
-    )
+    
+    # left-side, top -> bottom
+    suppressWarnings(segments(
+      x0 = x0 - width, 
+      x1 =  x0 - width, 
+      y0 = min(y1, na.rm = TRUE), 
+      y1 = max(y0, na.rm = TRUE), 
+      lwd = lwd,
+      lty = lty,
+      lend = 2
+    ))
+    
+    # top, left -> right
+    suppressWarnings(segments(
+      x0 = x0 - width, 
+      x1 =  x0 + width, 
+      y0 = min(y1, na.rm = TRUE), 
+      y1 = min(y1, na.rm = TRUE), 
+      lwd = lwd,
+      lty = lty,
+      lend = 2
+    ))
+    
+    # right-side, top -> bottom
+    suppressWarnings(segments(
+      x0 = x0 + width, 
+      x1 =  x0 + width, 
+      y0 = min(y1, na.rm = TRUE), 
+      y1 = max(y0, na.rm = TRUE), 
+      lwd = lwd,
+      lty = lty,
+      lend = 2
+    ))
     
     
+    ## final bottom-most line or ragged edge
+    # no line when divide.hz = TRUE
+    # simple line when divide.hz = FALSE
+    # ragged edge when profiles are truncated
     
-    # # standard rectangles
-    # # default are filled rectangles
-    # if(divide.hz) {
-    #   # classic approach: use rectangles, fully vectorized and automatic recycling over arguments
-    #   # x0 and width have length of 1
-    #   rect(x0 - width, y0, x0 + width, y1, col=this_profile_colors, border=NULL, density=this_profile_density, lwd=lwd, lty=lty)
-    # 
-    # } else {
-    #   # otherwise, we only draw the left, top, right borders, and then fill
-    # 
-    #   rect(x0 - width, y0, x0 + width, y1, col=this_profile_colors, border=NA, density=this_profile_density, lwd=lwd, lty=lty)
-    #   segments(x0 - width, y0, x0 - width, y1, lwd=lwd, lty=lty, lend=2) # left-hand side
-    #   segments(x0 + width, y0, x0 + width, y1, lwd=lwd, lty=lty, lend=2) # right-rand side
-    #   segments(x0 - width, min(y1), x0 + width, min(y1), lwd=lwd, lty=lty, lend=2) # profile top
-    #   segments(x0 - width, max(y0), x0 + width, max(y0), lwd=lwd, lty=lty, lend=2) # profile bottom
-    # }
-    # 
+    # bottom, left -> right
+    if(!divide.hz) {
+      
+      # use ragged bottom for truncated profiles
+      if(truncation_flag_i) {
+        
+        # derive from last element of coords.list
+        lines(
+          x = coords.list[[nh]]$ragged[, 1], 
+          y = coords.list[[nh]]$ragged[, 2], 
+          lwd = lwd, 
+          lty = coords.list[[nh]]$lty, 
+          lend = 1
+        )
+        
+      } else {
+        
+        suppressWarnings(segments(
+          x0 = x0 - width,
+          x1 =  x0 + width,
+          y0 = max(y0, na.rm = TRUE),
+          y1 = max(y0, na.rm = TRUE),
+          lwd = lwd,
+          lty = lty,
+          lend = 2
+        ))  
+        
+      }
+      
+    }
+    
+    
     
     ##################################
     ## horizon designations (names) ##
@@ -927,9 +1215,10 @@ plotSPC <- function(
     )
     
     
-
-   ## TODO:use find/fixOverlap() to adjust horizon designations in the presence of collisions (PARDEE)    ## See hz depth annotation code below
-
+    
+    ## TODO: use find/fixOverlap() to adjust horizon designations in the presence of collisions (PARDEE)    
+    ## See hz depth annotation code below
+    
     # optionally shrink the size of names if they are longer than a given thresh
     if(shrink) {
       
@@ -989,7 +1278,8 @@ plotSPC <- function(
       # along with user adjustment
       hzd.txt.x <- x0 + width + hz.depths.xfuzz + hz.depths.offset
       
-      # top-horizon, top depth: vertical alignment is close to "top"
+      ## top-most horizon
+      # top depth: vertical alignment is close to "top"
       hzd.txt <- this_profile_data[[tcol]][1]
       text(
         x = hzd.txt.x, 
@@ -1000,10 +1290,8 @@ plotSPC <- function(
         adj = c(0, 0.8)
       )
       
-      ## TODO: add optional adjustments here using fixOverlap()
-      ##       https://github.com/ncss-tech/aqp/issues/240
       
-      # in-between horizons, if present: vertical align is "center"
+      ## in-between horizons, if present: vertical align is "center"
       if(nh > 1) {
         # horizon depth annotation text (no scaling / offset applied here)
         hzd.txt <- this_profile_data[[tcol]][-1]
@@ -1011,45 +1299,87 @@ plotSPC <- function(
         # device coordinates: scaling / offset applied
         hzd.txt.y <- y1[-1]
         
-        ## collision detection / fix
-        if(fixLabelCollisions) {
-          # reasonable threshold for label collision detection
-          y.thresh <- 1.25 * abs(strheight('0', cex = cex.names))
+        
+        # sanity checks before attempting label collision repair:
+        #  - no NA
+        #  - no top == bottom
+        if(any(is.na(c(y0, y1)))) {
+          .canFixLabelCollision <- FALSE
+          message(sprintf('[%s:%s] horizon with top == bottom, cannot fix horizon depth overlap\n consider using repairMissingHzDepths()', this_profile_id, nh))
           
+        } else {
+          
+          # test for top == bottom, cannot perform label collision if this is the case
+          if(any(y0 == y1)) {
+            .canFixLabelCollision <- FALSE
+            message(sprintf('[%s:%s] horizon with top == bottom, cannot fix horizon depth overlap\n consider using repairMissingHzDepths()', this_profile_id, nh))
+          } else {
+            .canFixLabelCollision <- TRUE
+          }
+        }
+        
+        ## collision detection / fix
+        if(fixLabelCollisions && .canFixLabelCollision) {
+          
+          ## TODO: only need to compute this 1 time, move outside of loop
+          ## TODO: consider adjusting by scaling.factor
+          
+          # reasonable threshold for label collision detection
+          # depends on aesthetic weighting / graphics device / hz.depths.cex
+          y.thresh <- 1.125 * abs(strheight('0', cex = hz.depths.cex))
           # print(y.thresh)
-          # print(diff(y1))
           
           # must include top + bottom depths for collision detection
-          hzd.txt.y.fixed <- suppressMessages(fixOverlap( 
-            c(y1, y0[nh]), 
-            thresh = y.thresh, 
-            min.x = y1[1], 
-            max.x = y0[nh], 
-            adj = 1,
-            k = 20,
-            trace = FALSE
-          ))
+          # account for the fact that top-most and bottom-most horizon depths are inset
+          # based on native units (e.g. cm)
           
-          # remove top + bottom horizon depths
+          # top vertical buffer should not exceed bottom of first hz
+          .vbf <- 0.8
+          .vertical_buffer_top <- y1[1] + pmin((.vbf * scaling.factor), min(y1[-1]))
+          
+          # bottom vertical buffer must be truncated by max.depth
+          # this can result in bottom anchor < previous elements in pos
+          # remove in next steps
+          .vertical_buffer_bottom <- pmin(
+            ((max.depth - .vbf) * scaling.factor) + y.offset[i], 
+            y0[nh] - (.vbf * scaling.factor)
+          )
+          
+          # add synthetic top / bottom anchors
+          .pos <- c(
+            .vertical_buffer_top,
+            y1[-1],
+            .vertical_buffer_bottom
+          )
+          
+          # keep only positions that are < max.depth, after y.offset and scaling
+          # these are scaled positions
+          .pos <- .pos[which(.pos < ((max.depth * scaling.factor) + y.offset[i]))]
+          
+          # setup arguments to fixOverlap()
+          fixOverlapArgs[['x']] <- .pos
+          fixOverlapArgs[['thresh']] <- y.thresh
+          
+          # find / fix overlap using electrostatic simulation
+          # this includes top/bottom anchor points
+          hzd.txt.y.fixed <- suppressMessages(
+            do.call('fixOverlap', fixOverlapArgs)
+          )
+          
+          # remove top AND bottom anchors
           hzd.txt.y.fixed <- hzd.txt.y.fixed[-c(1, length(hzd.txt.y.fixed))]
           
-          # how much shuffling was performed
-          .badness <- (hzd.txt.y - hzd.txt.y.fixed)
+          ## this is the Label Adjustment Index (LAI)
+          # how much shuffling was performed?
+          .LAI <- (hzd.txt.y - hzd.txt.y.fixed)
           # normalize
-          .badness <- sum(abs(.badness), na.rm = TRUE) / y0[nh]
+          .LAI <- sum(abs(.LAI), na.rm = TRUE) / y0[nh]
           
-          # when n > length(x), we are iterating over non-profiles and .badness is NA
-          if(!is.na(.badness)) {
-            # if not too "bad", keep suggested adjustments
-            if(.badness < 0.2) {
-              hzd.txt.y <- hzd.txt.y.fixed
-            } else {
-              ## TODO: consider a message or keeping track of which profiles
-              # print(.badness)
-            }
-          }
+          # keep track of overlap metric for each profile
+          lsp[['hz.depth.LAI']][i] <- .LAI
           
-          # otherwise, keep original configuration
+          # make changes to annotation label locations
+          hzd.txt.y <- hzd.txt.y.fixed
         }
         
         
@@ -1064,7 +1394,8 @@ plotSPC <- function(
         ) 
       }
       
-      # bottom-horizon, bottom depth: vertical alignment is "bottom"
+      ## bottom-most horizon
+      # bottom depth: vertical alignment is "bottom"
       hzd.txt <- this_profile_data[[bcol]][nh]
       text(
         x = hzd.txt.x, 
@@ -1157,6 +1488,7 @@ plotSPC <- function(
     
     
     
+    ## TODO: move this to the top of profile-process loop, in case there is no hz data
     
     
     #################
@@ -1178,11 +1510,11 @@ plotSPC <- function(
       if(id.style == 'top') {
         text(x = x0, y = y.offset[i], id.text, pos = 3, font = font.id, cex = cex.id, srt = srt.id)
       }
-        
+      
       if(id.style == 'side') {
-        text(x0 - (width+0.025), y.offset[i], id.text, adj = c(1, -width), font = font.id, cex = cex.id, srt = 90)
+        text(x0 - (width + 0.025), y.offset[i], id.text, adj = c(1, -width), font = font.id, cex = cex.id, srt = 90)
       }
-        
+      
     }
     
   } # end looping over profiles
@@ -1192,16 +1524,92 @@ plotSPC <- function(
   ## depth axis ##
   ################
   
-  # suppress when there are multiple y.offsets
-  if(length(unique(y.offset)) > 1) {
-    plot.depth.axis <- FALSE 
+  ## 
+  ## retain for 2 (?) minor versions
+  ##
+  
+  # handling of aqp 1.x style arguments
+  if(!missing(plot.depth.axis)) {
+    if(missing(depth.axis)) {
+      depth.axis <- plot.depth.axis
+    }
+    message('`plot.depth.axis` is now deprecated, please use `depth.axis` argument')
   }
   
-  if(plot.depth.axis) {
+  if(!missing(cex.depth.axis)) {
+    if(inherits(depth.axis, 'list')) {
+      depth.axis[['cex']] <- cex.depth.axis
+    } else {
+      depth.axis <- list(cex = cex.depth.axis)
+    }
+    message('`cex.depth.axis` is now deprecated, please use `depth.axis` argument')
+  }
+  
+  if(!missing(axis.line.offset)) {
+    if(inherits(depth.axis, 'list')) {
+      depth.axis[['line']] <- axis.line.offset
+    } else {
+      depth.axis <- list(line = axis.line.offset)  
+    }
+    message('`axis.line.offset` is now deprecated, please use `depth.axis` argument')
+  }
+  
+  ##
+  ## end backwards compatibility
+  ##
+  
+  # suppress when there are multiple y.offsets
+  if(length(unique(y.offset)) > 1) {
+    message('depth axis is disabled when more than 1 unique y offsets are supplied')
+    depth.axis <- FALSE 
+  }
+  
+  # add depth axis
+  if(isTRUE(depth.axis) || is.list(depth.axis)) {
+    
+    # compose list with defaults if not already
+    # NULL `interval` will use sensible defaults
+    if(!is.list(depth.axis)) {
+      depth.axis <- list(style = 'traditional', line = -2, cex = cex.names * 1.15)
+    }
+    
+    # default style if missing
+    if(is.null(depth.axis[['style']])) {
+      depth.axis[['style']] <- 'traditional'
+    }
+    
+    # default line if missing
+    if(is.null(depth.axis[['line']])) {
+      depth.axis[['line']] <- switch(
+        depth.axis[['style']],
+        'compact' = -1.75,
+        'traditional' = -2,
+        'tape' = 4
+      )
+    }
+    
+    if(is.null(depth.axis[['cex']])) {
+      depth.axis[['cex']] <- cex.names * 1.15
+    }
+    
+    # compute nice range for depth axis with sensible interval and max value
+    depth_axis_intervals <- .depthAxisSeq(max.depth, i = depth.axis[['interval']])
+    
+    # convert to plot scale/offset
     depth_axis_tick_locations <- (depth_axis_intervals * scaling.factor) + y.offset[1]
+    
+    # add depth units
     depth_axis_labels <- paste(depth_axis_intervals, depth_units(x))
     
-    axis(side=4, line=axis.line.offset, las=2, at=depth_axis_tick_locations, labels=depth_axis_labels, cex.axis=cex.depth.axis, col.axis=par('fg'))
+    # draw axis
+    .drawDepthAxis(
+      style = depth.axis[['style']],
+      .at = depth_axis_tick_locations, 
+      .labels = depth_axis_labels,
+      .line = depth.axis[['line']], 
+      .cex = depth.axis[['cex']]
+    )
+    
   }
   
   
@@ -1276,7 +1684,8 @@ plotSPC <- function(
     }
   }
   
-  
+  # save to aqp env
+  assign('last_spc_plot', lsp, envir = aqp.env)
   
   
 }
@@ -1284,13 +1693,9 @@ plotSPC <- function(
 #' generic plot method for \code{SoilProfileCollection} objects
 #' @name plot
 #' @param y (not used)
-#' @usage
-#' ## S4 method for signature 'SoilProfileCollection,ANY'
-#' ## note: y argument in generic definition is not currently used
-#' plot(x, y, ...)
 #' @aliases plot,SoilProfileCollection,ANY-method
 #' @rdname SoilProfileCollection-plotting-methods
-#'
+#' @export
 setMethod("plot", signature(x = "SoilProfileCollection",
                             y = "ANY"),
           definition = {function(x, y, ...) plotSPC(x, ...)})

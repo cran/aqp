@@ -117,13 +117,14 @@
 #' @param w vector of proportions, can sum to any number
 #' 
 #' @param mixingMethod approach used to simulate a mixture: 
-#'    * `reference`  : simulate a subtractive mixture of pigments, selecting `n` closest reference spectra from [`munsell.spectra.wide`]
 #'    
 #'    * `exact`: simulate a subtractive mixture of pigments, color conversion via CIE1931 color-matching functions (see details)
 #'    
-#'    * `estimate` : closest Munsell chip to a weighted mean of CIELAB coordinates
+#'    * `reference`: simulate a subtractive mixture of pigments, selecting `n` closest reference spectra from [`munsell.spectra.wide`] (requires `gower` package)
 #'    
-#'    * `adaptive` : use reference spectra when possible, falling-back to weighted mean of CIELAB coordinates
+#'    * `estimate`: closest Munsell chip to a weighted mean of CIELAB coordinates (fastest)
+#'    
+#'    * `adaptive`: use `exact` method when possible, falling-back to `estimate` (weighted mean of CIELAB coordinates) otherwise
 #'
 #' @param n number of closest matching color chips (`mixingMethod = reference` only)
 #'
@@ -152,6 +153,8 @@
 #'
 #'
 #' @details
+#' See the [expanded tutorial](https://ncss-tech.github.io/AQP/aqp/mix-colors.html) for examples.
+#' 
 #' An accurate simulation of pigment mixtures ("subtractive" color mixtures) is incredibly complex due to factors that aren't easily measured or controlled: pigment solubility, pigment particle size distribution, water content, substrate composition, and physical obstruction to name a few. That said, it is possible to simulate reasonable, subtractive color mixtures given a reference spectra library (350-800nm) and some assumptions about pigment qualities and lighting. For the purposes of estimating a mixture of soil colors (these are pigments after all) we can relax these assumptions and assume a standard light source. The only missing piece is the spectral library for all Munsell chips in our color books.
 #' 
 #' Thankfully, [Scott Burns has outlined the entire process](https://arxiv.org/ftp/arxiv/papers/1710/1710.06364.pdf), and Paul Centore has provided a Munsell color chip [reflectance spectra library](https://www.munsellcolourscienceforpainters.com). The estimation of a subtractive mixture of soil colors can proceed as follows:
@@ -160,7 +163,7 @@
 #' 2. compute the weighted (`w` argument) geometric mean of the spectra
 #' 3. convert the spectral mixture to the closest Munsell color via:
 #'   * search for the closest `n` matching spectra in the reference library (`mixtureMethod = 'reference'`)
-#'   * direct conversion of spectra to closest Munsell color via [`spec2Munsell`] ( (`mixtureMethod = 'exact'`))
+#'   * direct conversion of spectra to closest Munsell color via [spec2Munsell()] (`mixtureMethod = 'exact'`)
 #' 4. suggest resulting Munsell chip(s) as the best candidate for a simulated mixture
 #' 
 #' Key assumptions include:
@@ -187,23 +190,10 @@
 #' 
 #' 
 #'
-#' @seealso \code{\link{munsell.spectra}}
+#' @seealso [munsell.spectra]
+#' @export
 #' 
-#' @examples 
-#' 
-#' # try a couple different methods
-#' cols <- c('10YR 6/2', '5YR 5/6', '10B 4/4')
-#' mixMunsell(cols, mixingMethod = 'reference')
-#' mixMunsell(cols, mixingMethod = 'exact')
-#' mixMunsell(cols, mixingMethod = 'estimate')
-#' 
-#' # 2.5 values
-#' cols <- c('10YR 2.5/2', '5YR 5/6')
-#' mixMunsell(cols, mixingMethod = 'reference')
-#' mixMunsell(cols, mixingMethod = 'exact')
-#' mixMunsell(cols, mixingMethod = 'estimate')
-#' 
-mixMunsell <- function(x, w = rep(1, times = length(x)) / length(x), mixingMethod = c('reference', 'exact', 'estimate', 'adaptive', 'spectra'), n = 1, keepMixedSpec = FALSE, distThreshold = 0.025, ...) {
+mixMunsell <- function(x, w = rep(1, times = length(x)) / length(x), mixingMethod = c('exact', 'reference', 'estimate', 'adaptive'), n = 1, keepMixedSpec = FALSE, distThreshold = 0.025, ...) {
 
   # satisfy R CMD check
   munsell.spectra.wide <- NULL
@@ -211,25 +201,21 @@ mixMunsell <- function(x, w = rep(1, times = length(x)) / length(x), mixingMetho
   # enforce mixing method
   mixingMethod <- match.arg(mixingMethod)
   
-  # backwards compatibility: "spectra" will be deprecated in the future
-  if(mixingMethod == 'spectra') {
-    message('please use `mixingMethod = "reference"`')
-    mixingMethod <- 'reference'
-  }
-  
   # multiple matches only possible when using mixingMethod == 'reference'
-  if((n > 1) & mixingMethod != 'reference') {
+  if((n > 1) && mixingMethod != 'reference') {
     stop('`n` is only valid for `mixingMethod = "reference"`', call. = FALSE)
   }
   
   # mixed spectra and multiple matches only possible when using mixingMethod == 'reference'
-  if(keepMixedSpec & ! mixingMethod %in% c('reference', 'exact')) {
+  if(keepMixedSpec && !mixingMethod %in% c('reference', 'exact')) {
     stop('`keepMixedSpec` is only valid for mixingMethod = "reference" or "exact"', call. = FALSE)
   }
   
   # sanity check, need this for gower::gower_topn()
-  if(!requireNamespace('gower'))
-    stop('package `gower` is required', call.=FALSE)
+  if(mixingMethod == 'reference' && !requireNamespace('gower')) {
+    stop("package `gower` is required for `mixingMethod='reference'`", call. = FALSE)
+  }
+  
 
   # can't mix a single color, just give it back at 0 distance
   if (length(unique(x)) == 1) {
@@ -294,7 +280,7 @@ mixMunsell <- function(x, w = rep(1, times = length(x)) / length(x), mixingMetho
     return(res)
     
   } else {
-    # spectral mixing if possible
+    # attempt spectral mixing
     
     # wide version for fast searches
     load(system.file("data/munsell.spectra.wide.rda", package="aqp")[1])
@@ -405,6 +391,7 @@ mixMunsell <- function(x, w = rep(1, times = length(x)) / length(x), mixingMetho
       
     } else {
       ## reference "spectra" method
+      ## requires suggested gower package
       
       ## operations on data.table likely faster
       

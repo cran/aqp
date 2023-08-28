@@ -6,9 +6,9 @@ munsell
 munsell.spectra
 munsell.spectra.wide
 munsellHuePosition
-pms.munsell.lut
+osd
+reactionclass
 rowley2019
-rruff.sample
 sierraTransect
 soil_minerals
 soiltexture
@@ -21,3 +21,4 @@ sp6
 spectral.reference
 traditionalColorNames
 us.state.soils
+wilson2022

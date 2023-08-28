@@ -23,6 +23,20 @@
 #' @aliases aqp-package aqp aqp.env
 #' @docType package
 #' @author Dylan E. Beaudette <debeaudette@@ucdavis.edu>, Pierre Roudier, Andrew G. Brown
-#' @seealso \link{ca630}, \code{\link{sp1}, \link{sp2}, \link{sp3}, \link{sp4}, \link{sp5}}
+#' @seealso `depths<-()`, `SoilProfileCollection()`, \code{\link{sp1}}, \code{\link{sp2}}, \code{\link{sp3}}, \code{\link{sp4}}, \code{\link{sp5}}, \code{\link{sp6}}
 #' @keywords package
+#' @import data.table
+#' @importFrom grDevices chull col2rgb colorRamp colorRampPalette colors convertColor grey hsv rgb rgb2hsv
+#' @importFrom graphics abline arrows axis box grid image legend lines mtext par points polygon rect segments strheight strwidth text grconvertX
+#' @importFrom methods setClass setOldClass representation prototype new isGeneric setGeneric setReplaceMethod setMethod .hasSlot as new slot slot<- slotNames
+#' @importFrom stats TukeyHSD aggregate aov approxfun as.dist as.formula cmdscale complete.cases dist formula median model.frame na.omit na.pass quantile rnorm runif sd splinefun terms update weighted.mean
+#' @importFrom utils object.size packageVersion
+#' @importFrom cluster pam daisy silhouette 
+#' @importFrom grid grid.text gpar unit
+#' @importFrom graphics plot
+#' @importFrom lattice levelplot xyplot panel.abline panel.grid panel.lines panel.points panel.polygon panel.rect panel.segments panel.text strip.custom trellis.par.get
+NULL
+
+#' @export aqp.env
+#' @noRd
 "aqp.env"

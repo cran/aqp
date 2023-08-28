@@ -12,8 +12,8 @@ SoilProfileCollection(
   depthcols = c("top", "bottom"),
   metadata = list(aqp_df_class = "data.frame", aqp_group_by = "", aqp_hzdesgn = "",
     aqp_hztexcl = "", stringsAsFactors = FALSE),
-  horizons = data.frame(id = character(0), hzID = character(0), top = numeric(0),
-    bottom = numeric(0), stringsAsFactors = FALSE),
+  horizons = data.frame(id = character(0), hzID = character(0), top = numeric(0), bottom
+    = numeric(0), stringsAsFactors = FALSE),
   site = data.frame(id = character(0), stringsAsFactors = FALSE),
   sp = new("SpatialPoints"),
   diagnostic = data.frame(stringsAsFactors = FALSE),
@@ -33,7 +33,7 @@ SoilProfileCollection(
 
 \item{site}{data.frame An object inheriting from data.frame containing Site data.}
 
-\item{sp}{SpatialPoints A SpatialPoints object. Generally initialized with \code{coordinates(spc) <- ~ x + y}.}
+\item{sp}{SpatialPoints A SpatialPoints object. No longer used in aqp 2+, see \code{?initSpatial}}
 
 \item{diagnostic}{data.frame An object inheriting from data.frame containing diagnostic feature data. Must contain profile ID. See \code{diagnostic_hz()}}
 
@@ -74,7 +74,7 @@ str(SoilProfileCollection())
 ## profile ID, top and bottom depth and set up
 ## a SPC that is topologically correct and complete
 
-d <- do.call('rbind',lapply(1:10, random_profile))
+d <- do.call('rbind', lapply(1:10, random_profile))
 
 # promote to SoilProfileCollection and plot
 depths(d) <- id ~ top + bottom
@@ -85,8 +85,9 @@ d.1 <- d[1, ]
 d.2 <- d[2, ]
 d.345 <- d[3:5, ]
 
-# recombine, note that profiles are sorted according to ID
-d.new <- pbindlist(list(d.345, d.1, d.2))
+# combine profile collections
+# note that profiles are sorted according to ID
+d.new <- c(d.345, d.1, d.2)
 plot(d.new)
 
 data(sp1)
@@ -140,7 +141,6 @@ site(sp1) <- ~ group
 # note that IDs should all be character class
 d <- data.frame(id=profile_id(sp1), p=runif(n=length(sp1)), stringsAsFactors=FALSE)
 site(sp1) <- d
-
 
 # edit horizon depths
 horizonDepths(sp1) <- c('t', 'b')

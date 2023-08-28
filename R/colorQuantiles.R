@@ -10,7 +10,7 @@
 
 
 
-## TODO: quantiles should be weighted by thickness, can we do this via slice()?
+## TODO: quantiles should be weighted by thickness, can we do this via dice()?
 ## TODO: finish documentation + links
 ## TODO: consider a third output: chip with pair-wise min(dE00) within distance matrix
 
@@ -43,11 +43,12 @@
 #' data(sp5)
 #' 
 #' # slice top 25 cm
-#' s <- slice(sp5, 1:25 ~ .)
+#' # 24-25cm is the last slice
+#' s <- dice(sp5, 0:24 ~ .)
 #' 
 #' # check some of the data
 #' par(mar=c(0,0,0,0))
-#' plot(sample(s, 25), divide.hz=FALSE, name='', print.id=FALSE, width=0.5)
+#' plotSPC(sample(s, 25), divide.hz = FALSE, name = '', print.id = FALSE, width = 0.5)
 #' 
 #' # colors
 #' previewColors(unique(s$soil_color))
@@ -192,7 +193,7 @@ plotColorQuantiles <- function(res, pt.cex = 7, lab.cex = 0.66) {
   # convert wide -> long format for plotting in panels
   # using data.table::melt()
   m.long <- melt(
-    as.data.table(res$marginal), 
+    data.table::as.data.table(res$marginal), 
     id.var = c('p', 'L_colors', 'A_colors', 'B_colors', 'L_chip', 'A_chip', 'B_chip')
     )
   
@@ -220,7 +221,7 @@ plotColorQuantiles <- function(res, pt.cex = 7, lab.cex = 0.66) {
   
   
   # compose figure
-  pp <- xyplot(
+  pp <- lattice::xyplot(
     y ~ value | variable, 
     data = m.long, 
     ylim = c(0.5, 2.5),

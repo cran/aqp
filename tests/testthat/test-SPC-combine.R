@@ -8,11 +8,8 @@ site(sp1) <- ~ group
 sp1$x <- seq(-119, -120, length.out = length(sp1))
 sp1$y <- seq(38, 39, length.out = length(sp1))
 
-sp::coordinates(sp1) <- ~ x + y
-
-sp::proj4string(sp1) <- '+proj=longlat +datum=WGS84'
-# PROJ6
-# sp::proj4string(sp1) <- sp::CRS(SRS_string = "OGC:CRS84")
+initSpatial(sp1) <- ~ x + y
+prj(sp1) <- 'OGC:CRS84'
 
 test_that("basic combination tests", {
 
@@ -57,15 +54,15 @@ test_that("non-conformal combination tests", {
 
   # random data
   ids <- sprintf("%02d", 1:5)
-  x <- plyr::ldply(ids, random_profile, n=c(6, 7, 8), n_prop=1, method='LPP',
-                   lpp.a=5, lpp.b=15, lpp.d=5, lpp.e=5, lpp.u=25)
+  x <- do.call('rbind', lapply(ids, random_profile, n=c(6, 7, 8), n_prop=1, method='LPP',
+                   lpp.a=5, lpp.b=15, lpp.d=5, lpp.e=5, lpp.u=25))
 
   depths(x) <- id ~ top + bottom
 
   # more random data
   ids <- sprintf("%s", letters[1:5])
-  y <- plyr::ldply(ids, random_profile, n=c(6, 7, 8), n_prop=4, method='LPP',
-                   lpp.a=5, lpp.b=15, lpp.d=5, lpp.e=5, lpp.u=25)
+  y <- do.call('rbind', lapply(ids, random_profile, n=c(6, 7, 8), n_prop=4, method='LPP',
+                   lpp.a=5, lpp.b=15, lpp.d=5, lpp.e=5, lpp.u=25))
 
   # alter ID, top, bottom column names
   y$pID <- y$id
@@ -133,30 +130,34 @@ test_that("combine with non-conformal spatial data", {
 
   # alter CRS, this generates an sp warning
   # 2020-07-12: now caught with all other rgdal 1.5-8+ warnings in proj4string,SoilProfileCollection-method
-  sp::proj4string(y) <- '+proj=utm +zone=10 +datum=NAD83'
+  prj(y) <- 'EPSG:26910' # NAD83 UTM Zone 10
 
-  # should throw an error
-
-
-  # this should not work, IDs aren't unqiue
-  expect_error(combine(list(x, y)), 'non-unique profile IDs detected')
-
+  # this should not work, IDs aren't unique
+  expect_error(expect_message(combine(list(x, y)),
+                              "inconsistent CRS, dropping spatial metadata"),
+               "non-unique profile IDs detected")
 
   # make IDs unique
   profile_id(y) <- sprintf("%s-copy", profile_id(y))
   profile_id(z) <- sprintf("%s-copy-copy", profile_id(z))
 
-  # remove sp data for one
+  # create non-conformal sp data for x=z
   z@sp <- new('SpatialPoints')
 
-  # remove all CRS
-  sp::proj4string(x) <- ''
-  sp::proj4string(y) <- ''
-  sp::proj4string(z) <- ''
-
-  expect_message(res <- combine(list(x, y, z)), "non-conformal point geometry, dropping spatial data")
+  res <- combine(list(x, y, z))
+  
+  # remove CRS (avoids "inconsistent CRS, dropping spatial metadata")
+  # equivalent ways to "unset" CRS: "", NA, NULL
+  prj(x) <- ''
+  prj(y) <- NULL
+  
+  expect_message(res <- combine(list(x, y, z)), "inconsistent CRS, dropping spatial metadata")
   expect_true(inherits(res, 'SoilProfileCollection'))
 
+  # coordinates are preserved, but projection is not
+  expect_null(metadata(res)$projection)
+  expect_null(metadata(res)$coordinates)
+  
   ## TODO: different coordinate names
 })
 

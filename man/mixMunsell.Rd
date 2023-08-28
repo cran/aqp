@@ -7,7 +7,7 @@
 mixMunsell(
   x,
   w = rep(1, times = length(x))/length(x),
-  mixingMethod = c("reference", "exact", "estimate", "adaptive", "spectra"),
+  mixingMethod = c("exact", "reference", "estimate", "adaptive"),
   n = 1,
   keepMixedSpec = FALSE,
   distThreshold = 0.025,
@@ -21,10 +21,10 @@ mixMunsell(
 
 \item{mixingMethod}{approach used to simulate a mixture:
 \itemize{
-\item \code{reference}  : simulate a subtractive mixture of pigments, selecting \code{n} closest reference spectra from \code{\link{munsell.spectra.wide}}
 \item \code{exact}: simulate a subtractive mixture of pigments, color conversion via CIE1931 color-matching functions (see details)
-\item \code{estimate} : closest Munsell chip to a weighted mean of CIELAB coordinates
-\item \code{adaptive} : use reference spectra when possible, falling-back to weighted mean of CIELAB coordinates
+\item \code{reference}: simulate a subtractive mixture of pigments, selecting \code{n} closest reference spectra from \code{\link{munsell.spectra.wide}} (requires \code{gower} package)
+\item \code{estimate}: closest Munsell chip to a weighted mean of CIELAB coordinates (fastest)
+\item \code{adaptive}: use \code{exact} method when possible, falling-back to \code{estimate} (weighted mean of CIELAB coordinates) otherwise
 }}
 
 \item{n}{number of closest matching color chips (\code{mixingMethod = reference} only)}
@@ -54,6 +54,8 @@ When \code{keepMixedSpec = TRUE} then a \code{list}:
 Simulate mixing of colors in Munsell notation, similar to the way in which mixtures of pigments operate.
 }
 \details{
+See the \href{https://ncss-tech.github.io/AQP/aqp/mix-colors.html}{expanded tutorial} for examples.
+
 An accurate simulation of pigment mixtures ("subtractive" color mixtures) is incredibly complex due to factors that aren't easily measured or controlled: pigment solubility, pigment particle size distribution, water content, substrate composition, and physical obstruction to name a few. That said, it is possible to simulate reasonable, subtractive color mixtures given a reference spectra library (350-800nm) and some assumptions about pigment qualities and lighting. For the purposes of estimating a mixture of soil colors (these are pigments after all) we can relax these assumptions and assume a standard light source. The only missing piece is the spectral library for all Munsell chips in our color books.
 
 Thankfully, \href{https://arxiv.org/ftp/arxiv/papers/1710/1710.06364.pdf}{Scott Burns has outlined the entire process}, and Paul Centore has provided a Munsell color chip \href{https://www.munsellcolourscienceforpainters.com}{reflectance spectra library}. The estimation of a subtractive mixture of soil colors can proceed as follows:
@@ -64,7 +66,7 @@ Thankfully, \href{https://arxiv.org/ftp/arxiv/papers/1710/1710.06364.pdf}{Scott 
 }
 \itemize{
 \item search for the closest \code{n} matching spectra in the reference library (\code{mixtureMethod = 'reference'})
-\item direct conversion of spectra to closest Munsell color via \code{\link{spec2Munsell}} ( (\code{mixtureMethod = 'exact'}))
+\item direct conversion of spectra to closest Munsell color via \code{\link[=spec2Munsell]{spec2Munsell()}} (\code{mixtureMethod = 'exact'})
 }
 \enumerate{
 \item suggest resulting Munsell chip(s) as the best candidate for a simulated mixture
@@ -81,21 +83,6 @@ For the purposes of estimating (for example) a "mixed soil color within the top 
 
 A message is printed when \code{scaledDistance} is larger than 1.
 }
-\examples{
-
-# try a couple different methods
-cols <- c('10YR 6/2', '5YR 5/6', '10B 4/4')
-mixMunsell(cols, mixingMethod = 'reference')
-mixMunsell(cols, mixingMethod = 'exact')
-mixMunsell(cols, mixingMethod = 'estimate')
-
-# 2.5 values
-cols <- c('10YR 2.5/2', '5YR 5/6')
-mixMunsell(cols, mixingMethod = 'reference')
-mixMunsell(cols, mixingMethod = 'exact')
-mixMunsell(cols, mixingMethod = 'estimate')
-
-}
 \references{
 Marcus, R.T. (1998). The Measurement of Color. In K. Nassau (Ed.), Color for Science, Art, and Technology (pp. 32-96). North-Holland.
 
@@ -109,7 +96,7 @@ Marcus, R.T. (1998). The Measurement of Color. In K. Nassau (Ed.), Color for Sci
 }
 }
 \seealso{
-\code{\link{munsell.spectra}}
+\link{munsell.spectra}
 }
 \author{
 D.E. Beaudette

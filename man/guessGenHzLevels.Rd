@@ -4,7 +4,7 @@
 \alias{guessGenHzLevels}
 \title{Guess Appropriate Ordering for Generalized Horizon Labels}
 \usage{
-guessGenHzLevels(x, hz = "genhz")
+guessGenHzLevels(x, hz = GHL(x, required = TRUE))
 }
 \arguments{
 \item{x}{a \code{SoilProfileCollection} object}
@@ -45,7 +45,7 @@ sp1$genhz <- generalize.hz(sp1$name, n, p)
 levels(sp1$genhz)
 
 # generalize horizons by depth slice
-s <- slice(sp1, c(5, 10, 15, 25, 50, 100, 150) ~ .)
+s <- dice(sp1, c(5, 10, 15, 25, 50, 100, 150) ~ .)
 s$slice <- paste0(s$top, ' cm')
 # not a factor
 levels(s$slice)

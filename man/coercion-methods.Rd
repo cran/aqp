@@ -4,7 +4,14 @@
 \name{as}
 \alias{as}
 \alias{as,SoilProfileCollection-method}
+\alias{as.data.frame,SoilProfileCollection-method}
 \title{Coerce SoilProfileCollection with \code{as()}}
+\usage{
+\S4method{as.data.frame}{SoilProfileCollection}(x)
+}
+\arguments{
+\item{x}{a SoilProfileCollection}
+}
 \value{
 list
 
@@ -15,6 +22,8 @@ tbl_df
 data.table
 
 SpatialPointsDataFrame
+
+sf
 
 SpatialPoints
 }
@@ -39,7 +48,7 @@ str(as(sp5, 'data.frame'))
 # Spatial Objects
 # make some random coordinate data for each profile
 sp5$x <- sp5$y <- rnorm(length(sp5))
-coordinates(sp5) <- ~ x + y
+initSpatial(sp5, crs = "OGC:CRS84") <- ~ x + y
 
 # SpatialPointsDataFrame output
 str(as(sp5, 'SpatialPointsDataFrame'))

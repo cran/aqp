@@ -16,14 +16,17 @@
 #' @references 
 #' \url{http://ncss-tech.github.io/AQP/}
 #' \url{http://www.brucelindbloom.com/index.html?ColorCalcHelp.html}
-#' \url{http://www.cis.rit.edu/mcsl/online/munsell.php}
 #' \url{https://www.munsellcolourscienceforpainters.com/MunsellAndKubelkaMunkToolbox/MunsellAndKubelkaMunkToolbox.html}
+#' http://www.cis.rit.edu/mcsl/online/munsell.php
 #'
 #' @return an (NA-padded) \code{data.frame} containing `hue`, `value`, `chroma`, and distance (dE00 when \code{colorSpace = 'CIE2000'}, Euclidean distance otherwise) to nearest matching color.
 #' 
 #' @export
 #'
 #' @examples 
+#' 
+#' # keep examples from using more than 2 cores
+#' data.table::setDTthreads(Sys.getenv("OMP_THREAD_LIMIT", unset = 2))
 #' 
 #' # Munsell notation to sRGB triplets [0-1] 
 #' color <- munsell2rgb(
@@ -200,8 +203,8 @@ rgb2munsell <- function(color, colorSpace = c('CIE2000', 'LAB', 'sRGB'), nCloses
 #' 
 #' @references \url{http://ncss-tech.github.io/AQP/}
 #' \url{http://www.brucelindbloom.com/index.html?ColorCalcHelp.html}
-#' \url{http://www.cis.rit.edu/mcsl/online/munsell.php}
 #' \url{https://www.munsellcolourscienceforpainters.com/MunsellAndKubelkaMunkToolbox/MunsellAndKubelkaMunkToolbox.html}
+#' http://www.cis.rit.edu/mcsl/online/munsell.php
 #' 
 #' @author D.E. Beaudette
 #' 
@@ -354,8 +357,8 @@ munsell2rgb <- function(the_hue, the_value, the_chroma, alpha = 1, maxColorValue
   
   ## TODO: maybe more efficient with keys
   # round-trip through data.table is still faster
-  d <- as.data.table(d)
-  munsell <- as.data.table(munsell)
+  d <- data.table::as.data.table(d)
+  munsell <- data.table::as.data.table(munsell)
   # join
   res <- merge(d, munsell, by = c('hue','value','chroma'), all.x = TRUE, sort = FALSE)
   # back to data.frame
@@ -422,10 +425,9 @@ munsell2rgb <- function(the_hue, the_value, the_chroma, alpha = 1, maxColorValue
 #' @param as.spc Return a data.frame-like object with ID columns?
 #'
 #' @return A SoilProfileCollection or \code{data.frame}-like object
-#' @aliases munsell2spc
 #' @seealso \code{\link{parseMunsell}} \code{\link{rgb2munsell}} \code{\link{munsell2rgb}}
-#' @export munsell2spc,SoilProfileCollection-method
-#'
+#' @export 
+#' @aliases munsell2spc
 #' @examples
 #'
 #' data(sp3)

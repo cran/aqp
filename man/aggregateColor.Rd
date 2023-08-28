@@ -23,11 +23,11 @@ aggregateColor(
 
 \item{colorSpace}{the name of color space or color distance metric to use for conversion of aggregate colors to Munsell; either CIE2000 (color distance metric), LAB, or sRGB. Default = 'CIE2000'}
 
-\item{k}{single integer specifying the number of colors discretized via PAM (cluster package), see details}
+\item{k}{single integer specifying the number of colors discretized via PAM (\code{\link[cluster:pam]{cluster::pam()}}), see details}
 
 \item{profile_wt}{the name of a site-level attribute used to modify weighting, e.g. area}
 
-\item{mixingMethod}{method used to estimate "aggregate" soil colors, see \code{\link{mixMunsell}}}
+\item{mixingMethod}{method used to estimate "aggregate" soil colors, see \code{\link[=mixMunsell]{mixMunsell()}}}
 }
 \value{
 A list with the following components:
@@ -45,6 +45,9 @@ where \code{w_i} is the weight associated with color \code{i}, \code{thickness_i
 }
 \examples{
 
+# keep examples from using more than 2 cores
+data.table::setDTthreads(Sys.getenv("OMP_THREAD_LIMIT", unset = 2))
+
 # load some example data
 data(sp1, package='aqp')
 
@@ -61,6 +64,10 @@ sp1$genhz <- generalize.hz(sp1$name, n, p)
 # aggregate colors over horizon-level attribute: 'genhz'
 a <- aggregateColor(sp1, groups = 'genhz', col = 'soil_color')
 
+# check results
+str(a)
+
+\dontrun{
 # aggregate colors over site-level attribute: 'group'
 a <- aggregateColor(sp1, groups = 'group', col = 'soil_color')
 
@@ -69,19 +76,16 @@ a <- aggregateColor(sp1, groups = 'group', col = 'soil_color')
 a <- aggregateColor(sp1, groups = 'group', col = 'soil_color', k = 4)
 
 # aggregate colors over depth-slices
-s <- slice(sp1, c(5, 10, 15, 25, 50, 100, 150) ~ soil_color)
+s <- dice(sp1, c(5, 10, 15, 25, 50, 100, 150) ~ soil_color)
 s$slice <- paste0(s$top, ' cm')
 s$slice <- factor(s$slice, levels=guessGenHzLevels(s, 'slice')$levels)
 a <- aggregateColor(s, groups = 'slice', col = 'soil_color')
 
-\dontrun{
   # optionally plot with helper function
   if(require(sharpshootR))
     aggregateColorPlot(a)
-}
 
 # a more interesting example
-\dontrun{
   data(loafercreek, package = 'soilDB')
   
   # generalize horizon names using REGEX rules
@@ -106,7 +110,7 @@ a <- aggregateColor(s, groups = 'slice', col = 'soil_color')
 
 }
 \seealso{
-\code{\link{generalize.hz}}
+\code{\link[=generalize.hz]{generalize.hz()}}
 }
 \author{
 D.E. Beaudette

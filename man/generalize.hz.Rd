@@ -2,57 +2,96 @@
 % Please edit documentation in R/generalize.hz.R
 \name{generalize.hz}
 \alias{generalize.hz}
+\alias{generalizeHz,character-method}
+\alias{generalizeHz}
+\alias{generalizeHz,SoilProfileCollection-method}
 \title{Generalize Horizon Names}
 \usage{
-generalize.hz(x, new, pat, non.matching.code = "not-used", hzdepm = NA, ...)
+generalize.hz(
+  x,
+  new,
+  pattern,
+  non.matching.code = "not-used",
+  hzdepm = NULL,
+  ordered = !missing(hzdepm),
+  ...
+)
+
+\S4method{generalizeHz}{character}(
+  x,
+  new,
+  pattern,
+  non.matching.code = "not-used",
+  hzdepm = NULL,
+  ordered = !missing(hzdepm),
+  ...
+)
+
+\S4method{generalizeHz}{SoilProfileCollection}(
+  x,
+  new,
+  pattern,
+  non.matching.code = "not-used",
+  hzdepm = NULL,
+  ordered = !missing(hzdepm),
+  ghl = "genhz",
+  ...
+)
 }
 \arguments{
-\item{x}{a character vector of horizon names}
+\item{x}{character vector of horizon names or a \code{SoilProfileCollection} object}
 
-\item{new}{a character vector of new horizon classes}
+\item{new}{character vector of generalized horizon labels (GHL)}
 
-\item{pat}{a character vector of REGEX, same length as \code{x}}
+\item{pattern}{character vector of REGEX patterns, same length as \code{new}}
 
-\item{non.matching.code}{text used to describe any horizon not matching any
-item in \code{pat}}
+\item{non.matching.code}{character, label used for any horizon not matched by \code{pattern}}
 
-\item{hzdepm}{a numeric vector of horizon mid-points, must not contain NA,
-same length as \code{x}}
+\item{hzdepm}{numeric vector of horizon mid-points; \code{NA} values in \code{hzdepm} will result in \code{non.matching.code} (or \code{NA} if not defined) in result}
 
-\item{\dots}{additional arguments passed to \code{grep()} such as
-\code{perl=TRUE} for advanced REGEX}
+\item{ordered}{logical, \code{TRUE} when \code{hzdepm} argument is specified}
+
+\item{...}{additional arguments passed to \code{grep()} such as \code{perl = TRUE} for advanced REGEX}
+
+\item{ghl}{Generalized Horizon Designation column name (to be created/updated when \code{x} is a \code{SoilProfileCollection})}
 }
 \value{
-factor of the same length as \code{x}
+factor (possibly an ordered factor) of the same length as \code{x} (if character) or as number of horizons in \code{x} (if \code{SoilProfileCollection})
 }
 \description{
 Generalize a vector of horizon names, based on new classes, and REGEX
-patterns.
+patterns. Or create a new column \code{ghl} in a \code{SoilProfileCollection} (requires a horizon designation name to be defined for the collection, see details)
+}
+\details{
+When \code{x} is a \code{SoilProfileCollection} the \code{ghl} column will be updated with the factor results. This requires that the "horizon designation name" metadata be defined for the collection to set the column for input designations.
 }
 \examples{
-
-\dontrun{
 
 data(sp1)
 
 # check original distribution of hz designations
 table(sp1$name)
 
-# generalize
-sp1$genhz <- generalize.hz(sp1$name,
-                           new=c('O','A','B','C','R'),
-                           pat=c('O', '^A','^B','C','R'))
+# generalized horizon labels
+# character vector input
+sp1$genhz <- generalizeHz(
+  sp1$name,
+  new = c('O','A','B','C','R'),
+  pattern = c('O', '^A','^B','C','R'),
+  ordered = TRUE
+)
 
 # see how we did / what we missed
 table(sp1$genhz, sp1$name)
 
 
-## a more advanced example, requries perl=TRUE
+## a more advanced example, requries `perl = TRUE`
 # example data
 x <- c('A', 'AC', 'Bt1', '^AC', 'C', 'BC', 'CB')
 
 # new labels
 n <- c('A', '^AC', 'C')
+
 # patterns:
 # "A anywhere in the name"
 # "literal '^A' anywhere in the name"
@@ -60,13 +99,43 @@ n <- c('A', '^AC', 'C')
 p <- c('A', '^A', '(?<!A)C')
 
 # note additional argument
-res <- generalize.hz(x, new = n, pat=p, perl=TRUE)
+res <- generalizeHz(
+  x, 
+  new = n, 
+  pattern = p, 
+  perl = TRUE
+)
 
 # double-check: OK
 table(res, x)
 
-}
+## apply to a SoilProfileCollection
+data(sp1)
+depths(sp1) <- id ~ top + bottom
 
+# must set horizon designation metadata
+hzdesgnname(sp1) <- 'name'
+
+# result is a SoilProfileCollection
+x <- generalizeHz(
+  sp1,
+  new = c('O','A','B','C','R'),
+  pattern = c('O', '^A','^B','C','R'),
+  ordered = TRUE
+)
+
+# GHL stored in 'genhz' column
+x$genhz
+
+# GHL metadata is set
+GHL(x)
+
+}
+\references{
+Beaudette, D. E., Roudier, P., & Skovlin, J. (2016). Probabilistic representation of genetic soil horizons. Digital soil morphometrics, 281-293.
+}
+\seealso{
+\code{\link[=hzdesgnname]{hzdesgnname()}}
 }
 \author{
 D.E. Beaudette

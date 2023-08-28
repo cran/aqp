@@ -1,8 +1,6 @@
 
 
 #' @title Visualize soil colors in Munsell notation according to within-group frequency.
-#' 
-#'
 #' @param m character vector of color in Munsell notation ('10YR 4/6')
 #' 
 #' @param g factor describing group membership, typically a generalization of horizon designation, default value will generate a fake grouping that covers all of the colors in `m`
@@ -21,12 +19,13 @@
 #' 
 #' @param annotate.cex scaling factor for chip frequency annotation
 #' 
-#' @param annotate.type character, within-group `count` or `percentage` 
+#' @param annotate.type character, within-group `count` or `percentage`
+#'
+#' @param threshold numeric within 0-1, color chips with proportion `< threshold` are removed
 #'
 #' @return a `trellis` object
 #' 
 #' @export
-#'
 #' @examples
 #' 
 #' # required for latticeExtra:useOuterStrips
@@ -48,7 +47,6 @@
 #'   
 #'   # annotation of frequency
 #'   colorChart(ric, chip.cex = 4, annotate = TRUE)
-#'   
 #'   
 #'   # bootstrap to larger size
 #'   ric.big <- sample(ric, size = 100, replace = TRUE)
@@ -82,9 +80,13 @@
 #'   # note special panel used to show neutral hues
 #'   colorChart(cols, size = FALSE, annotate = TRUE)
 #'   
+#'   # filter proportions below given threshold
+#'   colorChart(cols, size = FALSE, annotate = TRUE, threshold = 0.01, 
+#'   chip.cex = 4, annotate.type = 'percentage')
+#'   
 #' }
 #' 
-colorChart <- function(m, g = factor('All'), size = TRUE, annotate = FALSE, chip.cex = 3, chip.cex.min = 0.1, chip.cex.max = 1.5, chip.border.col = 'black', annotate.cex = chip.cex * 0.25, annotate.type = c('count', 'percentage')) {
+colorChart <- function(m, g = factor('All'), size = TRUE, annotate = FALSE, chip.cex = 3, chip.cex.min = 0.1, chip.cex.max = 1.5, chip.border.col = 'black', annotate.cex = chip.cex * 0.25, annotate.type = c('count', 'percentage'), threshold = NULL) {
   
   # custom panel function defined here, so that it can "find" data within the colorChart function scope
   panel.colorChart <- function(x, y, subscripts = subscripts, ...) {
@@ -123,7 +125,7 @@ colorChart <- function(m, g = factor('All'), size = TRUE, annotate = FALSE, chip
       ann.txt <- switch(
         annotate.type,
         'count' = round(p.data$count),
-        'percentage' = round(100 * p.data$prop)
+        'percentage' = signif(100 * p.data$prop, 2)
       )
       
       # adjust based on lightness
@@ -184,6 +186,22 @@ colorChart <- function(m, g = factor('All'), size = TRUE, annotate = FALSE, chip
   # filter 0s
   tab$prop <- ifelse(is.na(tab$prop), 0, tab$prop)
   tab <- tab[which(tab$prop > 0), ]
+  
+  # apply optional threshold on proportions
+  if( !is.null(threshold) ) {
+    # sanity check
+    if(threshold < 0 && threshold > 1) {
+      message('ignoring out of bounds threshold')
+    } else {
+     # apply threshold
+      tab <- tab[which(tab$prop > threshold), ]
+    }
+  }
+  
+  # check for 0 rows (too much filtering)
+  if(nrow(tab) < 1) {
+    stop('all rows have been removed, consider setting `threshold` higher', call. = FALSE)
+  }
   
   # convert colors
   tab$.color <- parseMunsell(tab$.munsell)
@@ -255,7 +273,7 @@ colorChart <- function(m, g = factor('All'), size = TRUE, annotate = FALSE, chip
   )
   
   # assemble basic plot
-  pp <- xyplot(
+  pp <- lattice::xyplot(
     value ~ chroma | hue + .groups, 
     data = tab,
     as.table = TRUE,
@@ -300,7 +318,7 @@ colorChart <- function(m, g = factor('All'), size = TRUE, annotate = FALSE, chip
     x.at.list <- rep(x.at.list, times = n.groups)
     x.limits.list <- rep(x.limits.list, times = n.groups)
     
-    pp <- xyplot(
+    pp <- lattice::xyplot(
       value ~ chroma | hue + .groups, 
       data = tab,
       as.table = TRUE,

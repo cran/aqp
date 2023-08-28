@@ -2,6 +2,85 @@
 ## document data here
 ## don't forget: @usage data(XXX)
 
+
+#' @title Example Output from soilDB::fetchOSD()
+#' @description An example `SoilProfileCollection` object created by `soilDB::fetchOSD()`, derived from the Cecil, Appling, and Bonneau Official Series Descriptions.
+#' @keywords datasets
+#' @usage data(osd)
+#' @format A `SoilProfileCollection`
+"osd"
+
+
+
+#' @title Example Data from Wilson et al. 2022
+#' @description An example `SoilProfileCollection`, derived from Wilson et al., 2022. Select data extracted from Appendix tables.
+#' @keywords datasets
+#' @usage data(wilson2022)
+#' @format A `SoilProfileCollection` with the following elements. Total elemental analysis by lithium borate fusion.
+#' 
+#' Horizon level attributes:
+#'   * name: horizon designation
+#'   * Al2O3: total Al (wt %)
+#'   * Fe2O3: total Fe (wt %)
+#'   * K2O: total K (wt %)
+#'   * MgO: total Mg (wt %)
+#'   * Na2O: total Na (wt %)
+#'   * P2O5: total P (wt %)
+#'   * SiO2: total Si (wt %)
+#'   * CaO: total Ca(wt %)
+#'   * Alo: Oxalate Extractable Al (g/kg)
+#'   * Feo: Oxalate Extractable Fe (g/kg)
+#'   * Fed: Dithionite extractable Fe (g/kg)
+#'   * Fed_minus_Feo: Crystalline Fe (hydr)oxides (g/kg)
+#'   * CIA: Chemical Index of Alteration, see original paper (ratio, unitless)
+#'   * Fed_div_Fet: (ratio, unitless)
+#'   * Fet: Total Fe from lithium borate fusion (g/kg)
+#'   * resin_Pi: Hedley phosphorus fractions (mg/kg)
+#'   * NaHCO3_Pi: Hedley phosphorus fractions (mg/kg) 
+#'   * labile_Pi: Sum of resin Pi and NaHCO3 Pi (mg/kg)
+#'   * NaCO3_Po: Hedley phosphorus fractions (mg/kg)
+#'   * NaOH_Pi: Hedley phosphorus fractions (mg/kg)
+#'   * NaOH_Po: Hedley phosphorus fractions (mg/kg)
+#'   * Ca_Pi: Hedley phosphorus fractions (mg/kg)
+#'   * organic_P: Sum of NaHCO3 and NaOH Po fractions (mg/kg)
+#'   * total_P: Total P from lithium borate fusion (mg/kg)
+#'   * occluded_P: Difference between total P and sum of Hedley P fractions (mg/kg)
+#'   * top: horizon top depth (cm)
+#'   * bottom: horizon bottom depth (cm)
+#'   * pedonID: pedon ID (serial number)
+#'   
+#' Site level attributes:
+#'   * pm: parent material group
+#'   * biome: biome
+#'
+#' @references 
+#' Stewart G. Wilson, Randy A. Dahlgren, Andrew J. Margenot, Craig Rasmussen, Anthony T. O'Geen. 2022. Expanding the Paradigm: The influence of climate and lithology on soil phosphorus, Geoderma: 421. \doi{10.1016/j.geoderma.2022.115809}
+#' 
+#' 
+#' 
+#' @examples 
+#' 
+#' data(wilson2022)
+#' 
+#' groupedProfilePlot(wilson2022, groups = 'pm', 
+#' group.name.offset = -15, label = 'biome', 
+#' name.style = 'center-center', color = 'CIA', 
+#' cex.names = 0.66, cex.id = 0.66, width = 0.3, 
+#' depth.axis = FALSE, hz.depths = TRUE)
+#' 
+#' groupedProfilePlot(wilson2022, groups = 'biome', 
+#' group.name.offset = -15, label = 'pm', 
+#' name.style = 'center-center', color = 'Fet', 
+#' cex.names = 0.66, cex.id = 0.66, width = 0.3, 
+#' depth.axis = FALSE, hz.depths = TRUE)
+#' 
+"wilson2022"
+
+
+
+
+
+
 #' Soil Profile Data Example 1
 #'
 #' Soil profile data from Pinnacles National Monument, CA.
@@ -38,7 +117,7 @@
 #' # re-sample each profile into 1 cm (thick) depth slices
 #' # for the variables 'prop', 'name', 'soil_color'
 #' # result is a SoilProfileCollection object
-#' s <- slice(sp1, 0:25 ~ prop + name + soil_color)
+#' s <- dice(sp1, 0:25 ~ prop + name + soil_color)
 #'
 #' # plot, note slices
 #' plot(s)
@@ -92,6 +171,9 @@ NULL
 #' @keywords datasets
 #' @examples
 #'
+#' # keep examples from using more than 2 cores
+#' data.table::setDTthreads(Sys.getenv("OMP_THREAD_LIMIT", unset = 2))
+#'
 #' data(sp2)
 #'
 #' # convert into SoilProfileCollection object
@@ -116,8 +198,7 @@ NULL
 #'
 #' # compute numerical distances between profiles
 #' # based on select horizon-level properties, to a depth of 200 cm
-#' d <- profile_compare(sp2, vars=c('prop','field_ph','hue'),
-#' max_d=200, k=0, sample_interval=5, rescale.result=TRUE)
+#' d <- NCSP(sp2, vars=c('prop','field_ph','hue'), maxDepth = 100, k = 0)
 #'
 #' # plot dendrogram with ape package:
 #' if(require(ape) & require(cluster)) {
@@ -188,9 +269,9 @@ NULL
 #'   # convert back to wide format
 #'   library(data.table)
 #'
-#'   a.wide.q25 <- dcast(a, top + bottom ~ variable, value.var = c('p.q25'))
-#'   a.wide.q50 <- dcast(a, top + bottom ~ variable, value.var = c('p.q50'))
-#'   a.wide.q75 <- dcast(a, top + bottom ~ variable, value.var = c('p.q75'))
+#'   a.wide.q25 <- dcast(as.data.table(a), top + bottom ~ variable, value.var = c('p.q25'))
+#'   a.wide.q50 <- dcast(as.data.table(a), top + bottom ~ variable, value.var = c('p.q50'))
+#'   a.wide.q75 <- dcast(as.data.table(a), top + bottom ~ variable, value.var = c('p.q75'))
 #'
 #'   # add a new id for the 25th, 50th, and 75th percentile pedons
 #'   a.wide.q25$id <- 'Q25'
@@ -201,8 +282,12 @@ NULL
 #'   vars <- c('top', 'bottom', 'id', 'clay', 'cec', 'ph', 'h', 's', 'v')
 #'   # make data.frame version of sp3
 #'   sp3.df <- as(sp3, 'data.frame')
-#'   sp3.grouped <- rbind(sp3.df[, vars], a.wide.q25[, vars], a.wide.q50[, vars], a.wide.q75[, vars])
-#'
+#' 
+#'   sp3.grouped <- as.data.frame(rbind(as.data.table(horizons(sp3))[, .SD, .SDcol = vars], 
+#'                                      a.wide.q25[, .SD, .SDcol = vars],
+#'                                      a.wide.q50[, .SD, .SDcol = vars], 
+#'                                      a.wide.q75[, .SD, .SDcol = vars]))
+#'                                      
 #'   # re-constitute the soil color from HSV triplets
 #'   # convert HSV back to standard R colors
 #'   sp3.grouped$soil_color <- with(sp3.grouped, hsv(h, s, v))
@@ -216,58 +301,64 @@ NULL
 #'     round(sp3.grouped$ph, 1)
 #'   )
 #'
-#'   ## perform comparison, and convert to phylo class object
-#'   ## D is rescaled to [0,]
-#'   d <- profile_compare(
-#'                         sp3.grouped,
-#'                         vars = c('clay', 'cec', 'ph'),
-#'                         max_d = 100,
-#'                         k = 0.01,
-#'                         replace_na = TRUE,
-#'                         add_soil_flag = TRUE,
-#'                         rescale.result = TRUE
-#'                       )
-#'
-#'   h <- agnes(d, method = 'ward')
-#'   p <- ladderize(as.phylo(as.hclust(h)))
-#'
-#'   # look at distance plot-- just the median profile
-#'   plot_distance_graph(d, 12)
-#'
-#'   # similarity relative to median profile (profile #12)
-#'   round(1 - (as.matrix(d)[12,] / max(as.matrix(d)[12,])), 2)
-#'
-#'   ## make dendrogram + soil profiles
-#'   # first promote to SoilProfileCollection
-#'   depths(sp3.grouped) <- id ~ top + bottom
-#'
-#'   # setup plot: note that D has a scale of [0,1]
-#'   par(mar = c(1, 1, 1, 1))
-#'
-#'   # get the last plot geometry
-#'   lastPP <- get("last_plot.phylo", envir = .PlotPhyloEnv)
-#'
-#'   # the original labels, and new (indexed) order of pedons in dendrogram
-#'   d.labels <- attr(d, 'Labels')
-#'
-#'   new_order <- sapply(1:lastPP$Ntip,
-#'                       function(i)
-#'                         which(as.integer(lastPP$xx[1:lastPP$Ntip]) == i))
-#'
-#'   # plot the profiles, in the ordering defined by the dendrogram
-#'   # with a couple fudge factors to make them fit
-#'   plot(
-#'     sp3.grouped,
-#'     color = "soil_color",
-#'     plot.order = new_order,
-#'     scaling.factor = 0.01,
-#'     width = 0.1,
-#'     cex.names = 0.5,
-#'     y.offset = max(lastPP$yy) + 0.1,
-#'     add = TRUE
-#'   )
+#' 
+#' # first promote to SoilProfileCollection
+#' depths(sp3.grouped) <- id ~ top + bottom
+#' 
+#' plot(sp3.grouped)
+#' 
+#' ## perform comparison, and convert to phylo class object
+#' ## D is rescaled to [0,]
+#' d <- NCSP(
+#'   sp3.grouped,
+#'   vars = c('clay', 'cec', 'ph'),
+#'   maxDepth = 100,
+#'   k = 0.01
+#' )
+#' 
+#' h <- agnes(d, method = 'ward')
+#' p <- ladderize(as.phylo(as.hclust(h)))
+#' 
+#' # look at distance plot-- just the median profile
+#' plot_distance_graph(d, 12)
+#' 
+#' # similarity relative to median profile (profile #12)
+#' round(1 - (as.matrix(d)[12, ] / max(as.matrix(d)[12, ])), 2)
+#' 
+#' ## make dendrogram + soil profiles
+#' 
+#' # setup plot: note that D has a scale of [0,1]
+#' par(mar = c(1, 1, 1, 1))
+#' p.plot <- plot(p,
+#'                cex = 0.8,
+#'                label.offset = 3,
+#'                direction = 'up',
+#'                y.lim = c(200, 0),
+#'                x.lim = c(1.25, length(sp3.grouped) + 1),
+#'                show.tip.label = FALSE)
+#' 
+#' # get the last plot geometry
+#' lastPP <- get("last_plot.phylo", envir = .PlotPhyloEnv)
+#' 
+#' # the original labels, and new (indexed) order of pedons in dendrogram
+#' d.labels <- attr(d, 'Labels')
+#' 
+#' new_order <- sapply(1:lastPP$Ntip,
+#'                     function(i)
+#'                       which(as.integer(lastPP$xx[1:lastPP$Ntip]) == i))
+#' 
+#' # plot the profiles, in the ordering defined by the dendrogram
+#' # with a couple fudge factors to make them fit
+#' plotSPC(
+#'   sp3.grouped,
+#'   color = "soil_color",
+#'   plot.order = new_order,
+#'   y.offset = max(lastPP$yy) + 10,
+#'   width = 0.1,
+#'   cex.names = 0.5,
+#'   add = TRUE
+#' )
 #' }
-#'
 NULL
 
 #' Soil Chemical Data from Serpentinitic Soils of California
@@ -411,21 +502,7 @@ NULL
 #'
 #' @name sp5
 #' @docType data
-#' @format \preformatted{ Formal class 'SoilProfileCollection' [package "aqp"]
-#' with 6 slots ..@ idcol : chr "soil" ..@ depthcols: chr [1:2] "top" "bottom"
-#' ..@ metadata :'data.frame': 1 obs. of 1 variable: .. ..$ depth_units: chr
-#' "cm" ..@ horizons :'data.frame': 1539 obs. of 17 variables: .. ..$ soil :
-#' soil ID .. ..$ sand : sand .. ..$ silt : silt .. ..$ clay : clay .. ..$ R25
-#' : RGB r-coordinate .. ..$ G25 : RGB g-coordinate .. ..$ B25 : RGB
-#' b-coordinate .. ..$ pH : pH .. ..$ EC : EC .. ..$ CaCO3 : CaC03 content ..
-#' ..$ C : C content .. ..$ Ca : Ca .. ..$ Mg : Mg .. ..$ Na : Na .. ..$ top :
-#' horizon top boundary (cm) .. ..$ bottom : horizon bottom boundary (cm) ..
-#' ..$ soil_color: soil color in r-friendly format ..@ site :'data.frame': 296
-#' obs. of 1 variable: .. ..$ soil: chr [1:296] "soil1" "soil10" "soil100"
-#' "soil101" ...  ..@ sp :Formal class 'SpatialPoints' [package "sp"] with 3
-#' slots .. .. ..@ coords : num [1, 1] 0 .. .. ..@ bbox : logi [1, 1] NA .. ..
-#' ..@ proj4string:Formal class 'CRS' [package "sp"] with 1 slots .. .. .. ..
-#' ..@ projargs: chr NA }
+#' @format `SoilProfileCollection` object
 #' @references F. Carre, M.C. Girard. 2002. Quantitative mapping of soil types
 #' based on regression kriging of taxonomic distances with landform and land
 #' cover attributes. Geoderma. 110: 241--263.
@@ -435,6 +512,7 @@ NULL
 #' @keywords datasets
 #' @examples
 #'
+#' \dontrun{
 #' library(scales)
 #' data(sp5)
 #' par(mar=c(1,1,1,1))
@@ -515,33 +593,7 @@ NULL
 #' polygon(c(1:25, 25:1), c((100-r)+150, rep((300*sf)+yo, times=25)),
 #' border='black', col=rgb(0,0,0.8, alpha=0.25))
 #'
-#'
-#' ##
-#' # sample 25 profiles from the collection
-#' s <- sp5[sample(1:length(sp5), size=25), ]
-#' # compute pair-wise dissimilarity
-#' d <- profile_compare(s, vars=c('R25','pH','clay','EC'), k=0,
-#' replace_na=TRUE, add_soil_flag=TRUE, max_d=300)
-#' # keep only the dissimilarity between profile 1 and all others
-#' d.1 <- as.matrix(d)[1, ]
-#' # rescale dissimilarities
-#' d.1 <- rescale(d.1, to=c(80, 0))
-#' # sort in ascending order
-#' d.1.order <- rev(order(d.1))
-#' # plotting parameters
-#' yo <- 100 # y-offset
-#' sf <- 0.65 # scaling factor
-#' # plot sketches
-#' par(mar=c(0,0,0,0))
-#' plot(s, max.depth=300, y.offset=yo, scaling.factor=sf, plot.order=d.1.order)
-#' # add dissimilarity values with lines/points
-#' lines(1:25, d.1[d.1.order])
-#' points(1:25, d.1[d.1.order], pch=16)
-#' # link dissimilarity values with profile sketches via arrows
-#' arrows(1:25, d.1[d.1.order], 1:25, 95, len=0.1)
-#' # add an axis for the dissimilarity scale
-#' axis(2, at=pretty(0:80), labels=rev(pretty(0:80)), line=-1, cex.axis=0.75, las=2)
-#'
+#' }
 #'
 #'
 NULL
@@ -594,6 +646,8 @@ NULL
 #'
 #'
 NULL
+
+
 #' Soil Physical and Chemical Data Related to Studies in the Sierra Nevada
 #' Mountains, CA, USA.
 #'
@@ -744,10 +798,10 @@ NULL
 #' 	ca <- ca[-missing.coords.idx, ]
 #'
 #' # register spatial data
-#' coordinates(ca) <- ~ lon + lat
+#' initSpatial(ca) <- ~ lon + lat
 #'
 #' # assign a coordinate reference system
-#' proj4string(ca) <- '+proj=longlat +datum=NAD83'
+#' prj(ca) <- 'EPSG:4269'
 #'
 #' # check the result
 #' print(ca)
@@ -796,19 +850,6 @@ NULL
 #' )
 #'
 #'
-#' # extract a SPDF with horizon data along a slice at 25 cm
-#' s.25 <- slice(ca, fm=25 ~ bs_7 + CEC7 + ex_acid)
-#' spplot(
-#' s.25, zcol=c('bs_7','CEC7','ex_acid'), 
-#' par.settings = tactile.theme,
-#' layout = c(3,1)
-#' )
-#'
-#' # note that the ordering is preserved:
-#' all.equal(s.25$pedon_key, profile_id(ca))
-#'
-#' # extract a data.frame with horizon data at 10, 20, and 50 cm
-#' s.multiple <- slice(ca, fm=c(10,20,50) ~ bs_7 + CEC7 + ex_acid)
 #'
 #' # Extract the 2nd horizon from all profiles as SPDF
 #' ca.2 <- ca[, 2]
@@ -946,19 +987,22 @@ NULL
 #' @keywords datasets
 #'
 #' @examples
-#'
+#' 
+#' # keep examples from using more than 2 cores
+#' data.table::setDTthreads(Sys.getenv("OMP_THREAD_LIMIT", unset = 2))
+#' 
 #' # load
 #' data(jacobs2000)
 #'
 #' # basic plot
-#' par(mar=c(0,1,3,3))
-#' plot(jacobs2000, name='name', color='matrix_color', width=0.3)
+#' par(mar=c(0, 1, 3, 1.5))
+#' plotSPC(jacobs2000, name='name', color='matrix_color', width=0.3)
 #' # add concentrations
 #' addVolumeFraction(jacobs2000, 'concentration_pct',
 #' col = jacobs2000$concentration_color, pch = 16, cex.max = 0.5)
 #'
 #' # add depletions
-#' plot(jacobs2000, name='name', color='matrix_color', width=0.3)
+#' plotSPC(jacobs2000, name='name', color='matrix_color', width=0.3)
 #' addVolumeFraction(jacobs2000, 'depletion_pct',
 #' col = jacobs2000$depletion_color, pch = 16, cex.max = 0.5)
 #'
@@ -989,6 +1033,7 @@ NULL
 #'
 #'
 "jacobs2000"
+
 
 #' Average Hydraulic Parameters from the ROSETTA Model by USDA Soil Texture
 #' Class
@@ -1084,129 +1129,6 @@ NULL
 #'
 "ROSETTA.centroids"
 
-#' Sample XRD Patterns
-#'
-#' Several sample XRD patterns from the RRUFF project site.
-#'
-#'
-#' @name rruff.sample
-#' @docType data
-#' @usage data(rruff.sample)
-#' @format A data frame with 3000 observations on the following 8 variables.
-#' \describe{ \item{twotheta}{twotheta values}
-#' \item{nontronite}{XRD pattern for nontronite}
-#' \item{montmorillonite}{XRD pattern for montmorillonite}
-#' \item{clinochlore}{XRD pattern for clinochlore}
-#' \item{antigorite}{XRD pattern for antigorite}
-#' \item{chamosite}{XRD pattern for chamosite}
-#' \item{hematite}{XRD pattern for hematite}
-#' \item{goethite}{XRD pattern for goethite} }
-#' @references http://rruff.info/
-#' @source http://rruff.info/
-#' @keywords datasets
-#' @examples
-#'
-#' data(rruff.sample)
-#'
-#' # plot all patterns
-#' matplot(rruff.sample, type='l', lty=1)
-#'
-#'
-"rruff.sample"
-
-#' @title Pantone Colors / Munsell Lookup Table
-#'
-#' @description A simple lookup table to convert \href{https://en.wikipedia.org/wiki/Pantone}{Pantone spot colors} into Munsell notation. Association is based on the "closest" Munsell color via \href{https://en.wikipedia.org/wiki/Color_difference#CIEDE2000}{CIE2000 distance metric (dE00)}. This is an experimental association between the two color systems and should not be used for precision color matching or mixing applications.
-#'
-#' Possible uses include rough estimation of soil colors in the field, by means of color swatches based on the Pantone system. This type of color matching is most appropriate in an educational setting where official soil color books may be too expensive.
-#'
-#' @keywords datasets
-#'
-#' @usage data(pms.munsell.lut)
-#'
-#' @format
-#' \describe{
-#'   \item{code}{Pantone spot color code}
-#'   \item{hex}{hex representation of sRGB colorspace, suitable for on-screen use}
-#'   \item{munsell}{Munsell notation of closest color "chip"}
-#'   \item{dE00}{delta-E 2000 metric describing the (perceptual) distance to the closest Munsell chip}
-#' }
-#'
-#' @references Data were sourced from:
-#' \itemize{
-#' \item{coated colors: }{\url{https://raw.githubusercontent.com/ajesma/Pantoner/gh-pages/csv/pantone-coated.csv}}
-#' \item{uncoated colors: }{\url{https://github.com/ajesma/Pantoner/raw/gh-pages/csv/pantone-uncoated.csv}}
-#' }
-#'
-#' @details Conversion from PMS to Munsell is performed by [`PMS2Munsell`] or manual subset of the lookup table (see examples 1 and 2 below) or implicit subset by way of a join (example 3). Conversion from Munsell to PMS will not always result in a matching color, see example 3 below.
-#'
-#' @note The lookup table contains entries for both coated and un-coated colors, these are identified by a '-c' or '-u' suffix. For example, PMS code '100-c' is associated with '10Y 9/9'.
-#'
-#'
-#' Several Munsell chips are matched by multiple Pantone spot colors, e.g. 5YR 5/5.
-#'
-#' 1    2    3    4    5    6    8    9
-#' 0.65 0.24 0.08 0.02 0.01 0.00 0.00 0.00
-#'
-#' @examples
-#'
-#' # load LUT
-#' data(pms.munsell.lut)
-#'
-#' ## 1. Munsell -> Pantone
-#'
-#' # colors to match
-#' colors <- c('10YR 3/3', '7.5YR 4/6')
-#'
-#' # index / subset match
-#' idx <- pms.munsell.lut$munsell %in% colors
-#' m <- pms.munsell.lut[idx, ]
-#'
-#' # simple display
-#' colorContrastPlot(m1 = m$munsell[1], m2 = m$munsell[2], labels = m$code)
-#'
-#' ## 2. Pantone -> Munsell
-#' codes <- c('723-c', '451-c')
-#'
-#' # index / subset match
-#' m <- PMS2Munsell(codes)
-#'
-#' # simple display
-#' colorContrastPlot(m1 = m$munsell[1], m2 = m$munsell[2], labels = m$code)
-
-#' ## 3. multiple Pantone colors matching a single Munsell color
-#' #
-#' colors <- pms.munsell.lut[pms.munsell.lut$munsell == '5YR 5/5', ]
-#' colors <- colors[order(colors$dE00), ]
-#'
-#' par(mar = c(0, 0, 2, 0), fg = 'white', bg = 'black')
-#' soilPalette(colors$hex, lab = colors$code)
-#' title('Pantone Colors Roughly Matching 5YR 5/5', col.main = 'white', line = 0)
-#' 
-#' ## 4. integration with SPC
-#' data(pms.munsell.lut)
-#' data(sp6)
-#' depths(sp6) <- id ~ top + bottom
-#'
-#' # get the closest Munsell chip from color meter data
-#' sp6$munsell <- getClosestMunsellChip(sp6$color, convertColors = FALSE)
-#' 
-#' # prepare a subset of the PMS lookup table where we take the first match to a Munsell chip
-#' #  this ensures the relationship between munsell chip and Pantone color is 1:1
-#' pms.munsell.first <- do.call('rbind', lapply(split(pms.munsell.lut, 
-#'                                                    pms.munsell.lut$munsell), 
-#'                                              function(x) x[1, ]))
-#' 
-#' # LEFT JOIN PMS table to existing horizons in SPC (on 'munsell' column)
-#' horizons(sp6) <- pms.munsell.first
-#'
-#' # graphical check
-#' par(mar = c(0, 0, 2, 1))
-#' plotSPC(sp6, color = 'hex')
-#'
-#'
-"pms.munsell.lut"
-
 
 #'
 #' @title US State Soils
@@ -1288,55 +1210,99 @@ NULL
 #' Teacher, May 2000. 2. Schwertmann, U. 1993. Relations Between Iron Oxides,
 #' Soil Color, and Soil Formation. "Soil Color". SSSA Special Publication no.
 #' 31, pages 51--69.
-#' @source
-#' \url{https://www.nrcs.usda.gov/wps/portal/nrcs/detail/soils/edu/?cid=nrcs142p2_054286}
 #' @keywords datasets
 #' @examples
 #'
 #' \dontrun{
+#' 
 #' library(aqp)
 #' library(ape)
 #' library(cluster)
-#' library(colorspace)
-#'
+#' library(farver)
+#' 
 #' # load common soil mineral colors
 #' data(soil_minerals)
+#' 
 #' # convert Munsell to R colors
-#' soil_minerals$col <- munsell2rgb(soil_minerals$hue, soil_minerals$value,
-#' soil_minerals$chroma)
-#'
+#' soil_minerals$col <- munsell2rgb(
+#'   soil_minerals$hue, 
+#'   soil_minerals$value,
+#'   soil_minerals$chroma
+#' )
+#' 
 #' # make a grid for plotting
 #' n <- ceiling(sqrt(nrow(soil_minerals)))
+#' 
 #' # read from top-left to bottom-right
 #' g <- expand.grid(x=1:n, y=n:1)[1:nrow(soil_minerals),]
-#'
+#' 
 #' # convert Munsell -> sRGB -> LAB
-#' col.rgb <- munsell2rgb(soil_minerals$hue, soil_minerals$value,
-#' soil_minerals$chroma, return_triplets = TRUE)
-#' col.lab <- as(sRGB(as.matrix(col.rgb)), 'LAB')@coords
+#' col.rgb <- munsell2rgb(
+#'   soil_minerals$hue,
+#'   soil_minerals$value,
+#'   soil_minerals$chroma,
+#'   return_triplets = TRUE
+#' )
+#' 
+#' # sRGB values expected to be in the range [0,255]
+#' col.rgb <- col.rgb * 255
+#' 
+#' # convert from sRGB -> CIE LAB
+#' col.lab <- convert_colour(
+#'   col.rgb , from = 'rgb',
+#'   to = 'lab', white_from = 'D65'
+#' )
+#' 
+#' # keep track of soil mineral names
+#' # in a way that will persist in a dist obj
 #' row.names(col.lab) <- soil_minerals$mineral
-#'
+#' 
+#' # perceptual distance via CIE dE00
+#' d <- compare_colour(
+#'   from = col.lab,
+#'   to = col.lab,
+#'   from_space = 'lab',
+#'   to_space = 'lab',
+#'   white_from = 'D65',
+#'   method = 'CIE2000'
+#' )
+#' 
+#' # matrix -> dist
+#' d <- as.dist(d)
+#' 
 #' # divisive hierarchical clustering of LAB coordinates
-#' d <- daisy(col.lab)
 #' h <- as.hclust(diana(d))
 #' p <- as.phylo(h)
-#'
+#' 
+#' # colors, in order based on clustering
+#' # starting from top-left
+#' min.cols <- rev(soil_minerals$col[h$order])
+#' 
+#' # mineral names, in order based on clustering
+#' # starting from top-left
+#' min.names <- rev(soil_minerals$mineral[h$order])
+#' 
+#' min.munsell <- rev(soil_minerals$color[h$order])
+#' 
 #' # plot grid of mineral names / colors
-#' layout(matrix(c(1,2), nrow=1), widths = c(1.25,1))
-#' par(mar=c(1,0,0,1))
-#' plot(g$x, g$y, pch=15, cex=12, axes=FALSE, xlab='', ylab='',
-#' col=rev(soil_minerals$col[h$order]), xlim=c(0.5,5.5), ylim=c(1.5,5.5))
-#' text(g$x, g$y, rev(soil_minerals$mineral[h$order]), adj=c(0.45,5), cex=1, font=2)
-#' text(g$x, g$y, rev(soil_minerals$color[h$order]), col='white', pos=1, cex=0.85, font=2)
-#' title(main='Common Soil Minerals', line=-2, cex.main=2)
-#' mtext('http://www.nrcs.usda.gov/wps/portal/nrcs/detail/soils/edu/?cid=nrcs142p2_054286',
-#' side=1, cex=0.75, line=-1.5)
-#' mtext('U. Schwertmann, 1993. SSSA Special Publication no. 31, pages 51--69', side=1,
-#' cex=0.75, line=-0.5)
-#'
+#' layout(matrix(c(1, 2), nrow = 1), widths = c(1.25, 1))
+#' 
+#' par(mar = c(1, 0, 0, 1))
+#' plot(g$x, g$y, pch = 15, cex = 12, axes = FALSE, xlab = '', ylab = '',
+#'      col = min.cols, 
+#'      xlim = c(0.5, 5.5), ylim = c(1.5, 5.5)
+#' )
+#' text(g$x, g$y, min.names, adj = c(0.45, 5.5), cex = 0.75, font = 2)
+#' text(g$x, g$y, min.munsell, col = invertLabelColor(min.cols), cex = 0.85, font = 2)
+#' 
+#' title(main = 'Common Soil Pigments', line = -1.75, cex.main = 2)
+#' mtext('U. Schwertmann, 1993. SSSA Special Publication no. 31, pages 51--69', side = 1,
+#'       cex = 0.75, line = -1.5)
+#' 
 #' # dendrogram + tip labels with mineral colors
-#' plot(p, cex=0.85, label.offset=1, font=1)
-#' tiplabels(pch=15, cex=4, col=soil_minerals$col)
+#' plot(p, cex = 0.85, label.offset = 5, font = 1)
+#' tiplabels(pch = 15, cex = 3, offset = 2, col = soil_minerals$col)
+
 #'
 #' }
 #'
@@ -1514,6 +1480,17 @@ NULL
 #' @usage data(munsellHuePosition)
 #' 
 "munsellHuePosition"
+
+
+#' @title pH Reaction Classes
+#' 
+#' @description Levels of pH (reaction) classes including descriptive name, and range from low to high pH
+#' @references Soil Science Division Staff. (2017) Soil Survey Manual. C. Ditzler, K. Scheffe, and H.C. Monger (eds.). USDA Handbook 18. Government Printing Office, Washington, D.C.
+#' @keywords datasets
+#' @usage data(reactionclass)
+#' 
+"reactionclass"
+
 
 
 

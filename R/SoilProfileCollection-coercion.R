@@ -28,14 +28,13 @@
 #' # Spatial Objects
 #' # make some random coordinate data for each profile
 #' sp5$x <- sp5$y <- rnorm(length(sp5))
-#' coordinates(sp5) <- ~ x + y
+#' initSpatial(sp5, crs = "OGC:CRS84") <- ~ x + y
 #' 
 #' # SpatialPointsDataFrame output
 #' str(as(sp5, 'SpatialPointsDataFrame'))
 #' 
 #' # SpatialPoints output
 #' str(as(sp5, 'SpatialPoints'))
-
 setAs("SoilProfileCollection", "list", function(from) {
   
   # get slot names from prototype
@@ -72,20 +71,21 @@ setAs("SoilProfileCollection", "list", function(from) {
 #' @rdname coercion-methods
 #'
 setAs("SoilProfileCollection", "data.frame", function(from) {
+  s <- getSpatial(from)
   
   # horizons + site + coordinates
-  if(nrow(site(from)) > 0 & nrow(coordinates(from)) == length(from)) {
-    site.coords <- data.frame(site(from), coordinates(from), stringsAsFactors = FALSE)
-    return(join(horizons(from), site.coords, by=idname(from)))
+  if(nrow(site(from)) > 0 & nrow(s) == length(from)) {
+    site.coords <- data.frame(site(from), s, stringsAsFactors = FALSE)
+    return(merge(horizons(from), site.coords, by = idname(from), sort = FALSE, all.x = TRUE))
   }
   
   # horizons + site
-  if(nrow(site(from)) > 0 & ! nrow(coordinates(from)) == length(from))
-    return(join(horizons(from), site(from), by=idname(from)))
+  if(nrow(site(from)) > 0 & ! nrow(s) == length(from))
+    return(merge(horizons(from), site(from), by = idname(from), sort = FALSE, all.x = TRUE))
     
   # horizons + coordinates
-  if(! nrow(site(from)) > 0 & nrow(coordinates(from)) == length(from)) {
-    ids.coords <- data.frame(profile_id(from), coordinates(from), stringsAsFactors = FALSE)
+  if(! nrow(site(from)) > 0 & nrow(s) == length(from)) {
+    ids.coords <- data.frame(profile_id(from), s, stringsAsFactors = FALSE)
     return(data.frame(horizons(from), ids.coords, stringsAsFactors = FALSE))
   }
   
@@ -121,10 +121,41 @@ setAs("SoilProfileCollection", "data.table", function(from) {
 #' @docType methods
 #' @rdname coercion-methods
 setAs("SoilProfileCollection", "SpatialPointsDataFrame", function(from) {
-  s <- SpatialPointsDataFrame(coordinates(from), data = site(from), proj4string=CRS(proj4string(from)), match.ID = FALSE)
-  message('only site data are extracted')
-  return(s)
+  if (!requireNamespace("sf")) {
+    stop("Package 'sf' is required to coerce a SoilProfileCollection to SpatialPointsDataFrame object", call. = FALSE)
+  }
+  sf::as_Spatial(as(from, 'sf'))
 }
+)
+
+#' @name as
+#' @return sf
+#' @aliases as,SoilProfileCollection-method
+#' @docType methods
+#' @rdname coercion-methods
+setAs("SoilProfileCollection", "sf", 
+  function(from) {
+
+    if (!requireNamespace("sf")) {
+      stop("Package 'sf' is required to coerce a SoilProfileCollection to sf object", call. = FALSE)
+    }
+    
+    crd <- metadata(from)$coordinates
+    prj <- metadata(from)$crs
+    
+    if (all(is.null(crd) | is.na(crd)) || length(crd) < 2) {
+      stop("Two coordinate (X, Y) column names must be defined to coerce a SoilProfileCollection to sf object", call. = FALSE)
+    }
+    
+    if (is.null(prj)) {
+      prj <- NA_character_
+    }
+    
+    # keep empty point geometries, and do not remove original columns
+    s <- sf::st_as_sf(site(from), crs = prj, coords = crd, na.fail =  FALSE, remove = FALSE)
+    message('only site data are extracted')
+    return(s)
+  }
 )
 
 #' @name as
@@ -133,6 +164,18 @@ setAs("SoilProfileCollection", "SpatialPointsDataFrame", function(from) {
 #' @docType methods
 #' @rdname coercion-methods
 setAs("SoilProfileCollection", "SpatialPoints", function(from) {
-    SpatialPoints(coordinates(from), proj4string = CRS(proj4string(from)))
+  
+    if (!requireNamespace("sf")) {
+      stop("Package 'sf' is required to coerce a SoilProfileCollection to sf object", call. = FALSE)
+    }
+  
+    sf::as_Spatial(sf::st_as_sfc(as(from, 'sf')))
   }
 )
+
+#' @param x a SoilProfileCollection
+#' @export 
+#' @rdname coercion-methods
+setMethod("as.data.frame", "SoilProfileCollection", function(x) {
+  as(x, 'data.frame')
+})

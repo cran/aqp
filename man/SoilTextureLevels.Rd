@@ -2,12 +2,14 @@
 % Please edit documentation in R/factor-level-setters.R
 \name{SoilTextureLevels}
 \alias{SoilTextureLevels}
-\title{Ranking Systems for USDS Soil Texture Classes}
+\title{Ranking Systems for USDA Soil Texture Classes}
 \usage{
-SoilTextureLevels(which = "codes")
+SoilTextureLevels(which = "codes", simplify = FALSE)
 }
 \arguments{
 \item{which}{'codes' (texture codes) or 'names' (texture class names)}
+
+\item{simplify}{Return 12-class factor levels (\code{TRUE}) or 21-class factor levels (default: \code{FALSE})? The 12-class system does not separate sands, loamy sands and sandy loams into sand fraction variants (e.g. "very fine sandy loam" in the 21-class system is "sandy loam" in 12-class system)}
 }
 \value{
 an ordered factor
@@ -22,8 +24,11 @@ SoilTextureLevels()
 
 # class names
 SoilTextureLevels(which = 'names')
+
+# simpler class names
+SoilTextureLevels(which = 'names', simplify = TRUE)
  
 }
 \references{
-\href{https://www.nrcs.usda.gov/wps/portal/nrcs/detail/soils/research/guide/?cid=nrcs142p2_054184}{Field Book for Describing and Sampling Soils, version 3.0}
+\href{https://nrcspad.sc.egov.usda.gov/DistributionCenter/product.aspx?ProductID=991}{Field Book for Describing and Sampling Soils, version 3.0}
 }

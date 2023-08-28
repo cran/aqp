@@ -1,25 +1,74 @@
+# if (!isGeneric("depths"))
+setGeneric("depths", function(x, hzID = FALSE, ...)
+  standardGeneric("depths"))
+
+#' @name depths
+#' @param x A SoilProfileCollection 
+#' @param hzID Include horizon ID? Usually this is calculated from the (sorted) row index unless `hzidname()<-` has been called. Default: `FALSE`
+#' @param ... not used
+#' @return a `data.frame` containing profile ID, top depth, and bottom depth
+#' @export
+#' @seealso `horizons()` `idname()` `hzidname()` `horizonDepths()`
+#' @rdname depths
+#' @aliases depths,SoilProfileCollection-method
+#' @examples
+#' # load a SoilProfileCollection
+#' data(jacobs2000, package = "aqp")
+#' 
+#' depths(jacobs2000)
+setMethod("depths", "SoilProfileCollection", function(x, hzID = FALSE, ...) {
+  n <- c(idname(x), hzidname(x)[isTRUE(hzID)], horizonDepths(x))
+  .data.frame.j(horizons(x), n, use_class = aqp_df_class(x))
+})
+
 # if (!isGeneric("validSpatialData"))
   setGeneric("validSpatialData", function(object, ...)
     standardGeneric("validSpatialData"))
 
-#' Get names of columns in site table
+#' Check for valid spatial reference of profiles
 #'
-#' @description Are the contents of @sp valid: n x 2 matrix? If not, then contents of @sp in the SoilProfileCollection are an empty SpatialPoints object.
+#' @description Are coordinate column names defined in metadata and existing in the SoilProfileCollection?
 #' @param object a SoilProfileCollection
 #' @aliases validSpatialData
 #' @docType methods
 #' @rdname validSpatialData
-#'
+#' @return logical `TRUE` if column names are defined and correspond to existing data
+#' @export
 setMethod("validSpatialData", signature(object = "SoilProfileCollection"),
           function(object) {
-            # n x 2 ---> valid / initialized coordinates
-            # n x 1 ---> empty SP object
-            res <- dim(coordinates(object))[[2]]
-            if (res == 2)
-              return(TRUE)
-            else
-              return(FALSE)
+            # coordinate column names are defined in metadata
+            crds <- metadata(object)$coordinates
+            
+            # and columns of that name exist in either site or horizon slots
+            return(!is.null(crds) && all(crds %in% names(object)))
           })
+
+setGeneric("isEmpty", function(object, ...)
+  standardGeneric("isEmpty"))
+
+#' Check for "empty" profiles in a SoilProfileCollection
+#' 
+#' "Empty" profiles are used as placeholders for positions in a `SoilProfileCollection`
+#' These profiles result from operations that remove or extract portions of horizons
+#' from source profiles. 
+#' 
+#' In a `SoilProfileCollection` an empty profile occurs when it has one horizon, 
+#' with `NA` top and bottom depths. Generally all non-profile ID site and horizon-level
+#' values are all also `NA`, but only the depths are checked by `isEmpty()`.
+#' 
+#' @param object A SoilProfileCollection
+#' @param ... Additional arguments not used.
+#' @aliases isEmpty
+#' @docType methods
+#' @rdname isEmpty
+#' @return logical. Vector of length equal to number of profiles in `object`. Returns `TRUE` when a profile has one horizon with `NA` top and bottom depths
+#' @export
+setMethod("isEmpty", signature(object = "SoilProfileCollection"),
+          function(object, ...) {
+  .NHZ <- .TOP <- .BOTTOM <- NULL
+  d <- object[, 1, .TOP, .BOTTOM]
+  object[, , .NHZ] == 1 & is.na(d[[1]]) & is.na(d[[2]])
+})
 
 ##
 ## overloads
@@ -35,10 +84,11 @@ setMethod("validSpatialData", signature(object = "SoilProfileCollection"),
 #' @aliases names
 #' @docType methods
 #' @rdname names
-#'
+#' @export
 setMethod("names", signature("SoilProfileCollection"),
           function(x) {
-            res <- c(horizons = horizonNames(x), site = siteNames(x)[-1])
+            sn <- siteNames(x)
+            res <- c(horizons = horizonNames(x), site = sn[!sn %in% idname(x)])
             return(res)
           })
 
@@ -51,6 +101,7 @@ setMethod("names", signature("SoilProfileCollection"),
 #' @aliases min
 #' @docType methods
 #' @rdname min
+#' @export
 setMethod(
   f = "min",
   signature(x = "SoilProfileCollection"),
@@ -65,8 +116,9 @@ setMethod(
     }
     
     # handle empty spc
-    if(length(x@horizons[[htb[2]]]) == 0) {
-      return(NA)
+    bd <- x@horizons[[htb[2]]]
+    if (length(bd) == 0 || all(is.na(bd))) {
+      return(Inf)
     }
     
     # filter out missing data, accounting for optional `v`
@@ -91,6 +143,7 @@ setMethod(
 #' @aliases max
 #' @docType methods
 #' @rdname max
+#' @export
 setMethod(
   f = "max",
   signature(x = "SoilProfileCollection"),
@@ -104,8 +157,9 @@ setMethod(
     }
     
     # handle empty spc
-    if(length(x@horizons[[htb[2]]]) == 0) {
-      return(NA)
+    bd <- x@horizons[[htb[2]]]
+    if (length(bd) == 0 || all(is.na(bd))) {
+      return(-Inf)
     }
     
     # filter out missing data, accounting for optional `v`
@@ -129,6 +183,7 @@ setMethod(
 #' @aliases length
 #' @docType methods
 #' @rdname length
+#' @export
 setMethod(
   f = "length",
   signature(x = "SoilProfileCollection"),
@@ -141,11 +196,7 @@ setMethod(
 )
 
 # overload nrow() to give us the number of horizons in the collection
-
 # do not need to define a generic at all if we use the base prototype
-# if (!isGeneric('nrow'))
-#   setGeneric('nrow', function(x)
-#     standardGeneric('nrow'))
   
 #' Get the number of horizons in a SoilProfileCollection
 #' @aliases nrow
@@ -153,6 +204,7 @@ setMethod(
 #' @param x a SoilProfileCollection
 #' @docType methods
 #' @rdname nrow
+#' @export
 setMethod(
   f = "nrow",
   signature(x = "SoilProfileCollection"),
@@ -174,7 +226,7 @@ setMethod(
 #' @aliases unique
 #' @docType methods
 #' @rdname unique
-#' 
+#' @export
 #' @examples
 #'
 #'   # an example soil profile
@@ -257,6 +309,7 @@ setMethod(f = 'unique',
 #'
 #'
 #' @aliases subset
+#' @export
 #'
 #' @details To minimize likelihood of issues with non-standard evaluation context, especially when using `subset()` inside another function, all expressions used in `...` should be in terms of variables that are in the site or horizon data frame.
 #'
@@ -353,7 +406,7 @@ setGeneric("subsetHz", function(x, ...)
 #' 
 #' @param x a SoilProfileCollection
 #' @param ... Comma-separated set of R expressions that evaluate as `TRUE` or `FALSE` in context of horizon data frame. Length for individual expressions matches number of horizons, in \code{x}.
-#' 
+#' @param drop Default: `TRUE`. When `drop=FALSE` placeholder horizons (profile ID with all other values `NA`) are created where the specified filter results in removal of all horizons.
 #' @details To minimize likelihood of issues with non-standard evaluation context, especially when using `subsetHz()` inside another function, all expressions used in `...` should be in terms of variables that are in the horizon data frame.
 #' 
 #' @return a SoilProfileCollection with a subset of horizons, possibly with some sites removed
@@ -368,13 +421,16 @@ setGeneric("subsetHz", function(x, ...)
 #' # show just horizons with 10YR hues
 #' plot(subsetHz(sp3, hue == '10YR'))
 #' 
-setMethod("subsetHz", signature(x = "SoilProfileCollection"), function(x, ...) {
+setMethod("subsetHz", signature(x = "SoilProfileCollection"), function(x, ..., drop = TRUE) {
   # capture expression(s) at function
   .dots <- substitute(list(...))
   .dots <- .dots[2:length(.dots)]
   
   # create composite object to facilitate eval
   .data <- horizons(x)
+  idn <- idname(x)
+  pid <- profile_id(x)
+  hzd <- horizonDepths(x)
   
   # loop through list of expressions and evaluate
   res <- vector('list', length(.dots))
@@ -385,22 +441,71 @@ setMethod("subsetHz", signature(x = "SoilProfileCollection"), function(x, ...) {
   subcrit <- Reduce('&', res)
   
   if (!is.logical(subcrit)) {
-    badxpr <- paste0("'",paste0(.dots[sapply(.dots, function(x) !is.logical(x))],
-                                collapse=",'"),"'")
+    badxpr <- paste0("'", paste0(.dots[sapply(.dots, function(x) {
+      !is.logical(x)
+    })], collapse = ",'"), "'")
     message(sprintf("%s is not logical; returning `x` unchanged", badxpr))
     return(x)
   }
   
   newhz <- .data[which(subcrit),]
   
-  # subset SPC first to remove sites and other slots
-  x <- x[which(profile_id(x) %in% newhz[[idname(x)]]),]
+  if (drop) {
+    # subset SPC first to remove sites and other slots
+    x <- x[which(pid %in% newhz[[idn]]), ]
+    
+    # then replace horizons with horizon subset 
+    replaceHorizons(x) <- newhz
+  } else {
+    # reinsert empty horizons and site data for "retained" profiles
+    x <- .insert_dropped_horizons(x, newhz)
+  }
   
-  # then replace horizons with horizon subset 
-  #   (avoid profile IDs in site are missing from replacement horizons!)
-  replaceHorizons(x) <- newhz
   x
 })
+
+#' @description  used to implement "drop=FALSE" for various methods that remove horizons from SoilProfileCollection object
+#' @noRd
+.insert_dropped_horizons <- function(object = SoilProfileCollection(), 
+                                     horizons = horizons(object), 
+                                     sites = site(object),
+                                     pid = idname(object),
+                                     depths = horizonDepths(object),
+                                     SPC = TRUE) {
+  
+  s.i <- sites[[pid]]
+  i.idx <- unique(horizons[[pid]])
+  i.idx2 <- setdiff(s.i, i.idx)
+  newid <- sites[[pid]][which(sites[[pid]] %in% i.idx2)]
+  
+  # create ID-only empty data using original data as templates
+  h.empty <- horizons[0, , drop = FALSE][seq_along(i.idx2), , drop = FALSE]
+  h.empty[[pid]] <- newid
+  s.empty <- sites[0, , drop = FALSE][seq_along(i.idx2), , drop = FALSE]
+  s.empty[[pid]] <- newid
+  
+  # reorder to original id (+ top depth for horizons)
+  horizons <- rbind(horizons, h.empty)
+  horizons <- horizons[order(horizons[[pid]], horizons[[depths[1]]]),]
+  
+  sites <- sites[which(!sites[[pid]] %in% h.empty[[pid]]), , drop = FALSE]
+  sites <- rbind(sites, s.empty)
+  sites <- sites[order(sites[[pid]]), , drop = FALSE]
+  
+  if (inherits(object, 'SoilProfileCollection') && SPC) {
+    object@site <- sites
+    replaceHorizons(object) <- horizons
+    return(object)
+  } else {
+    return(list(
+      horizons = horizons,
+      sites = sites,
+      pid = pid,
+      depths = depths
+    ))
+  }
+}
+
 
 # functions tailored for use with magrittr %>% operator / tidyr
 
@@ -502,6 +607,7 @@ setMethod("subApply", signature(object = "SoilProfileCollection"),
 #' @param ... not used
 #'
 #' @return A \code{SoilProfileCollection} class object.
+#' @export
 #' @examples
 #'
 #' # more interesting sample data

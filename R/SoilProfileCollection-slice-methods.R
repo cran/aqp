@@ -1,64 +1,6 @@
-## this scales fairly well:
-## n = (100, 1000, 10000) --> (0.53, 4.21, 38) seconds
-
-## TODO: this function cannot deal with overlapping horizons (usually an error):  > 1 row / slice
-## it would be useful to support these kind of data, as many lab-sampled sites have sub-samples
-## https://github.com/ncss-tech/aqp/issues/88
-
-# this function is run on the horizon data, once for each depth slice
-get.slice <- function(h, id, top, bottom, vars, z, include='top', strict=TRUE) {
-
-  ## TODO: this is likely very slow
-  # 1. get indices to rows matchings current depth slice (z)
-  # this is the default method
-  if(include == 'top')
-    idx <- which(z >= h[[top]] & z < h[[bottom]])
-  # not sure why someone would use this approach, but include it anyways
-  if(include == 'bottom')
-  	idx <- which(z > h[[top]] & z <= h[[bottom]])
-
-  ## TODO: split -> list -> process -> combine
-  # 2. extract data.frame along slice, and named vars + id
-  h <- h[idx, c(id, vars)]
-
-  # 2.5 compute fraction missing
-  # if there is only 1 variable, don't try to compute this value
-  # if all data are missing NA is returned
-  h$.pctMissing <- apply(as.matrix(h[, vars]), 1, function(i, n=length(vars)) length(which(is.na(i))) / n)
-
-  # 3. QA/QC
-  # how many unique IDs?
-  l.ids <- length(unique(h[[id]]))
-  # how many rows in the result?
-  n.res <- nrow(h)
-
-  # more rows than IDs --> bad horizonation
-  if(l.ids != n.res) {
-  	if(strict == TRUE) {
-  	  # get offending IDs
-  	  id.tab <- table(h[[id]])
-  	  bad.ids <- paste(names(id.tab)[which(id.tab > 1)], collapse=', ')
-  	  stop(paste('bad horizonation in IDs:', bad.ids), call.=FALSE)
-  	  }
-
-  	# looser interp of the data... issue warning and return multuple rows/ID
-  	# join(..., match='first') will correct the problem
-    else
-      warning('Bad horizonation detected, first matching horizon selected. Use strict=TRUE to enforce QA/QC.')
-  	}
-
-  # done: return subset of original data + pct not NA
-  return(h)
-  }
-
-
-## TODO: further optimization should be possible.
-## this is a much more robust + fast version of slice.slow
-## needs a little more testing, and then will be ready
 #' Slicing of SoilProfileCollection Objects
 #'
-#' Slicing of SoilProfileCollection Objects
-#'
+#' A method for "slicing" of SoilProfileCollection objects into constant depth intervals. Now deprecated, see `[dice()]`.
 #'
 #' @name slice-methods
 #' 
@@ -80,9 +22,6 @@ get.slice <- function(h, id, top, bottom, vars, z, include='top', strict=TRUE) {
 #' 
 #' @return Either a new `SoilProfileCollection` with data sliced according to `fm`, or a `data.frame`.
 #' 
-#' @note \code{slab()} and \code{slice()} are much faster and require less
-#' memory if input data are either numeric or character.
-#' 
 #' @section Details: By default, slices are defined from the top-down:
 #' \code{0:10} implies 0-11 depth units.
 #' 
@@ -96,7 +35,9 @@ get.slice <- function(h, id, top, bottom, vars, z, include='top', strict=TRUE) {
 #' 10.1016/j.cageo.2012.10.020.
 #' 
 #' @keywords methods manip
-#' 
+#' @export
+#' @rdname slice
+#' @importFrom stringr str_c fixed str_split
 #' @examples
 #'
 #' library(aqp)
@@ -111,27 +52,28 @@ get.slice <- function(h, id, top, bottom, vars, z, include='top', strict=TRUE) {
 #'
 #' # generate single slice at 10 cm
 #' # output is a SoilProfileCollection object
-#' s <- slice(d, 10 ~ name + p1 + p2 + p3)
+#' s <- dice(d, fm = 10 ~ name + p1 + p2 + p3)
 #'
 #' # generate single slice at 10 cm, output data.frame
-#' s <- slice(d, 10 ~ name + p1 + p2 + p3, just.the.data=TRUE)
+#' s <- dice(d, 10 ~ name + p1 + p2 + p3, SPC = FALSE)
 #'
 #' # generate integer slices from 0 - 26 cm
 #' # note that slices are specified by default as "top-down"
+#' # result is a SoilProfileCollection
 #' # e.g. the lower depth will always by top + 1
-#' s <- slice(d, 0:25 ~ name + p1 + p2 + p3)
+#' s <- dice(d, fm = 0:25 ~ name + p1 + p2 + p3)
 #' par(mar=c(0,1,0,1))
-#' plot(s)
+#' plotSPC(s)
 #'
 #' # generate slices from 0 - 11 cm, for all variables
-#' s <- slice(d, 0:10 ~ .)
+#' s <- dice(d, fm = 0:10 ~ .)
 #' print(s)
 #'
-#' # note that pct missing is computed for each slice,
+#' # compute percent missing, for each slice,
 #' # if all vars are missing, then NA is returned
 #' d$p1[1:10] <- NA
-#' s <- slice(d, 10 ~ ., just.the.data=TRUE)
-#' print(s)
+#' s <- dice(d, 10 ~ ., SPC = FALSE, pctMissing = TRUE)
+#' head(s)
 #'
 #' \dontrun{
 #' ##
@@ -153,24 +95,21 @@ get.slice <- function(h, id, top, bottom, vars, z, include='top', strict=TRUE) {
 #' )
 #'
 #' # hopefully the same value, calculated via slice()
-#' s <- slice(sp1.sub, 0:max(sp1.sub) ~ prop)
-#' hz.slice.mean <- mean(s$prop, na.rm=TRUE)
+#' s <- dice(sp1.sub, fm = 0:max(sp1.sub) ~ prop)
+#' hz.slice.mean <- mean(s$prop, na.rm = TRUE)
 #'
-#' # same?
-#' if(!all.equal(hz.slice.mean, hz.wt.mean))
-#'   stop('there is a bug in slice() !!!')
+#' # they are the same
+#' all.equal(hz.slice.mean, hz.wt.mean)
 #' }
 #'
-
-
-
 slice.fast <- function(object, fm, top.down=TRUE, just.the.data=FALSE, strict=TRUE){
 
   ## Plan:
   #   1. message about future deprecation -> dice()
-  message('Note: aqp::slice() will be deprecated in aqp version 2.0\n--> Please consider using the more efficient aqp::dice()')
+  # message('Note: aqp::slice() will be deprecated in aqp version 2.0\n--> Please consider using the more efficient aqp::dice()')
   
   #   2. deprecation -> dice() in aqp 2.0
+  .Deprecated(new = 'dice', msg = 'slice() has been deprecated, please use the more efficient aqp::dice()')
   
   #   3. masking / removal of slice(), shortly there after
   
@@ -185,9 +124,9 @@ slice.fast <- function(object, fm, top.down=TRUE, just.the.data=FALSE, strict=TR
 
 
   # extract components of the formula:
-  formula <- str_c(deparse(fm, 500), collapse="")
-  elements <- str_split(formula, fixed("~"))[[1]]
-  formula <- lapply(str_split(elements, "[+*]"), str_trim)
+  formula <- stringr::str_c(deparse(fm, 500), collapse="")
+  elements <- stringr::str_split(formula, stringr::fixed("~"))[[1]]
+  formula <- lapply(stringr::str_split(elements, "[+*]"), str_trim)
 
   # TODO: this will have to be changed when we implement no LHS = all slices
   if (length(formula) > 2)
@@ -244,11 +183,10 @@ slice.fast <- function(object, fm, top.down=TRUE, just.the.data=FALSE, strict=TR
     m.i.sub <- get.slice(h, id=id, top=top, bottom=bottom, vars=vars, z=z[slice.i], strict=strict)
 
     # join with original IDs in order to account for NA, or bad horizonation
-    d <- data.frame(temp_id=id.order)
+    d <- data.frame(temp_id = id.order)
     names(d) <- id
 
-    ## TODO: convert to data.table merge method (but is there a match = 'first' option?)
-    m.i <- join(d, m.i.sub, by=id, type='left', match='first')
+    m.i <- merge(d, m.i.sub[!duplicated(m.i.sub[[id]]),], by = id, all.x = TRUE, sort = FALSE)
 
     # add depth range:
     # top-down, means that the slice starts from the user-defined depths (default)
@@ -264,11 +202,10 @@ slice.fast <- function(object, fm, top.down=TRUE, just.the.data=FALSE, strict=TR
 
     # save to the list
     hd.slices[[slice.i]] <- m.i
-    }
+  }
 
-  ## TODO: do all of the work via list, lapply / map / do.call('rbind')
   # convert list into DF
-  hd.slices <- ldply(hd.slices)
+  hd.slices <- data.frame(data.table::rbindlist(hd.slices))
 
   # re-order by id, then top
   # keep only data we care about
@@ -278,20 +215,6 @@ slice.fast <- function(object, fm, top.down=TRUE, just.the.data=FALSE, strict=TR
   # if we just want the data:
   if(just.the.data)
     return(hd.slices)
-
-  # if spatial data and only a single slice: SPDF
-  if(validSpatialData(object) & length(z) == 1) {
-    cat('result is a SpatialPointsDataFrame object\n')
-    # check for site data, if present - join to our sliced data
-    if(nrow(site(object)) > 0 )
-      hd.slices <- join(hd.slices, site(object), by=id)
-
-    # since the order of our slices and coordinates are the same
-    # it is safe to use 'match.ID=FALSE'
-    # this gets around a potential problem when dimnames(object)[[1]] aren't consecutive
-    # values-- often the case when subsetting has been performed
-    return(SpatialPointsDataFrame(coordinates(object), data=hd.slices, match.ID=FALSE))
-    }
 
   ## otherwise return an SPC, be sure to copy over the spatial data
 
@@ -305,8 +228,8 @@ slice.fast <- function(object, fm, top.down=TRUE, just.the.data=FALSE, strict=TR
   horizonNames(hd.slices)[idx] <- 'sliceID'
   hzidname(hd.slices) <- 'sliceID'
 
-  # copy spatial data
-  hd.slices@sp <- object@sp
+  # # copy spatial data
+  # hd.slices@sp <- object@sp
 
   # safely copy site data via JOIN
   site(hd.slices) <- site(object)
@@ -338,13 +261,70 @@ slice.fast <- function(object, fm, top.down=TRUE, just.the.data=FALSE, strict=TR
 
   # done
   return(hd.slices)
+}
+
+setGeneric("slice", function(object, fm, top.down = TRUE, just.the.data = FALSE, strict = TRUE) 
+  standardGeneric("slice"))
+
+#' @export
+#' @rdname slice
+setMethod(f = 'slice', signature(object = 'SoilProfileCollection'), slice.fast)
+
+
+# this function is run on the horizon data, once for each depth slice
+#' @param h Horizon data.frame
+#' @param id Profile ID
+#' @param top Top Depth Column Name
+#' @param bottom Bottom Depth Column Name
+#' @param vars Variables of Interest
+#' @param z Slice Depth (index).
+#' @param include Either `'top'` or `'bottom'`. Boundary to include in slice. Default: `'top'`
+#' @param strict Check for logic errors? Default: `TRUE`
+#'
+#' @export
+#' @rdname slice
+get.slice <- function(h, id, top, bottom, vars, z, include='top', strict=TRUE) {
+  
+  ## TODO: this is likely very slow
+  # 1. get indices to rows matchings current depth slice (z)
+  # this is the default method
+  if(include == 'top')
+    idx <- which(z >= h[[top]] & z < h[[bottom]])
+  # not sure why someone would use this approach, but include it anyways
+  if(include == 'bottom')
+    idx <- which(z > h[[top]] & z <= h[[bottom]])
+  
+  ## TODO: split -> list -> process -> combine
+  # 2. extract data.frame along slice, and named vars + id
+  h <- h[idx, c(id, vars)]
+  
+  # 2.5 compute fraction missing
+  # if there is only 1 variable, don't try to compute this value
+  # if all data are missing NA is returned
+  h$.pctMissing <- apply(as.matrix(h[, vars]), 1, function(i, n=length(vars)) length(which(is.na(i))) / n)
+  
+  # 3. QA/QC
+  # how many unique IDs?
+  l.ids <- length(unique(h[[id]]))
+  # how many rows in the result?
+  n.res <- nrow(h)
+  
+  # more rows than IDs --> bad horizonation
+  if(l.ids != n.res) {
+    if(strict == TRUE) {
+      # get offending IDs
+      id.tab <- table(h[[id]])
+      bad.ids <- paste(names(id.tab)[which(id.tab > 1)], collapse=', ')
+      stop(paste('bad horizonation in IDs:', bad.ids), call.=FALSE)
+    }
+    
+    # looser interp of the data... issue warning and return multuple rows/ID
+    # join(..., match='first') will correct the problem
+    else
+      warning('Bad horizonation detected, first matching horizon selected. Use strict=TRUE to enforce QA/QC.')
   }
+  
+  # done: return subset of original data + pct not NA
+  return(h)
+}
 
-
-## slice:
-# if (!isGeneric("slice"))
-  setGeneric("slice", function(object, fm, top.down=TRUE, just.the.data=FALSE, strict=TRUE) standardGeneric("slice"))
-
-
-## TODO: allow the use of site data (PSC etc.) to determine the z-slice
-setMethod(f='slice', signature(object = 'SoilProfileCollection'), slice.fast)

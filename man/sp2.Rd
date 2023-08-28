@@ -36,6 +36,9 @@ Creek, California.
 }
 \examples{
 
+# keep examples from using more than 2 cores
+data.table::setDTthreads(Sys.getenv("OMP_THREAD_LIMIT", unset = 2))
+
 data(sp2)
 
 # convert into SoilProfileCollection object
@@ -60,8 +63,7 @@ abline(h=200, lty=2, lwd=2)
 
 # compute numerical distances between profiles
 # based on select horizon-level properties, to a depth of 200 cm
-d <- profile_compare(sp2, vars=c('prop','field_ph','hue'),
-max_d=200, k=0, sample_interval=5, rescale.result=TRUE)
+d <- NCSP(sp2, vars=c('prop','field_ph','hue'), maxDepth = 100, k = 0)
 
 # plot dendrogram with ape package:
 if(require(ape) & require(cluster)) {

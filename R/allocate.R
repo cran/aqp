@@ -1,3 +1,7 @@
+
+## TODO: add verbose = FALSE argument cut down on chatter
+
+
 #' @title Allocate soil properties within various classification systems.
 #' 
 #' @description Generic function to allocate soil properties to different classification schemes.
@@ -40,7 +44,7 @@
 #'   + **hzname:** horizon name column, required when \code{object} is a \code{data.frame}
 #'   + **hztop:** horizon top depth column name, required when \code{object} is a \code{data.frame}
 #'   + **hzbot:** horizon bottom depth column name, required when \code{object} is a \code{data.frame}
-#'   + **texture:** soil texture class (USDA) column name
+#'   + **texcl:** soil texture class (USDA) column name
 #'   + **rupresblkcem:** rupture resistance column name
 #'   + **m_value:** moist Munsell value column name
 #'   + **m_chroma:** moist Munsell chroma column name
@@ -154,13 +158,14 @@
 #' 
 #' # Soil Taxonomy Diagnostic Features
 #' data(sp1)
+#' sp1$texcl = gsub("gr|grv|cbv", "", sp1$texture)
 #' df <- allocate(object = sp1, pedonid = "id", hzname = "name", 
-#'                hzdept = "top", hzdepb = "bot", texture = "texture", 
+#'                hzdept = "top", hzdepb = "bottom", texcl = "texcl", 
 #'                to = "ST Diagnostic Features"
 #' )
 #' aggregate(featdept ~ id, data = df, summary)
 #' 
-allocate <- function(..., to = c("FAO Salt Severity", "FAO Black Soil", "ST Diagnostic Features"), droplevels = TRUE) {
+allocate <- function(..., to = c("FAO Salt Severity", "FAO Black Soil", "ST Diagnostic Features"), droplevels = FALSE) {
   
   # sanity check
   to <- match.arg(to, several.ok = FALSE)
@@ -180,7 +185,7 @@ allocate <- function(..., to = c("FAO Salt Severity", "FAO Black Soil", "ST Diag
       # hzname = "hzname"
       # hzdept = "hzdept"
       # hzdepb = "hzdepb"
-      # texture = "texture"
+      # texcl = "texcl"
       # hz_pat = ""
       # tex_pat = "br"
       # featkind = "argillic horizon"
@@ -188,7 +193,7 @@ allocate <- function(..., to = c("FAO Salt Severity", "FAO Black Soil", "ST Diag
       featkind <- c("lithic contact", "paralithic contact", "densic contact", "petrocalcic horizon", "calcic horizon", "secondary carbonates", "mollic epipedon") #, "reduced matrix")
       
       a <- lapply(featkind, function(x) {
-        # a <- .guess_df(pedonid = "peiid", hzname = "hzname", hzdept = "hzdept", hzdepb = "hzdepb", texture = "texture", featkind = "lithic contact")
+        # a <- .guess_df(pedonid = "peiid", hzname = "hzname", hzdept = "hzdept", hzdepb = "hzdepb", texcl = "texcl", featkind = "lithic contact")
         a <- .guess_df(..., featkind = x)
       })
       a <- do.call("rbind", a)
@@ -202,25 +207,37 @@ allocate <- function(..., to = c("FAO Salt Severity", "FAO Black Soil", "ST Diag
 # To do add USDA and other salt classes
 ## TODO consider optional object = NULL
 ## TODO safe handling of NA
-.rank_salts <- function(EC = NULL, pH = NULL, ESP = NULL, system = "FAO Salt Severity", droplevels = TRUE) {
+.rank_salts <- function(EC = NULL, pH = NULL, ESP = NULL, SAR = NULL, system = "FAO Salt Severity", droplevels = FALSE) {
   
   # EC = 1; pH = 3; ESP = 50
-  l <- list(EC = EC, pH = pH, ESP = ESP)
+  l <- list(EC = EC, pH = pH, ESP = ESP, SAR = SAR)
   
-  # tests
+  # tests ----
+  # ESP vs SAR
+  if (!is.null(SAR)) {
+    warning("SAR will be converted to ESP via Richards (1958) conversion formula.")
+  }
+  if (!is.null(ESP) & !is.null(SAR)) {
+    warning("Both ESP & SAR are present, SAR will only be used where ESP is missing.")
+  }
   # minimum dataset
-  if (any(sapply(l, is.null))) {
-    warning("the minimum dataset of soil properites for allocating to the Salt Severity classes are: EC (aka Electrial Conductivity), pH, ESP (aka Exchangable Sodium Percentage")
+  if (any(sapply(l[c(1, 3)], is.null)) & any(sapply(l[c(1, 4)], is.null))) {
+    warning("the minimum dataset of soil properites for allocating to the Salt Severity classes are: EC (aka Electrial Conductivity), and ESP (aka Exchangable Sodium Percentage) or SAR (aka Sodium Adsorption Ratio)")
+  }
+  # pH rule
+  if (any(!complete.cases(EC, ESP)) | any(!complete.cases(EC, SAR))) {
+    warning("pH is used in where both ESP and SAR are missing")
   }
   # length
   n <- sapply(l, length)
-  if (! all(max(n) == n)) {
+  if (! all(max(n) == n[1:3]) & ! all(max(n) == n[c(1:2, 4)])) {
     stop("all arguments must have the same length")
   }
   
   
+  # levels ----
   fao_lev <- c(
-    c("nonsaline", "slightly saline", "moderately saline", "strongly saline", "very strongly saline", "extremely saline"),
+    c("none", "slightly saline", "moderately saline", "strongly saline", "very strongly saline", "extremely saline"),
     c("none", "slightly sodic", "moderately sodic", "strongly sodic", "very strongly sodic")
     )
   
@@ -228,20 +245,33 @@ allocate <- function(..., to = c("FAO Salt Severity", "FAO Black Soil", "ST Diag
   ## TODO: why?
   sc <- rep("none", times = length(EC))
   
-  ## TODO: consider separate saline / sodic classifaction
+  ## TODO: consider separate saline / sodic classification
+  # estimate ESP from SAR ----
+  if (is.null(ESP)) ESP <- rep(NA_real_, times = length(EC))
+  if (is.null(SAR)) SAR <- rep(NA_real_, times = length(EC))
   
+  .esp <- function(SAR) {
+    (100 * (-0.0126 + 0.01475 * SAR)) / 
+      (1   + (-0.0126 + 0.01475 * SAR))
+  }
+  ESPx <- .esp(SAR)
+  ESP <- ifelse(is.na(ESP) & !is.na(SAR), ESPx, ESP)
+  
+  
+  # rank ----
   # saline soils
-  sc <- ifelse(ESP <= 15, # & EC > 4 & pH <= 8.5, 
+  sc <- ifelse(EC > -1 & (ESP <= 15 | (is.na(ESP) & pH <= 8.2)), # & EC > 4 & pH <= 8.5, 
                as.character(
                  cut(EC,
-                     breaks = c(-1, 0.75, 2, 4, 8, 15, 1000), 
+                     breaks = c(-1, 0.75, 2, 4, 8, 15, 1500), 
                      labels = fao_lev[1:6],
                      right  = FALSE
                      )),
                sc
                )
   # sodic soils
-  sc <- ifelse(EC <= 4 & (ESP > 15 | pH > 8.2),  
+  # ESP
+  sc <- ifelse(EC <= 4 & ESP > 15,  # | pH > 8.2
                as.character(
                  cut(ESP,
                      # breaks = c(0, 15, 30, 50, 70, 100),
@@ -253,11 +283,11 @@ allocate <- function(..., to = c("FAO Salt Severity", "FAO Black Soil", "ST Diag
                sc
                )
   # saline-sodic soils
-  sc <- ifelse(EC > 4 & ESP > 15, "saline-sodic", sc)
+  sc <- ifelse(EC > 4 & (ESP > 15 | (is.na(ESP) & pH > 8.2)), "saline-sodic", sc)
   
   
   # convert to factor
-  sc <- factor(sc, levels = c(fao_lev[1:6], "saline-sodic", fao_lev[8:11]))
+  sc <- factor(sc, levels = c(fao_lev[6:1], fao_lev[8:11], "saline-sodic"))
 
   
   # droplevels
@@ -270,7 +300,7 @@ allocate <- function(..., to = c("FAO Salt Severity", "FAO Black Soil", "ST Diag
 
 
 
-.codify <- function(x, system = "salt severity", droplevels = TRUE) {
+.codify <- function(x, system = "salt severity", droplevels = FALSE) {
 
   if (system == "salt severity") {
 
@@ -279,11 +309,11 @@ allocate <- function(..., to = c("FAO Salt Severity", "FAO Black Soil", "ST Diag
   }
 
 
-.codify_salt_severity <- function(x, droplevels = TRUE) {
+.codify_salt_severity <- function(x, droplevels = FALSE) {
   
   # set levels
   fao_lev <- c(
-    c("nonsaline", "slightly saline", "moderately saline", "strongly saline", "very strongly saline", "extremely saline"),
+    c("none", "slightly saline", "moderately saline", "strongly saline", "very strongly saline", "extremely saline"),
     c("none", "slightly sodic", "moderately sodic", "strongly sodic", "very strongly sodic")
   )
   
@@ -291,7 +321,11 @@ allocate <- function(..., to = c("FAO Salt Severity", "FAO Black Soil", "ST Diag
   if (!is.integer(x)) stop("x is not an integer")
   if (!all(unique(x) %in% c(1:11, NA))) warning("some x values do not match the lookup table")
 
-  sc <- factor(x, levels = 1:11, labels = c(fao_lev[1:6], "saline-sodic", fao_lev[8:11]))
+  sc <- factor(
+    x, 
+    levels = 1:11, 
+    labels = c(fao_lev[6:1], fao_lev[8:11], "saline-sodic")
+    )
   
   if (droplevels == TRUE) {
     sc <- droplevels(sc)
@@ -380,7 +414,7 @@ allocate <- function(..., to = c("FAO Salt Severity", "FAO Black Soil", "ST Diag
   # combine results and subset to 0-25cm
   df_bs  <- cbind(df[vars2[1:3]], BS1 = bs1, BS2 = bs2)
   df_bs  <- segment(df_bs, intervals = c(0, 25), hzdepcols = c("hztop", "hzbot"))
-  df_bs  <- df_bs[df_bs$segment_id == "0-25", -6]
+  df_bs  <- df_bs[df_bs$segment_id == "00-25", -6]
   
   # aggregate the horizons
   df_bs2 <- aggregate(cbind(BS1, BS2) ~ pedonid, data = df_bs, FUN = all, na.action = na.pass)
@@ -402,14 +436,14 @@ allocate <- function(..., to = c("FAO Salt Severity", "FAO Black Soil", "ST Diag
 
 
 # guess diagnostic features
-.guess_df <- function(object = NULL, pedonid = "peiid", hzname = "hzname", hzdept = "hzdept", hzdepb = "hzdepb", texture = "texture", rupresblkcem = "rupresblkcem", m_value = "m_value", d_value = "d_value", m_chroma = "m_chroma", BS = "BS", OC = "OC", n_value = "n_value", featkind = NULL) {
+.guess_df <- function(object = NULL, pedonid = "peiid", hzname = "hzname", hzdept = "hzdept", hzdepb = "hzdepb", texcl = "texcl", rupresblkcem = "rupresblkcem", m_value = "m_value", d_value = "d_value", m_chroma = "m_chroma", BS = "BS", OC = "OC", n_value = "n_value", featkind = NULL) {
   
-  # pedonid = "peiid"; hzname = "hzname"; hzdept = "hzdept"; hzdepb = "hzdepb"; texture = "texture"; hz_pat = ""; tex_pat = "br"; featkind = "mollic epipedon"; rupresblkcem = "rupresblkcem"; m_value = "m_value"; d_value = "d_value"; m_chroma = "m_chroma"; BS = NA; OC = NA; n_value = "n_value"
-  # object = sp1; pedonid = "id"; hzname = "name"; hzdept = "top"; hzdepb = "bot"; texture = "texture"
-  # vars <- list(pedonid = "peiid", hzname = "hzname", hzdept = "hzdept", hzdepb = "hzdepb", texture = "texture", rupresblkcem = "rupresblkcem", m_value = "m_value", d_value = "d_value", m_chroma = "m_chroma", OC = "OC", BS = "BS", n_value = "n_value")
+  # pedonid = "peiid"; hzname = "hzname"; hzdept = "hzdept"; hzdepb = "hzdepb"; texcl = "texcl"; hz_pat = ""; tex_pat = "br"; featkind = "mollic epipedon"; rupresblkcem = "rupresblkcem"; m_value = "m_value"; d_value = "d_value"; m_chroma = "m_chroma"; BS = NA; OC = NA; n_value = "n_value"
+  # object = sp1; pedonid = "id"; hzname = "name"; hzdept = "top"; hzdepb = "bot"; texcl = "texture"
+  # vars <- list(pedonid = "peiid", hzname = "hzname", hzdept = "hzdept", hzdepb = "hzdepb", texcl = "texture", rupresblkcem = "rupresblkcem", m_value = "m_value", d_value = "d_value", m_chroma = "m_chroma", OC = "OC", BS = "BS", n_value = "n_value")
   
   # standardize inputs
-  vars <- list(pedonid = pedonid, hzname = hzname, hzdept = hzdept, hzdepb = hzdepb, texture = texture, rupresblkcem = rupresblkcem, m_value = m_value, d_value = d_value, m_chroma = m_chroma, OC = OC, BS = BS, n_value = n_value)
+  vars <- list(pedonid = pedonid, hzname = hzname, hzdept = hzdept, hzdepb = hzdepb, texcl = texcl, rupresblkcem = rupresblkcem, m_value = m_value, d_value = d_value, m_chroma = m_chroma, OC = OC, BS = BS, n_value = n_value)
   
   # standardize inputs
   if (class(object)[1] == "SoilProfileCollection") {
@@ -425,7 +459,7 @@ allocate <- function(..., to = c("FAO Salt Severity", "FAO Black Soil", "ST Diag
   # check arguments match df colnames & subset
   # no vars should be NA, but this will catch them if they are
   if (! all(vars %in% names(df))) {
-    warning("the minimum dataset includes: pedonid, hzdept, hzdepb, and hzname; if texture or rupreblkcem are missing the resulting diagnostic features are inferred from the available information")
+    warning("the minimum dataset includes: pedonid, hzdept, hzdepb, and hzname; if texcl or rupreblkcem are missing the resulting diagnostic features are inferred from the available information")
     idx <- vars %in% names(df)
     mis <- vars[! idx]
     df <- df[vars[idx]]
@@ -437,36 +471,36 @@ allocate <- function(..., to = c("FAO Salt Severity", "FAO Black Soil", "ST Diag
     vars2 <- names(vars)
     names(df) <- vars2
   }
-  df$texture      <- tolower(df$texture)
+  df$texcl      <- tolower(df$texcl)
   df$rupresblkcem <- tolower(df$rupresblkcem)
   
   # match pattern
   
-  # lithic contact
+  # lithic contact ----
   if (featkind == "lithic contact") {
     message(paste("guessing", featkind))
     idx_hzn <-  grepl("R|Dr", df$hzname) & !grepl("\\/", df$hzname)
-    idx_tex <- !grepl("Cr|CR", df$hzname) & (df$texture %in% c("br", "wb", "uwb") | is.na(df$texture))
+    idx_tex <- !grepl("Cr|CR", df$hzname) & (df$texcl %in% c("br", "wb", "uwb") | is.na(df$texcl))
     
-    lev <- c("strongly cemented", "very strongly cemented", "indurated", "strongly", "extremely strongly", "H") 
+    lev <- c("strongly cemented", "very strongly cemented", "indurated", "strongly", "extremely strongly", "H", "moderately coherent", "strongly coherent", "very strongly coherent") 
     idx_cem <- df$rupresblkcem %in% lev | is.na(df$rupresblkcem)
     
     # error
     idx_err <- idx_hzn  & (!idx_tex | !idx_cem) 
     if (any(idx_err)) {
-      message(paste("the following pedonid have R horizons that do not meeting the texture or rupture resistance cementation criteria and will be excluded: ", paste0(df$pedonid[idx_err], collapse = ", ")))
+      message(paste("the following pedonid have R horizons that do not meeting the texcl or rupture resistance cementation criteria and will be excluded: ", paste0(df$pedonid[idx_err], collapse = ", ")))
     }
     
     df$featkind <- ifelse(idx_hzn & idx_tex & idx_cem, featkind, NA)
   }
   
   
-  # paralithic contact
+  # paralithic contact ----
   if (featkind == "paralithic contact") {
     message(paste("guessing", featkind))
     
     idx_hzn <-  grepl("Cr|CR", df$hzname)
-    idx_tex <- !grepl("R|Dr", df$hzname) & (df$texture %in% c("br", "wb", "uwb") | is.na(df$texture))
+    idx_tex <- !grepl("R|Dr", df$hzname) & (df$texcl %in% c("br", "wb", "uwb") | is.na(df$texcl))
     
     lev <- c("extremely weakly cememented", "very weakly cemented", "weakly cemented", "moderately cemented", "weakly", "moderately", "S") 
     idx_cem <- df$rupresblkcem %in% lev | is.na(df$rupresblkcem)
@@ -474,14 +508,14 @@ allocate <- function(..., to = c("FAO Salt Severity", "FAO Black Soil", "ST Diag
     # error
     idx_err <- idx_hzn  & (!idx_tex | !idx_cem) 
     if (any(idx_err)) {
-      message(paste("the following pedonid have Cr horizons that do not meeting the texture or rupture resistance cementation criteria and will be excluded: ", paste0(df$pedonid[idx_err], collapse = ", ")))
+      message(paste("the following pedonid have Cr horizons that do not meeting the texcl or rupture resistance cementation criteria and will be excluded: ", paste0(df$pedonid[idx_err], collapse = ", ")))
     }
 
     df$featkind <- ifelse(idx_hzn & idx_tex & idx_cem, featkind, NA)
   }
   
   
-  # densic contact
+  # densic contact ----
   if (featkind == "densic contact") {
     message(paste("guessing", featkind))
     idx <- grepl("d$|D$|d[1:9]|D[1:9]", df$hzname)
@@ -489,12 +523,12 @@ allocate <- function(..., to = c("FAO Salt Severity", "FAO Black Soil", "ST Diag
   }
   
   
-  # petrocalcic horizon
+  # petrocalcic horizon ----
   if (featkind == "petrocalcic horizon") {
     message(paste("guessing", featkind))
     
     idx_hzn  <- grepl("kkm|kkqm", df$hzname)
-    idx_tex  <- ((grepl("cem", df$texture) & !grepl("-br", df$texture)) | is.na(df$texture))
+    idx_tex  <- ((grepl("cem", df$texcl) & !grepl("-br", df$texcl)) | is.na(df$texcl))
     
     lev <- "noncemented" 
     idx_cem <- !df$rupresblkcem %in% lev | is.na(df$rupresblkcem)
@@ -502,19 +536,19 @@ allocate <- function(..., to = c("FAO Salt Severity", "FAO Black Soil", "ST Diag
     # error
     idx_err <- idx_hzn  & (!idx_tex | !idx_cem) 
     if (any(idx_err)) {
-      message(paste("the following pedonid have Bkkm|Bkkqm horizons that do not meeting the texture or rupture resistance cementation criteria and will be excluded: ", paste0(df$pedonid[idx_err], collapse = ", ")))
+      message(paste("the following pedonid have Bkkm|Bkkqm horizons that do not meeting the texcl or rupture resistance cementation criteria and will be excluded: ", paste0(df$pedonid[idx_err], collapse = ", ")))
     }
     
     df$featkind <- ifelse(idx_hzn & idx_tex & idx_cem, featkind, NA)
   }
   
   
-  # calcic horizon
+  # calcic horizon ----
   if (featkind == "calcic horizon") {
     message(paste("guessing", featkind))
     
     idx_hzn <-  grepl("kk$|kk[1:9]|kkq$|kkq[1:9]|kkb$|kkb[1:9]", df$hzname)
-    idx_tex <- (!grepl("cem-", df$texture) | is.na(df$texture))
+    idx_tex <- (!grepl("cem-", df$texcl) | is.na(df$texcl))
     
     lev <- "noncemented" 
     idx_cem <- df$rupresblkcem %in% lev | is.na(df$rupresblkcem)
@@ -522,14 +556,14 @@ allocate <- function(..., to = c("FAO Salt Severity", "FAO Black Soil", "ST Diag
     # error
     idx_err <- idx_hzn  & (!idx_tex | !idx_cem) 
     if (any(idx_err)) {
-      message(paste("the following pedonid have Bkk horizons that do not meeting the texture or rupture resistance cementation criteria and will be excluded: ", paste0(df$pedonid[idx_err], collapse = ", ")))
+      message(paste("the following pedonid have Bkk horizons that do not meeting the texcl or rupture resistance cementation criteria and will be excluded: ", paste0(df$pedonid[idx_err], collapse = ", ")))
     }
     
     df$featkind <- ifelse(idx_hzn & idx_tex & idx_cem, featkind, NA)
   }
   
   
-  # secondary carbonates
+  # secondary carbonates ----
   if (featkind == "secondary carbonates") {
     message(paste("guessing", featkind))
     
@@ -539,24 +573,25 @@ allocate <- function(..., to = c("FAO Salt Severity", "FAO Black Soil", "ST Diag
   }
   
   
-  # mollic epipedon
+  # mollic epipedon ----
    if (featkind == "mollic epipedon") {
      message(paste("guessing", featkind))
      
      idx_hzn <- !grepl("O|Ao|R|W|M|C|\\/", df$hzname)
+     idx_tex <- df$texcl %in% levels(SoilTextureLevels()) | is.na(df$texcl)
      # need to add structure to fetchNASIS
      idx_col <- 
-       (df$m_value  <= 3 | !is.na(df$m_value))  & 
-       (df$d_value  <= 5 | !is.na(df$d_value))  &
+       (df$m_value  <= 3 | is.na(df$m_value))  & 
+       (df$d_value  <= 5 | is.na(df$d_value))  &
         df$m_chroma <= 3                        &
-       (!is.na(df$m_value) & !is.na(df$d_value))
+       (!is.na(df$m_value) | !is.na(df$d_value))
      idx_bs  <- (df$BS >= 50 | is.na(df$BS)) # & (df$ph1to1 > 6 | is.na(df$ph1to1))
      idx_oc  <- 
        ((df$OC >= 2.5 | is.na(df$OC)) & (df$m_value %in% 4:5 | is.na(df$m_value))) |
        ((df$OC >= 0.6 | is.na(df$OC)) & (df$m_value < 4      | is.na(df$m_value)))
      idx_nv <- (df$n_value < 0.7 | is.na(df$n_value))
      
-     df$featkind <- ifelse(idx_hzn & idx_col & idx_bs & idx_oc & idx_nv, featkind, NA)
+     df$featkind <- ifelse(idx_hzn & idx_tex & idx_col & idx_bs & idx_oc & idx_nv, featkind, NA)
    }
   
   
@@ -566,7 +601,7 @@ allocate <- function(..., to = c("FAO Salt Severity", "FAO Black Soil", "ST Diag
     
     df_sub <- df[!is.na(df$featkind), ]
     
-    # aggregate depths
+    # aggregate depths ----
     idx <- !is.na(df_sub$featkind)
     if (any(idx) & sum(idx, na.rm = TRUE) > 1) {
       sp <- aggregate(hzdept ~ pedonid + featkind, data = df_sub, FUN = function(x) min(x, na.rm = TRUE))

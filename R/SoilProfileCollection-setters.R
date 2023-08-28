@@ -9,20 +9,23 @@
 
 #' @aliases depths<-,SoilProfileCollection-method
 #' @rdname depths
+#' @export
 setReplaceMethod("depths", signature(object = "SoilProfileCollection"),
 	function(object, value) {
 		message('This is already a SoilProfileCollection-class object, doing nothing.')
 		object
 	})
 
-#' Initialize a SoilProfileCollection from a data.frame object
+#' Initialize a SoilProfileCollection from data.frame 
+#' @description `depths(<data.frame>) <- <formula>`: Initialize SoilProfileCollection
+#' @description `depths(<SoilProfileCollection>)`: Extract profile ID and horizon depths from SoilProfileCollection
 #' @name depths<-
 #' @param object An object to promote to SoilProfileCollection (inherits from data.frame)
 #' @param value A formula specifying the unique profile ID, top and bottom depth column names
-#' @aliases depths<-,data.frame-method
+#' @aliases depths<-,data.frame-method depths depths<-
 #' @details The input horizon data, and the resulting profile order, is sorted based on unique profile ID and top depth. ID columns are converted to character, depth columns are converted to integer. If `NA` values exist in all of the top depths, a prototype with 1 horizon per profile ID is returned, with `NA` in all non-essential columns. If the input `object` has 0 rows, a prototype with 0 horizons and 0 rows, but same column names as `object`, is returned. 
 #' @rdname depths
-#'
+#' @export
 #' @examples
 #' ## init SoilProfileCollection objects from data.frame of horizon data
 #'
@@ -230,11 +233,10 @@ setReplaceMethod("depths", "data.frame",
   return(res)
 }
 
+setGeneric('site<-', function(object, value)
+  standardGeneric('site<-'))
 
-##
-## initialize site data
-##
-#' Create or add data to the site slot
+#' Create or Add Data to Site Slot
 #'
 #' @name site<-
 #'
@@ -251,7 +253,7 @@ setReplaceMethod("depths", "data.frame",
 #' @usage site(object) <- value
 #'
 #' @rdname site
-#'
+#' @export
 #' @examples
 #'
 #' # load test data
@@ -277,87 +279,87 @@ setReplaceMethod("depths", "data.frame",
 #' # inspect site table: holocene & lower riverbank have values
 #' site(sp2)
 #'
-# if (!isGeneric('site<-'))
-  setGeneric('site<-', function(object, value)
-    standardGeneric('site<-'))
-
 setReplaceMethod("site", signature(object = "SoilProfileCollection"),
   function(object, value) {
 
     # get profile IDs from horizon table
     ids <- as.character(horizons(object)[[idname(object)]])
-    ids.coalesce <- .coalesce.idx(ids)
-
+    pid <- .coalesce.idx(ids)
+    idn <- idname(object)
+    adf <- aqp_df_class(object)
+    
   	# creation of site data from horizon data
     if (inherits(value, "formula")) {
       mf <- model.frame(value, object@horizons, na.action = na.pass)
       nm <- names(mf)
       mf <- data.frame(ids, mf, stringsAsFactors = FALSE)
-      names(mf) <- c(idname(object), nm)
+      names(mf) <- c(idn, nm)
       object <- .createSiteFromHorizon(object, mf)
     }
 
     # creation of site data from an external data.frame via merge (LEFT JOIN)
     if (inherits(value, "data.frame")) {
       # get column names from proposed site, and existing horizons
-      ns <- names(value)
-      nh <- horizonNames(object)
-
-      # site and horizons<- allow short circuiting to ensure that site(x)$<- and horizons(x)$<- work
-      if (all(colnames(value) %in% siteNames(object)) &
-          idname(object) %in% colnames(value) &
-          nrow(value) == length(object)) {
-        if (!all(value[[idname(object)]] %in% profile_id(object))) {
-          message("Some profile IDs in input data are not present in object and no new columns to merge. Doing nothing.")
+      new.cols <- names(value)
+      hz.names <- horizonNames(object)
+      si.names <- siteNames(object)
+      
+      # short circuit:ensure that site(x)$<-NULL works
+      if (all(new.cols %in% si.names) &
+               idn %in% new.cols & 
+                nrow(value) == length(object)) {
+        
+          if (!all(value[[idn]] %in% pid)) {
+            message("Some profile IDs in input data are not present in object and no new columns to merge. Doing nothing.")
+            return(object)
+          }
+        
+          # re-sorts for case when "joining" only ID 
+          sort.idx <- match(pid, value[[idn]])
+          object@site <- .as.data.frame.aqp(value[sort.idx,, drop = FALSE], adf)
           return(object)
-        }
-        # re-sorts for case when "joining" only ID e.g. when combining SPCs with only profile id in @site
-        sort.idx <- match(profile_id(object), value[[idname(object)]])
-        object@site <- .as.data.frame.aqp(value, aqp_df_class(object))[sort.idx, , drop = FALSE]
-        return(object)
       }
-
+      
+      # check there is >1 column shared b/w existing site and value
+      if (length(new.cols) > 1 && !any(new.cols %in% si.names)) {
+        stop("new data must have one or more column names in common with the site data", call. = FALSE)
+      }
+      
       ## remove ID column from names(horizons)
-      ID.idx <- match(idname(object), nh)
+      ID.idx <- match(idn, hz.names)
 
       # check to make sure there is no overlap in proposed site + hz variable names
-      if(any(ns %in% nh[-ID.idx]))
+      if (any(new.cols %in% hz.names[-ID.idx])) {
         stop('duplicate names in new site / existing horizon data not allowed', call. = FALSE)
-
+      }
+      
       # existing site data (may be absent == 0-row data.frame)
       s <- object@site
-
+      
       # join to existing data: by default it will only be on idname(object)
-
-      ## an appropriate ID must exist in 'value' AND @site for this to work
+      
       # LEFT JOIN
-     site.new <- merge(s, value, all.x = TRUE, sort = FALSE)
-
-      new.id.order <- site.new[[idname(object)]]
-      if(length(new.id.order) != length(ids.coalesce) ||
-         any(new.id.order != ids.coalesce)) {
-        # message("join condition resulted in sorting of sites, re-applying original order")
-        if (any(is.na(ids.coalesce)))
-          message("profile IDs derived from horizon data contain NA!")
-        site.new <- site.new[match(ids.coalesce, new.id.order),]
+      site.new <- merge(s, value, all.x = TRUE, sort = FALSE)
+      
+      new.id.order <- site.new[[idn]]
+      if (length(new.id.order) != length(pid) || any(new.id.order != pid)) {
+        # join condition resulted in sorting of sites, re-apply original order
+        if (any(is.na(pid))) {
+          warning("profile IDs derived from horizon data contain NA!", call. = FALSE)
+        }
+        site.new <- site.new[match(pid, new.id.order), ]
       }
 
       # sanity check: site + new data should have same number of rows as original
-      if(nrow(s) != nrow(site.new)) {
-      	message(paste('original data (', nrow(s), ' rows) new data (', nrow(site.new), ' rows)', sep=''))
-        stop('invalid join condition, site data not changed', call.=FALSE)
+      if (nrow(s) != nrow(site.new)) {
+      	message(paste('original data (', nrow(s), ' rows) new data (',
+      	              nrow(site.new), ' rows)', sep = ''))
+        stop('invalid join condition, site data not changed', call. = FALSE)
       }
 
       # 2020-05-30: subclasses of data.frame have more than one class
-      object@site <- .as.data.frame.aqp(site.new, metadata(object)$aqp_df_class)
+      object@site <- .as.data.frame.aqp(site.new, adf)
 	  }
-
-    ## TODO: finer reporting on what the problem might be
-    # check to make sure the the number of rows in @site is the same as length(object)
-    if(length(object) != nrow(site(object))){
-    	print(paste('pedons (', length(object), ') rows of site data (', nrow(site(object)), ')', sep=''))
-    	stop('invalid site data, non-unique values present in horizon data?', call.=FALSE)
-    }
 
     # done
     return(object)
@@ -381,7 +383,7 @@ setReplaceMethod("site", signature(object = "SoilProfileCollection"),
 
   .SD <- NULL
   
-  dth <- as.data.table(horizons(object))
+  dth <- data.table::as.data.table(horizons(object))
   
   new_site_data <- .as.data.frame.aqp(unique(dth[, .SD, .SDcols = names_attr]), aqp_df_class(object))
   
@@ -409,7 +411,11 @@ setReplaceMethod("site", signature(object = "SoilProfileCollection"),
   return(object)
 }
 
-#' Replace data in the horizon slot
+
+setGeneric('replaceHorizons<-', function(object, value)
+  standardGeneric('replaceHorizons<-'))
+
+#' Replace Data in Horizon Slot
 #'
 #' @name replaceHorizons<-
 #'
@@ -421,6 +427,7 @@ setReplaceMethod("site", signature(object = "SoilProfileCollection"),
 #' @docType methods
 #'
 #' @rdname replaceHorizons
+#' @export
 #'
 #' @examples
 #'
@@ -442,42 +449,41 @@ setReplaceMethod("site", signature(object = "SoilProfileCollection"),
 #' # inspect result (a clean slate)
 #' horizons(p)
 #'
-# if (!isGeneric('replaceHorizons<-'))
-  setGeneric('replaceHorizons<-', function(object, value)
-    standardGeneric('replaceHorizons<-'))
-
 setReplaceMethod("replaceHorizons",
                  signature(object = "SoilProfileCollection"),
                  function(object, value) {
 
+  hmn <- .hzMetadataNames(object, depths = TRUE)
   required.columns <-  c(idname(object), horizonDepths(object))
   required.missing <- !required.columns %in% names(value)
 
-  if(any(required.missing))
-    stop(paste0("required horizon data are missing: ",
-         paste0(required.columns[required.missing], collapse=", ")), call. = FALSE)
-
+  if (any(required.missing)) {
+    stop(paste0("required horizon data are missing from replacement: ",
+                paste0(required.columns[required.missing], 
+                       collapse = ", ")), call. = FALSE)
+  }
+  
   ids.match1 <- all(profile_id(object) %in% value[[idname(object)]])
-  if(!ids.match1)
+  if (!ids.match1) {
     stop("profile IDs in site are missing from replacement horizons!", call. = FALSE)
-
+  }
+  
   ids.match2 <- all(value[[idname(object)]] %in% profile_id(object))
-  if(!ids.match2)
+  if (!ids.match2) {
     stop("profile IDs in replacement are missing from site!", call. = FALSE)
-
-  optional.columns <-  c(hzidname(object),
-                         hzdesgnname(object),
-                         hztexclname(object))
-
+  }
+  
+  optional.columns <-  hmn[!hmn %in% required.columns]
   optional.missing <- !optional.columns %in% names(value)
 
-  #if(any(optional.missing))
-    #message(paste0("optional columns are missing: ",
-    #               paste0(optional.columns[optional.missing],
-    #               collapse=", ")))
+  if (any(optional.missing)) {
+    message(paste0("optional columns are missing from replacement: ",
+                   paste0(optional.columns[optional.missing],
+                          collapse = ", ")))
+  }
 
   # assign hzID if hzidname() is missing
-  if(optional.missing[1]) {
+  if (optional.missing[1]) {
     value$hzID <- as.character(1:nrow(value))
     hzidname(object) <- "hzID"
     message("no horizon ID present, defaulting to `hzID`")
@@ -487,7 +493,11 @@ setReplaceMethod("replaceHorizons",
   return(object)
 })
 
-#' Add data to the horizons slot
+
+setGeneric('horizons<-', function(object, value)
+  standardGeneric('horizons<-'))
+
+#' Join Data to Horizon Slot
 #'
 #' @name horizons<-
 #'
@@ -498,7 +508,7 @@ setReplaceMethod("replaceHorizons",
 #' @param value An object inheriting \code{data.frame}
 #' @aliases horizons<-,SoilProfileCollection-method
 #' @docType methods
-#'
+#' @export
 #' @rdname horizons
 #'
 #' @examples
@@ -520,30 +530,30 @@ setReplaceMethod("replaceHorizons",
 #' #  with top depth equal to zero
 #' horizons(sp2)
 #'
-# if (!isGeneric('horizons<-'))
-  setGeneric('horizons<-', function(object, value)
-    standardGeneric('horizons<-'))
-
 setReplaceMethod("horizons", signature(object = "SoilProfileCollection"),
   function(object, value) {
 
+  idn <- idname(object)
+  hdn <- hzidname(object)
+  hzd <- horizonDepths(object)
+  
   if (is.null(value))
-    stop("new horizon data must not be NULL; to remove a site or horizon attribute use `spc$attribute <- NULL`", call.=FALSE)
+    stop("new horizon data must not be NULL; to remove a site or horizon attribute use `spc$attribute <- NULL`", call. = FALSE)
 
   # testing the class of the horizon data to add to the object
   if (!inherits(value, "data.frame"))
-	  stop("new horizon data input value must inherit from data.frame", call.=FALSE)
+    stop("new horizon data input value must inherit from data.frame", call. = FALSE)
 
   # allow short-circuit
   if (all(colnames(value) %in% horizonNames(object)) &
-      all(c(idname(object), hzidname(object), horizonDepths(object)) %in% colnames(value)) &
+      all(c(idn, hdn, hzd) %in% colnames(value)) &
       nrow(value) == nrow(object)) {
-    if (!all(value[[idname(object)]] %in% profile_id(object))) {
+    if (!all(value[[idn]] %in% profile_id(object))) {
       message("Some profile IDs in input data are not present in object and no new columns to merge. Doing nothing.")
       return(object)
     }
-    target.order <- order(object@horizons[[idname(object)]], object@horizons[[horizonDepths(object)[1]]])
-    input.order <- order(value[[idname(object)]], value[[horizonDepths(object)[1]]])
+    target.order <- order(object@horizons[[idn]], object@horizons[[hzd[1]]])
+    input.order <- order(value[[idn]], value[[hzd[1]]])
     idx.order <- match(input.order, target.order)
     # print(idx.order)
     object@horizons <- .as.data.frame.aqp(value, aqp_df_class(object))[idx.order,]
@@ -551,80 +561,85 @@ setReplaceMethod("horizons", signature(object = "SoilProfileCollection"),
   }
 
   # get the corresponding vector of IDs, will be used to compute distinct attributes
-  ids <- as.character(horizons(object)[[idname(object)]])
+  ids <- as.character(horizons(object)[[idn]])
 
   # get column names from proposed horizons, and existing site
   ns <- names(value)
   nh <- siteNames(object)
 
+  # check there is >1 column shared b/w existing horizon and value
+  if (length(ns) > 1 && !any(ns %in% horizonNames(object))) {
+    stop("new data must have one or more column names in common with the horizon data", call. = FALSE)
+  }
+  
   ## remove ID column from names(site)
-  ID.idx <- match(idname(object), nh)
+  ID.idx <- match(idn, nh)
 
   # check to make sure there is no overlap in proposed site + hz variable names
-  if(any(ns %in% nh[-ID.idx]))
-    stop('horizons left join value contains duplicate names', call.=FALSE)
-
-  h.id <- as.character(object@horizons[[hzidname(object)]])
-  original.horizon.order <- 1:length(h.id)
-  names(original.horizon.order) <- h.id
-
-  original.site.order <- match(.coalesce.idx(object@site[[idname(object)]]),
-                               object@site[[idname(object)]])
-
-  ## debug
-  # print(original.order)
+  if (any(ns %in% nh[-ID.idx])) {
+    stop('duplicate names in new horizon / existing site data not allowed', call. = FALSE)
+  }
+  
+  h.id <- as.character(object@horizons[[hdn]])
+  original.site.order <- match(.coalesce.idx(object@site[[idn]]),
+                               object@site[[idn]])
 
   # in keeping with tradition of site<-, we let the join happen
   # left join to existing data
-  suppressMessages(horizon.new <- merge(object@horizons,
-                                        value,
-                                        #by = c(idname(object), hzidname(object)),
-                                        all.x = TRUE, sort = FALSE))
+  suppressMessages({
+    horizon.new <- merge(object@horizons,
+                         value,
+                         #by = c(idname(object), hzidname(object)),
+                         all.x = TRUE, sort = FALSE)
+  })
   
   # TODO: data.table merge() would fix the need for re-sorting, but would check data types
   #       which might cause some backwards compatibility problems (requiring type conversion)
   #       this is a problem because the join is completely open ended -- not just based on ID
   
-  chnew <- .coalesce.idx(horizon.new[[idname(object)]])
+  chnew <- .coalesce.idx(horizon.new[[idn]])
   if (length(chnew) != length(original.site.order) |
      suppressWarnings(any(original.site.order != chnew))) {
-    new.horizon.order <- order(horizon.new[[idname(object)]], 
-                               horizon.new[[horizonDepths(object)[1]]])
+    new.horizon.order <- order(horizon.new[[idn]], 
+                               horizon.new[[hzd[1]]])
     # message("join condition resulted in sorting of horizons, re-applying original order")
     horizon.new <- horizon.new[new.horizon.order,]
   }
 
   # sanity check: horizons + new data should have same number of rows as original
-  if(nrow(object@horizons) != nrow(horizon.new)) {
-    message(paste('original data (', nrow(object@horizons), ' rows) new data (', nrow(horizon.new), ' rows)', sep=''))
-    stop("invalid horizons left join condition, data not changed", call.=FALSE)
+  if (nrow(object@horizons) != nrow(horizon.new)) {
+    message(paste('original data (', nrow(object@horizons), ' rows) new data (', nrow(horizon.new), ' rows)', sep = ''))
+    stop("invalid horizons left join condition, data not changed", call. = FALSE)
   }
 
   # 2020-05-30: subclasses of data.frame have more than one class
   object@horizons <- .as.data.frame.aqp(horizon.new, aqp_df_class(object))
 
   # check to make sure same profile IDs are present
-  if(any(!(ids %in% as.character(object@horizons[[idname(object)]])))) {
-    print(paste('pedons (', nrow(object), ') rows of horizon data (', nrow(object@horizons), ')', sep=''))
-    stop('profile IDs are missing from join result, data not changed', call.=FALSE)
+  if (any(!(ids %in% as.character(object@horizons[[idn]])))) {
+    print(paste('pedons (', nrow(object), ') rows of horizon data (', nrow(object@horizons), ')', sep = ''))
+    stop('profile IDs are missing from join result, data not changed', call. = FALSE)
   }
 
   # done
   return(object)
 })
 
-#' Add data to the diagnostic slot
+setGeneric('diagnostic_hz<-', function(object, value)
+  standardGeneric('diagnostic_hz<-'))
+
+#' Add Data to Diagnostic Features Slot
 #'
 #' @name diagnostic_hz<-
 #'
-#' @description Diagnostic data in an object inheriting from \code{data.frame} can easily be added via merge (LEFT JOIN). There must be one or more same-named columns containing profile ID on the left and right hand side to facilitate the join: \code{diagnostic_hz(spc) <- newdata}
+#' @description Diagnostic feature data in an object inheriting from \code{data.frame} can easily be added via merge (LEFT JOIN). There must be one or more same-named columns containing profile ID on the left and right hand side to facilitate the join: \code{diagnostic_hz(spc) <- newdata}
 #'
 #' @param object A SoilProfileCollection
 #' @param value An object inheriting \code{data.frame}
 #'
 #' @aliases diagnostic_hz<-,SoilProfileCollection-method
 #' @docType methods
-#'
+#' @export
 #' @rdname diagnostic_hz-set
 #'
 #' @examples
@@ -648,10 +663,6 @@ setReplaceMethod("horizons", signature(object = "SoilProfileCollection"),
 #' #  with top depth equal to zero
 #' diagnostic_hz(sp2)
 #'
-# if (!isGeneric('diagnostic_hz<-'))
-  setGeneric('diagnostic_hz<-', function(object, value)
-    standardGeneric('diagnostic_hz<-'))
-
 setReplaceMethod("diagnostic_hz",
                  signature(object = "SoilProfileCollection"),
   function(object, value) {
@@ -698,8 +709,10 @@ setReplaceMethod("diagnostic_hz",
   return(object)
 })
 
+setGeneric('restrictions<-', function(object, value)
+  standardGeneric('restrictions<-'))
 
-#' Add data to the restrictions slot
+#' Add Data to Restrictions Slot
 #'
 #' @name restrictions<-
 #'
@@ -712,7 +725,7 @@ setReplaceMethod("diagnostic_hz",
 #' @docType methods
 #'
 #' @rdname restrictions-set
-#'
+#' @export
 #' @examples
 #'
 #' # load test data
@@ -733,10 +746,6 @@ setReplaceMethod("diagnostic_hz",
 #' #  with top depth equal to zero
 #' restrictions(sp2)
 #'
-# if (!isGeneric('restrictions<-'))
-  setGeneric('restrictions<-', function(object, value)
-    standardGeneric('restrictions<-'))
-
 setReplaceMethod("restrictions", signature(object = "SoilProfileCollection"),
                  function(object, value) {
 

@@ -3,7 +3,7 @@
 #' 
 #' @description Lattice visualization demonstrating subtractive mixtures of colors in Munsell notation and associated spectra.
 #' 
-#' @details If present, `names` attribute of `x` is used for the figure legend.
+#' @details If present, `names` attribute of `x` is used for the figure legend. See the [expanded tutorial](https://ncss-tech.github.io/AQP/aqp/mix-colors.html) for examples.
 #' 
 #' @author D.E. Beaudette
 #' 
@@ -12,49 +12,27 @@
 #' @param w vector of weights, can sum to any number
 #' 
 #' @param mixingMethod approach used to simulate a mixture: 
-#'    * `reference`  : simulate a subtractive mixture of pigments, selecting `n` closest reference spectra
 #'    
-#'    * `exact`: simulate a subtractive mixture of pigments, color conversion via CIE1931 color-matching functions (see [`mixMunsell`])
+#'    * `exact`: simulate a subtractive mixture of pigments, color conversion via CIE1931 color-matching functions (see [mixMunsell()])
+#'    
+#'    * `reference`  : simulate a subtractive mixture of pigments, selecting `n` closest reference spectra, requires `gower` package
 #' 
-#' @param n number of closest mixture candidates when `mixingMethod = 'reference'` (see [`mixMunsell`]), results can be hard to interpret when `n > 2`
+#' @param n number of closest mixture candidates when `mixingMethod = 'reference'` (see [mixMunsell()]), results can be hard to interpret when `n > 2`
 #' 
-#' @param swatch.cex scaling factor for color swatch
+#' @param swatch.cex scaling factor for color swatch rectangle width and height, relative to `label.cex`, typically between 1 and 3
 #' 
 #' @param label.cex scaling factor for swatch labels
 #' 
 #' @param showMixedSpec show weighted geometric mean (mixed) spectra as dotted line (only when `mixingMethod = 'reference'`)
 #' 
-#' @param overlapFix attempt to "fix" overlapping chip labels via [`fixOverlap`]
+#' @param overlapFix attempt to "fix" overlapping chip labels via [fixOverlap()], using `method = 'E'`
 #' 
 #' @return a `lattice` graphics object
 #' 
-#' @examples 
+#' @seealso [mixMunsell()]
+#' @export
 #' 
-#' # color chips
-#' chips <- c('5B 5/10', '5Y 8/8')
-#' names(chips) <- chips
-#' 
-#' # weights
-#' wt <- c(1, 1)
-#' 
-#' plotColorMixture(
-#' x = chips, 
-#' w = wt, 
-#' swatch.cex = 4, 
-#' label.cex = 0.65, 
-#' showMixedSpec = TRUE, 
-#' mixingMethod = 'reference'
-#' )
-#' 
-#' plotColorMixture(
-#'   x = chips, 
-#'   w = wt, 
-#'   swatch.cex = 4, 
-#'   label.cex = 0.65, 
-#'   mixingMethod = 'exact'
-#' )
-#' 
-plotColorMixture <- function(x, w = rep(1, times = length(x)) / length(x), mixingMethod = c('reference', 'exact'), n = 1, swatch.cex = 6, label.cex = 0.85, showMixedSpec = FALSE, overlapFix = TRUE) {
+plotColorMixture <- function(x, w = rep(1, times = length(x)) / length(x), mixingMethod = c('exact', 'reference'), n = 1, swatch.cex = 1.5, label.cex = 0.85, showMixedSpec = FALSE, overlapFix = TRUE) {
   
   # TODO plot will be incorrect if duplicate Munsell chips are specified
   
@@ -65,13 +43,18 @@ plotColorMixture <- function(x, w = rep(1, times = length(x)) / length(x), mixin
   # mixture method sanity checks
   mixingMethod <- match.arg(mixingMethod)
   
+  # 'reference' mixing method requires gower package
+  if(mixingMethod == 'reference' & !requireNamespace('gower')) {
+    stop('package `gower` is required for `reference` mixingMethod', call. = FALSE)
+  }
+  
   # can't use n > 1 with mixingMethod = 'exact'
   if(mixingMethod == 'exact') {
     
     if(n > 1 ) {
       stop('cannot request multiple matches with `mixingMethod = "exact"`', call. = FALSE)
     }
-   
+    
     # must retain mixed spectra
     showMixedSpec <- TRUE
   }
@@ -79,7 +62,7 @@ plotColorMixture <- function(x, w = rep(1, times = length(x)) / length(x), mixin
   # mix colors
   mx <- suppressMessages(
     mixMunsell(x = x, w = w, n = n, mixingMethod = mixingMethod, keepMixedSpec = showMixedSpec)
-    )
+  )
   
   # make local copy of the mixed colors when asking for the mixed spectra too
   if(showMixedSpec) {
@@ -152,7 +135,7 @@ plotColorMixture <- function(x, w = rep(1, times = length(x)) / length(x), mixin
   
   s <- do.call('rbind', s)
   row.names(s) <- NULL
-
+  
   # create sensible levels for plotting / legend
   # names + mixtures
   all.names <- unique(s$ID)
@@ -223,39 +206,74 @@ plotColorMixture <- function(x, w = rep(1, times = length(x)) / length(x), mixin
         i[length(i)]
       })
       
+      # get width / height of labels
+      # dummy label is not printed
+      .dummyLabel <- grid::grid.text(
+        label = '10GY 4/4\n100%',
+        x = grid::unit(750, units = 'native'), 
+        y = grid::unit(max(y, na.rm = TRUE), units = 'native'),
+        gp = grid::gpar(
+          cex = label.cex,
+          font = 2
+        ), draw = FALSE
+      )
+      
+      .labelHeight <- grid::convertHeight(
+        grid::unit(1, 'grobheight', .dummyLabel),
+        unitTo = 'native'
+      )
+      
+      .labelWidth <- grid::convertWidth(
+        grid::unit(1, 'grobwidth', .dummyLabel),, 
+        unitTo = 'native'
+      )
+      
+      ## debugging grob geom
+      # print(cbind(.labelWidth, .labelHeight))
+      
+      
       # attempt to fix overlap
       if(overlapFix) {
         
-        ## TODO: this should be computed from screen space
-        #        or adjustable by argument
+        # save original indexing information via name
+        .original_order <- names(last.y.coords)
         
-        # this is about right (units are reflectance)
-        # adjust according to ratio of swatch size to default size (6)
-        ov.thresh <- 0.04 * (swatch.cex / 6)
+        # sort according to y-coordinates
+        last.y.coords <- sort(last.y.coords)
+        
+        # new ordering
+        .new_order <- names(last.y.coords)
+        
+        # vertical threshold is the grob height of color swatch
+        ov.thresh <- as.vector(.labelHeight) * swatch.cex
         
         # attempt to find overlap using the above threshold
-        ov <- findOverlap(last.y.coords, thresh = ov.thresh)
+        ov <- overlapMetrics(last.y.coords, thresh = ov.thresh)
         
         # if present, iteratively find suitable alternatives
         # search is bounded to the min/max of all spectra
         # consider set.seed() for consistent output
-        if(length(ov) > 0) {
+        if(length(ov$idx) > 0) {
           message('fixing overlap')
           
+          # init position vector 
           # set boundary conditions for overlap adjustment
-          # max(min of the last y coords or min y of all spectra)
-          adj.min.x <- pmax(min(last.y.coords) - 0.08, min(y))
-          # min(max of last y coords or max y of all spectra)
-          adj.max.x <- pmin(max(last.y.coords) + 0.08, max(y))
+          # adding fake min / max values, based on spectra reflectance values
+          .pos <- c(min(y, na.rm = TRUE), last.y.coords, max(y, na.rm = TRUE))
           
           last.y.coords <- fixOverlap(
-            last.y.coords, 
-            thresh = ov.thresh, 
-            adj = ov.thresh * 1/3,
-            min.x = adj.min.x,
-            max.x = adj.max.x
+            .pos, method = 'E',
+            thresh = ov.thresh * 0.95,
+            q = 1
           )
+          
+          # ignore first and last positions
+          # those are the boundary conditions
+          last.y.coords <- last.y.coords[2:(length(.pos) - 1)]
         }
+        
+        # revert to original order
+        last.y.coords <- last.y.coords[match(.original_order, .new_order)]
       }
       
       
@@ -272,14 +290,17 @@ plotColorMixture <- function(x, w = rep(1, times = length(x)) / length(x), mixin
         this.col <- tps$superpose.line$col[i]
         # current label
         
-        # place symbol with appropriate color
-        grid::grid.points(
+        # rectangle color swatch surrounds label
+        # label widths and heights are used to size t he rectangle (native units)
+        grid::grid.rect(
           x = grid::unit(750, units = 'native'), 
           y = grid::unit(last.y, units = 'native'), 
-          pch = 15, 
+          width = .labelWidth * swatch.cex,
+          height = .labelHeight * swatch.cex,
+          default.units = 'native',
           gp = grid::gpar(
             col = this.col,
-            cex = swatch.cex
+            fill = this.col
           )
         )
         
@@ -307,7 +328,7 @@ plotColorMixture <- function(x, w = rep(1, times = length(x)) / length(x), mixin
   )
   
   return(pp)
-
+  
 }
 
 

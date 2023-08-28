@@ -8,8 +8,11 @@
 
 #' @title Convert reflectance spectra to closest Munsell chip
 #' 
+#' @details See the [expanded tutorial](https://ncss-tech.github.io/AQP/aqp/mix-colors.html) for additional examples.
 #' 
-#' @param x reflectance spectra, (380nm to 730nm, 10nm resolution)
+#' @param x reflectance spectra, must range from 380nm to 730nm with resolution specified in `res`
+#' 
+#' @param res spectra resolution in nm, typically 5nm or 10nm
 #' 
 #' @param convert logical, convert sRGB coordinates to closest Munsell chip (see `?munsell`)
 #' 
@@ -19,9 +22,9 @@
 #'    * D65 represents average daylight
 #'    * F2 represents typical fluorescent lighting
 #' 
-#' @param ... further arguments to [`rgb2munsell`]
+#' @param ... further arguments to [rgb2munsell()]
 #'
-#' @return output from [`rgb2munsell`]
+#' @return output from [rgb2munsell()]
 #' @export
 #'
 #' @references 
@@ -61,7 +64,8 @@
 #'   labels = c('original', 'spectral\ninterpretation')
 #' )
 #' 
-#' 
+#' \dontrun{
+#' if(requireNamespace("gower")) {
 #' # mix colors, return spectra, convert to color
 #' cols <- c('10YR 6/2', '5YR 5/6', '10B 4/4')
 #' res <- mixMunsell(cols, keepMixedSpec = TRUE, mixingMethod = 'reference')
@@ -70,7 +74,10 @@
 #' res$mixed
 #' spec2Munsell(res$spec)
 #' 
-spec2Munsell <- function(x, convert = TRUE, SO = c('CIE1931', 'CIE1964'), illuminant = c('D65', 'F2'), ...) {
+#' }
+#' }
+#' 
+spec2Munsell <- function(x, res = 10, convert = TRUE, SO = c('CIE1931', 'CIE1964'), illuminant = c('D65', 'F2'), ...) {
   
   # D65 and CIE1931 reference data at 5nm
   spectral.reference <- NULL
@@ -86,16 +93,27 @@ spec2Munsell <- function(x, convert = TRUE, SO = c('CIE1931', 'CIE1964'), illumi
   # in the Munsell spectra libraries 
   #   * munsell.spectra
   #   * munsell.spectra.wide
-  w.10 <- seq(from = 380, to = 730, by = 10)
+  .wl <- seq(from = 380, to = 730, by = res)
   
-  # spline interpolator
-  f <- splinefun(w.10, x)
   
+  ## 10nm res: length(x) == 36
+  ## 5nm res: length(x) == 71
+  # sanity check
+  if(length(.wl) != length(x)) {
+    stop('inconsistent spectral limits / resolution', call. = FALSE)
+  }
+  
+  # spline interpolator: reflectance ~ wavelength
+  .sf <- splinefun(.wl, x)
+  
+  ## TODO: interpolate spectral.refernce to match resolution of x
+  
+  # spectral reference is 5nm resolution
   # interpolate to 5nm res
   w.5 <- seq(from = 380, to = 730, by = 5)
   R <- data.frame(
     w = w.5, 
-    x = f(w.5)
+    x = .sf(w.5)
   )
   
   # reflectance spectra * illuminant

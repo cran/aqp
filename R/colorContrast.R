@@ -1,6 +1,3 @@
-# compute metrics of color contrast: delta-Hue, Value, Chroma and delta-E00
-# m1: vector of Munsell colors ('10YR 3/3')
-# m2: vector of Munsell colors ('10YR 3/4')
 
 #' @title Metrics of Contrast Suitable for Comparing Soil Colors
 #'
@@ -14,24 +11,19 @@
 #' 
 #' The most meaningful representation of color contrast is the CIE2000 (dE00) metric.
 #'
-#' @return
-#' A `data.frame` with the following columns:
+#' @return `data.frame` with the following columns:
 #'
-#' \itemize{
-#' \item{m1: }{Munsell color 1}
-#' \item{m2: }{Munsell color 2}
-#' \item{dH: }{delta-hue, as computed by \code{huePosition}}
-#' \item{dV: }{delta-value, absolute value of difference in Munsell value (m1 vs. m2)}
-#' \item{dc: }{delta-chroma, absolute value of difference in Munsell chroma (m1 vs. m2)}
-#' \item{dE00: }{delta-E00, e.g. the [CIE delta-E as refined in 2000](https://en.wikipedia.org/wiki/Color_difference#CIEDE2000)}
-#' \item{cc: }{soil color contrast class, as specified in [Soil Survey Technical Note 2](https://www.nrcs.usda.gov/wps/portal/nrcs/detail/soils/ref/?cid=nrcs142p2_053569)}
-#' }
+#'   * m1: Munsell color 1
+#'   * m2: Munsell color 2
+#'   * dH: delta-hue, as computed by `huePosition`
+#'   * dV: delta-value, absolute value of difference in Munsell value (m1 vs. m2)
+#'   * dc: delta-chroma, absolute value of difference in Munsell chroma (m1 vs. m2)
+#'   * dE00: delta-E00, e.g. the [CIE delta-E as refined in 2000](https://en.wikipedia.org/wiki/Color_difference#CIEDE2000)
+#'   * cc: soil color contrast class, as specified in Soil Survey Technical Note 2.
 #'
 #' @references
 #'
 #'  1. https://en.wikipedia.org/wiki/Color_difference
-#'
-#'  2. \href{https://www.nrcs.usda.gov/wps/portal/nrcs/detail/soils/ref/?cid=nrcs142p2_053569}{Soil Survey Technical Note 2}
 #'
 #' @author D.E. Beaudette
 #'
@@ -40,8 +32,11 @@
 #' @seealso [colorContrastPlot], [huePosition], [huePositionCircle]
 #'
 #' @keywords manip
-#'
+#' @export
 #' @examples
+#'
+#' # keep examples from using more than 2 cores
+#' data.table::setDTthreads(Sys.getenv("OMP_THREAD_LIMIT", unset = 2))
 #'
 #' # two sets of colors to compare
 #' m1 <- c('10YR 6/3', '7.5YR 3/3', '10YR 2/2', '7.5YR 3/4')
@@ -76,7 +71,7 @@ colorContrast <- function(m1, m2) {
 
   # sanity check, need this for color distance eval
   if(!requireNamespace('farver', quietly = TRUE))
-    stop('pleast install the `farver` package.', call.=FALSE)
+    stop('please install the `farver` package.', call.=FALSE)
 
   # sanity check: length of colors to compare should be equal
   if(length(m1) != length(m2)) {
@@ -102,7 +97,7 @@ colorContrast <- function(m1, m2) {
   ## TODO: add a notes / flag field in the results
   
   # difference in number of hue chips, clock-wise, as specified in:
-  # https://www.nrcs.usda.gov/wps/portal/nrcs/detail/soils/ref/?cid=nrcs142p2_053569
+  # Soil Survey Technical Note 2 [wayback machine URL](https://web.archive.org/web/20220704214918/https://www.nrcs.usda.gov/wps/portal/nrcs/detail/soils/ref/?cid=nrcs142p2_053569)
   # including neutral hues in position 1
   dH <- abs(huePosition(m1.pieces[[1]], includeNeutral = TRUE) - huePosition(m2.pieces[[1]], includeNeutral = TRUE))
   
@@ -144,7 +139,8 @@ colorContrast <- function(m1, m2) {
   dE00 <- unlist(d)
 
   # NCSS color contrast classes
-  # https://www.nrcs.usda.gov/wps/portal/nrcs/detail/soils/ref/?cid=nrcs142p2_053569
+  # Soil Survey Technical Note 2 [wayback machine URL](https://web.archive.org/web/20220704214918/https://www.nrcs.usda.gov/wps/portal/nrcs/detail/soils/ref/?cid=nrcs142p2_053569)
+  #
   # value1, chroma1, value2, chroma2, dH, dV, dC
   cc <- contrastClass(m1.pieces[[2]], m1.pieces[[3]], m2.pieces[[2]], m2.pieces[[3]], dH, dV, dC)
 

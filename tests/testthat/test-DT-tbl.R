@@ -19,38 +19,38 @@ test_that("basic coercion", {
   }
 
   ### .as.data.frame.aqp wrapper on data.frames
-  expect_equal(aqp:::.as.data.frame.aqp(empty_df, "data.frame"), empty_df)
+  expect_equal(.as.data.frame.aqp(empty_df, "data.frame"), empty_df)
   ## data frame with 0 columns and 0 rows
 
-  expect_equal(aqp:::.as.data.frame.aqp(empty_df, "data.table"), empty_dt)
+  expect_equal(.as.data.frame.aqp(empty_df, "data.table"), empty_dt)
   ## Null data.table (0 rows and 0 cols)
 
-  expect_equal(aqp:::.as.data.frame.aqp(empty_df, "tbl_df"), empty_tb)
+  expect_equal(.as.data.frame.aqp(empty_df, "tbl_df"), empty_tb)
   ## A tibble: 0 x 0
 
 
   # as.data.frame wrapper on tibbles
-  expect_equal(aqp:::.as.data.frame.aqp(empty_tb, "data.table"), empty_dt)
+  expect_equal(.as.data.frame.aqp(empty_tb, "data.table"), empty_dt)
   # Null data.table (0 rows and 0 cols)
   #
-  expect_equal(aqp:::.as.data.frame.aqp(empty_tb, "data.frame"), empty_df)
+  expect_equal(.as.data.frame.aqp(empty_tb, "data.frame"), empty_df)
   # data frame with 0 columns and 0 rows
   #
-  expect_equal(aqp:::.as.data.frame.aqp(empty_tb, "tbl_df"), empty_tb)
+  expect_equal(.as.data.frame.aqp(empty_tb, "tbl_df"), empty_tb)
   # A tibble: 0 x 0
 
   # as.data.frame wrapper on data.table
-  expect_equal(aqp:::.as.data.frame.aqp(empty_dt, "data.table"), empty_dt)
+  expect_equal(.as.data.frame.aqp(empty_dt, "data.table"), empty_dt)
   # Null data.table (0 rows and 0 cols)
 
-  expect_equal(aqp:::.as.data.frame.aqp(empty_dt, "data.frame"), empty_df)
+  expect_equal(.as.data.frame.aqp(empty_dt, "data.frame"), empty_df)
   # data frame with 0 columns and 0 rows
 
-  expect_equivalent(aqp:::.as.data.frame.aqp(empty_dt, "tbl_df"), empty_tb)
+  expect_equivalent(.as.data.frame.aqp(empty_dt, "tbl_df"), empty_tb)
   # note: that because of slight internal differences (leftover from data.table?)
   #       cannot use expect_equal -- though they are clearly equivalent
   #
-  # > str(aqp:::.as.data.frame.aqp(empty_dt, "tbl_df"))
+  # > str(.as.data.frame.aqp(empty_dt, "tbl_df"))
   # tibble [0 × 0] (S3: tbl_df/tbl/data.frame)
   # Named list()
   # - attr(*, ".internal.selfref")=<externalptr>
@@ -83,7 +83,7 @@ res <- lapply(dfclasses, function(use_class) {
 
     # basic function for converting inputs btween tibble and data.frame
     test_object <- function(object, use_class) {
-      aqp:::.as.data.frame.aqp(object, as.class = use_class)
+      .as.data.frame.aqp(object, as.class = use_class)
     }
 
     # make some fake data
@@ -111,8 +111,7 @@ res <- lapply(dfclasses, function(use_class) {
     site(test) <- crds
 
     # promote to spatial
-    coordinates(test) <- ~ x + y
-    proj4string(test) <- "+proj=longlat +datum=WGS84"
+    initSpatial(test, crs = "+proj=longlat +datum=WGS84") <- ~ x + y
 
     # show method should be produce output without error
     expect_output(show(test))
@@ -134,7 +133,7 @@ res <- lapply(dfclasses, function(use_class) {
     expect_message(rebuildSPC(test2), "using `hzID` as a unique horizon ID")
 
     # test enforce_df_class
-    expect_silent(aqp:::.enforce_df_class(test2, use_class))
+    expect_silent(.enforce_df_class(test2, use_class))
 
     # "normalize" (horizon -> site) a site-level attribute
     site(test) <- ~ siteprop
@@ -146,20 +145,19 @@ res <- lapply(dfclasses, function(use_class) {
     test$newy <- denormalize(test, "y")
     
     # promote to spatial works from horizons
-    coordinates(test) <- ~ newx + newy
-    
-    # only formulas are allowed for input value
-    expect_error(coordinates(test) <- "foo")
+    # formula and character are allowed inputs on RHS
+    # LHS specifies optional CRS
+    initSpatial(test, crs = "OGC:CRS84") <- ~ newx + newy
     
     # siteprop removed from horizons
-    # newx should be removed after promotion
     if (use_class == "tbl_df") {
       expect_warning(expect_null(horizons(test)$siteprop))
-      expect_warning(expect_null(horizons(test)$newx))
     } else {
       expect_null(horizons(test)$siteprop)
-      expect_null(horizons(test)$newx)
     }
+    
+    # newx is still in horizon data (converted to site level only on coercion)
+    expect_false(is.null(horizons(test)$newx))
     
     # check that ids are in order
     expect_equal(profile_id(test), site(test)$id)
@@ -278,7 +276,7 @@ res <- lapply(dfclasses, function(use_class) {
 
     ## make sample data using current class type
     data(sp1, package = 'aqp')
-    sp1df <- aqp:::.as.data.frame.aqp(sp1, use_class, stripFactors = TRUE)
+    sp1df <- .as.data.frame.aqp(sp1, use_class, stripFactors = TRUE)
     depths(sp1df) <- id ~ top + bottom
     site(sp1df) <- ~ group
 
@@ -312,7 +310,7 @@ res <- lapply(dfclasses, function(use_class) {
 
       # this should work
       foo <- explainPlotSPC(sp1df)
-      expect_equal(length(foo), 11)
+      expect_true(is.list(foo))
     })
 
     test_that(sprintf("SPC diagnostics and restrictions (%s)", use_class), {
@@ -344,7 +342,7 @@ res <- lapply(dfclasses, function(use_class) {
       # do it here
       h <- horizons(sp1df)
       s <- site(sp1df)
-      d <- aqp:::.as.data.frame.aqp(as(sp1df, 'data.frame'), use_class)
+      d <- .as.data.frame.aqp(as(sp1df, 'data.frame'), use_class)
 
       expect_true(inherits(h, use_class))
       expect_true(inherits(s, use_class))

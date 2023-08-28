@@ -139,7 +139,21 @@ test_that("SPC subsetting ", {
 
   # horizon subsets
   expect_true(inherits(sp1[, 2], 'SoilProfileCollection'))
-
+  expect_true(inherits(sp1[, 6], 'SoilProfileCollection'))
+  
+  # j-index subset with drop=FALSE argument
+  site(sp1)$foo <- "bar"
+  sp1d <- sp1[, 6, drop = FALSE]
+  expect_true(inherits(sp1d, 'SoilProfileCollection'))
+  expect_equal(length(sp1d), length(sp1)) # no profiles removed 
+                                          # (4 with less than 6 horizons)
+  expect_equal(sum(is.na(sp1d$foo)), 4)   # 4 profiles with NA $foo data
+  
+  # check empty profiles
+  expect_true(all(!isEmpty(sp1)))
+  expect_equal(isEmpty(sp1d), c(FALSE, TRUE, TRUE, TRUE, TRUE,
+                                FALSE, FALSE, FALSE, FALSE))
+  
   # there should only be 1 profile and 1 horizon
   expect_equal(length(sp1[1, 1]), 1)
   expect_equal(nrow(sp1[1, 1]), 1)
@@ -189,73 +203,38 @@ test_that("SPC graceful failure of spatial operations when data are missing", {
 
 
 test_that("SPC spatial operations ", {
-
-  skip_if_not_installed("rgdal")
-
+  
+  skip_if_not_installed("sf")
+  
   # init / extract coordinates
-  coordinates(sp1) <- ~ x + y
-  co <- coordinates(sp1)
-
+  initSpatial(sp1) <- ~ x + y
+  
+  # "coordinates" getter is getSpatial
+  co <- getSpatial(sp1)
+  
   # these are valid coordinates
   expect_true(validSpatialData(sp1))
-
+  
   # coordinates should be a matrix
   expect_true(inherits(co, 'matrix'))
+  
   # as many rows as length and 2 columns
   expect_equal(dim(co), c(length(sp1), 2))
-
+  
   # coordinate columns should be removed from @site
-  expect_true(all( ! dimnames(co)[[2]] %in% siteNames(sp1)))
+  # expect_true(all(!dimnames(co)[[2]] %in% siteNames(sp1)))
 
-  # set previously NULL CRS
-  # updated to not include a +datum as this breaks in upstream sp/rgdal
-
-  # 2020/07/12: warnings expect warning on rgdal 1.5-8+
-  # https://cran.r-project.org/web/packages/rgdal/vignettes/PROJ6_GDAL3.html
-  # catching all rgdal 1.5-8+ warnings in proj4string,SoilProfileCollection-methods
-  # expect_silent(proj4string(sp1) <- '+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0')
-  #
-  # # we should get back the same thing we started with
-  # if (packageVersion("rgdal") >= "1.5-17")
-  #   expect_silent(expect_equal(proj4string(sp1), '+proj=longlat +datum=WGS84 +no_defs'))
-  # else if (packageVersion("rgdal") >= "1.5-8")
-  #   expect_silent(expect_equal(proj4string(sp1), '+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs'))
-  # else
-  #   expect_silent(expect_equal(proj4string(sp1), '+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0'))
-  #
+  # set CRS
+  expect_silent(prj(sp1) <- "OGC:CRS84")
+  
+  # get CRS (via crs(<SPC>) method)
+  expect_true(nchar(prj(sp1)) > 0)
+  
   # # basic coercion
-  # if (packageVersion("rgdal") >= "1.5-17")
-  #   expect_silent(expect_true(inherits(as(sp1, 'SpatialPoints'), 'SpatialPoints')))
-  # else if (packageVersion("rgdal") >= "1.5-8")
-  #   expect_warning(expect_true(inherits(as(sp1, 'SpatialPoints'), 'SpatialPoints')))
-  # else
-  #   expect_silent(expect_true(inherits(as(sp1, 'SpatialPoints'), 'SpatialPoints')))
-  #
+  expect_true(inherits(as(sp1, 'SpatialPoints'), 'SpatialPoints'))
+
   # # down-grade to {site + sp} = SpatialPointsDataFrame
-  # if (packageVersion("rgdal") >= "1.5-17")
-  #   expect_silent(expect_message(as(sp1, 'SpatialPointsDataFrame'), 'only site data are extracted'))
-  # else if (packageVersion("rgdal") >= "1.5-8")
-  #   expect_warning(expect_message(as(sp1, 'SpatialPointsDataFrame'), 'only site data are extracted'))
-  # else
-  #   expect_silent(expect_message(as(sp1, 'SpatialPointsDataFrame'), 'only site data are extracted'))
-  #
-  # if (packageVersion("rgdal") >= "1.5-17")
-  #   expect_silent(sp1.spdf <- suppressMessages(as(sp1, 'SpatialPointsDataFrame')))
-  # else if (packageVersion("rgdal") >= "1.5-8")
-  #   expect_warning(sp1.spdf <- suppressMessages(as(sp1, 'SpatialPointsDataFrame')))
-  # else
-  #   expect_silent(sp1.spdf <- suppressMessages(as(sp1, 'SpatialPointsDataFrame')))
-  #
-  # expect_true(inherits(sp1.spdf, 'SpatialPointsDataFrame'))
-
-  # Unit-length j-index SPDF downgrading DEPRECATED
-
-  # implicity down-grade to SPDF via hz-subsetting
-  # sp1.spdf <- suppressMessages(sp1[, 1])
-  # expect_true(inherits(sp1.spdf, 'SpatialPointsDataFrame'))
-  # again, with profile indexing
-  # sp1.spdf <- suppressMessages(sp1[1, 1])
-  # expect_true(inherits(sp1.spdf, 'SpatialPointsDataFrame'))
+  expect_message(as(sp1, 'SpatialPointsDataFrame'), 'only site data are extracted')
 
   # retain SPC object when using unit-length j index
   sp1.spc <- suppressMessages(sp1[, 1])
@@ -528,11 +507,11 @@ test_that("SPC horizon ID init conflicts", {
   # test backup name
   expect_equivalent(hzidname(x), 'hzID_')
 
-  # special case: IDs resulting from slice()
-  s <- slice(sp1, 0:100 ~ .)
+  # special case: IDs resulting from dice()
+  s <- dice(sp1, 0:100 ~ ., SPC = TRUE)
   expect_equivalent(hzidname(s), 'sliceID')
   # check to make sure hzID and sliceID are present
-  expect_equal(grep('hzID|sliceID', horizonNames(s)), c(18, 20))
+  expect_equal(length(grep('hzID|sliceID', horizonNames(s))), 2)
 
 })
 

@@ -5,7 +5,7 @@
 
 #' Estimate upper and lower boundary of argillic diagnostic subsurface horizon
 #'
-#' @param p A single-profile SoilProfileCollection
+#' @param p A SoilProfileCollection
 #' @param hzdesgn the name of the column/attribute containing the horizon designation; default="hzname"
 #' @param clay.attr the name of the column/attribute containing the clay content; default="clay"
 #' @param texcl.attr the name of the column/attribute containing the textural class (used for finding sandy horizons); default="texcl"
@@ -42,7 +42,7 @@
 #' depths(sp1) <- id ~ top + bottom
 #' site(sp1) <- ~ group
 #'
-#' p <- sp1[1]
+#' p <- sp1
 #' attr <- 'prop' # clay contents
 #' foo <- getArgillicBounds(p, hzdesgn='name', clay.attr = attr, texcl.attr="texture")
 #' foo
@@ -186,6 +186,7 @@ getArgillicBounds <- function(p,
 #' @references Soil Survey Staff. 2014. Keys to Soil Taxonomy, 12th ed.
 #' USDA-Natural Resources Conservation Service, Washington, DC.
 #' @keywords manip
+#' @export
 #' @examples
 #'
 #' # crit.clay.argillic uses different equations for clay content
@@ -232,6 +233,7 @@ crit.clay.argillic <- function(eluvial_clay_content) {
 #' @seealso \code{getArgillicBounds}, \code{get.increase.matrix},
 #' \code{crit.clay.argillic}
 #' @keywords manip
+#' @export
 #' @examples
 #' 
 #' data(sp1, package = 'aqp')

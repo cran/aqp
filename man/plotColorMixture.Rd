@@ -7,9 +7,9 @@
 plotColorMixture(
   x,
   w = rep(1, times = length(x))/length(x),
-  mixingMethod = c("reference", "exact"),
+  mixingMethod = c("exact", "reference"),
   n = 1,
-  swatch.cex = 6,
+  swatch.cex = 1.5,
   label.cex = 0.85,
   showMixedSpec = FALSE,
   overlapFix = TRUE
@@ -22,19 +22,19 @@ plotColorMixture(
 
 \item{mixingMethod}{approach used to simulate a mixture:
 \itemize{
-\item \code{reference}  : simulate a subtractive mixture of pigments, selecting \code{n} closest reference spectra
-\item \code{exact}: simulate a subtractive mixture of pigments, color conversion via CIE1931 color-matching functions (see \code{\link{mixMunsell}})
+\item \code{exact}: simulate a subtractive mixture of pigments, color conversion via CIE1931 color-matching functions (see \code{\link[=mixMunsell]{mixMunsell()}})
+\item \code{reference}  : simulate a subtractive mixture of pigments, selecting \code{n} closest reference spectra, requires \code{gower} package
 }}
 
-\item{n}{number of closest mixture candidates when \code{mixingMethod = 'reference'} (see \code{\link{mixMunsell}}), results can be hard to interpret when \code{n > 2}}
+\item{n}{number of closest mixture candidates when \code{mixingMethod = 'reference'} (see \code{\link[=mixMunsell]{mixMunsell()}}), results can be hard to interpret when \code{n > 2}}
 
-\item{swatch.cex}{scaling factor for color swatch}
+\item{swatch.cex}{scaling factor for color swatch rectangle width and height, relative to \code{label.cex}, typically between 1 and 3}
 
 \item{label.cex}{scaling factor for swatch labels}
 
 \item{showMixedSpec}{show weighted geometric mean (mixed) spectra as dotted line (only when \code{mixingMethod = 'reference'})}
 
-\item{overlapFix}{attempt to "fix" overlapping chip labels via \code{\link{fixOverlap}}}
+\item{overlapFix}{attempt to "fix" overlapping chip labels via \code{\link[=fixOverlap]{fixOverlap()}}, using \code{method = 'E'}}
 }
 \value{
 a \code{lattice} graphics object
@@ -43,34 +43,10 @@ a \code{lattice} graphics object
 Lattice visualization demonstrating subtractive mixtures of colors in Munsell notation and associated spectra.
 }
 \details{
-If present, \code{names} attribute of \code{x} is used for the figure legend.
+If present, \code{names} attribute of \code{x} is used for the figure legend. See the \href{https://ncss-tech.github.io/AQP/aqp/mix-colors.html}{expanded tutorial} for examples.
 }
-\examples{
-
-# color chips
-chips <- c('5B 5/10', '5Y 8/8')
-names(chips) <- chips
-
-# weights
-wt <- c(1, 1)
-
-plotColorMixture(
-x = chips, 
-w = wt, 
-swatch.cex = 4, 
-label.cex = 0.65, 
-showMixedSpec = TRUE, 
-mixingMethod = 'reference'
-)
-
-plotColorMixture(
-  x = chips, 
-  w = wt, 
-  swatch.cex = 4, 
-  label.cex = 0.65, 
-  mixingMethod = 'exact'
-)
-
+\seealso{
+\code{\link[=mixMunsell]{mixMunsell()}}
 }
 \author{
 D.E. Beaudette

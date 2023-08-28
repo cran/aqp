@@ -21,6 +21,7 @@
 #' @author D.E. Beaudette
 #' @seealso \code{\link{generalize.hz}}
 #' @keywords manip
+#' @export
 #' @examples
 #'
 #' # load some example data
@@ -38,7 +39,7 @@
 #' levels(sp1$genhz)
 #'
 #' # generalize horizons by depth slice
-#' s <- slice(sp1, c(5, 10, 15, 25, 50, 100, 150) ~ .)
+#' s <- dice(sp1, c(5, 10, 15, 25, 50, 100, 150) ~ .)
 #' s$slice <- paste0(s$top, ' cm')
 #' # not a factor
 #' levels(s$slice)
@@ -52,7 +53,7 @@
 #' # that is better
 #' levels(s$slice)
 #'
-guessGenHzLevels <- function(x, hz='genhz') {
+guessGenHzLevels <- function(x, hz = GHL(x, required = TRUE)) {
   tb <- horizonDepths(x)
   h <- horizons(x)
   # compute horizon mid-point

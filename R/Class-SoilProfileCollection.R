@@ -1,6 +1,7 @@
 #' @title An S4 object representation of a group of soil profiles.
 #'
 #' @name SoilProfileCollection
+#' @export
 #'
 #' @slot idcol character.
 #' @slot hzidcol character.
@@ -13,7 +14,8 @@
 #' @slot restrictions data.frame.
 #' @aliases SoilProfileCollection-class
 #' @rdname SoilProfileCollection-class
-#'
+#' @importFrom sp SpatialPoints proj4string coordinates proj4string<- coordinates<-
+#' @importClassesFrom sp SpatialPoints SpatialPointsDataFrame
 setClass(
   Class = 'SoilProfileCollection',
   representation = representation(
@@ -45,7 +47,7 @@ setClass(
                           top = numeric(0), bottom = numeric(0),
                           stringsAsFactors = FALSE),
     site = data.frame(id = character(0), stringsAsFactors = FALSE),
-    sp = SpatialPoints(data.frame(x = 0, y = 0))[-1, ],
+    sp = sp::SpatialPoints(data.frame(x = 0, y = 0))[-1, ],
     diagnostic = data.frame(stringsAsFactors = FALSE),
     restrictions = data.frame(stringsAsFactors = FALSE)
   ),
@@ -68,13 +70,14 @@ setClass(
 #' @param metadata list, metadata including data.frame class in use and depth units
 #' @param horizons data.frame An object inheriting from data.frame containing Horizon data.
 #' @param site data.frame An object inheriting from data.frame containing Site data.
-#' @param sp SpatialPoints A SpatialPoints object. Generally initialized with \code{coordinates(spc) <- ~ x + y}.
+#' @param sp SpatialPoints A SpatialPoints object. No longer used in aqp 2+, see `?initSpatial`
 #' @param diagnostic data.frame An object inheriting from data.frame containing diagnostic feature data. Must contain profile ID. See \code{diagnostic_hz()}
 #' @param restrictions data.frame An object inheriting from data.frame containing restrictive feature data. Must contain profile ID. See \code{restrictions()}
 #'
 #' @description In general, one should use \code{depths()} to initiate a SoilProfileCollection object from data. However, sometimes there are instances where either an empty, or very specific, object is needed. If that is the case, the general constructor \code{SoilProfileCollection} is available.
 #'
 #' @author Pierre Roudier, Dylan E. Beaudette, Andrew G. Brown
+#' @export
 #'
 #' @rdname SoilProfileCollection-class
 #' @examples
@@ -87,7 +90,7 @@ setClass(
 #' ## profile ID, top and bottom depth and set up
 #' ## a SPC that is topologically correct and complete
 #'
-#' d <- do.call('rbind',lapply(1:10, random_profile))
+#' d <- do.call('rbind', lapply(1:10, random_profile))
 #'
 #' # promote to SoilProfileCollection and plot
 #' depths(d) <- id ~ top + bottom
@@ -98,8 +101,9 @@ setClass(
 #' d.2 <- d[2, ]
 #' d.345 <- d[3:5, ]
 #'
-#' # recombine, note that profiles are sorted according to ID
-#' d.new <- pbindlist(list(d.345, d.1, d.2))
+#' # combine profile collections
+#' # note that profiles are sorted according to ID
+#' d.new <- c(d.345, d.1, d.2)
 #' plot(d.new)
 #'
 #' data(sp1)
@@ -153,7 +157,6 @@ setClass(
 #' # note that IDs should all be character class
 #' d <- data.frame(id=profile_id(sp1), p=runif(n=length(sp1)), stringsAsFactors=FALSE)
 #' site(sp1) <- d
-#'
 #'
 #' # edit horizon depths
 #' horizonDepths(sp1) <- c('t', 'b')
@@ -295,19 +298,9 @@ setMethod(f = 'show',
             h <- h[rows.show.h, , drop = FALSE]
             s <- s[rows.show.s, , drop = FALSE]
 
-            # move IDs and depths, horizon designation if available
-            hzd <- hzdesgnname(object)
-            if (hzd != "") {
-
-              # registered in a slot
-              idx <- match(c(idname(object),
-                             hzidname(object),
-                             horizonDepths(object),
-                             hzdesgnname(object)), names(h))
-            } else {
-              # undefined
-              idx <- match(c(idname(object), hzidname(object), horizonDepths(object)), names(h))
-            }
+            # move IDs and depths, horizon designation/texture if available
+            hzm <- .hzMetadataNames(object, depths = TRUE)
+            idx <- match(hzm, names(h))
 
             # determine number of columns to show, and index to hz / site data
             # user sett-able
@@ -321,18 +314,7 @@ setMethod(f = 'show',
 
             if (length(h.n) > 0) {
 
-              # aqp:::.data.frame.j is the safe way to use the j index the data.frame way
-              #  if you might encounter a data.table
               h <- .data.frame.j(h, c(h.n[idx], h.n[-na.omit(idx)]), aqp_df_class(object))
-
-              # # if defined, move horizon designation to the 3rd column
-              # # missing horizon designation evaluates to character(0)
-              hzd <- hzdesgnname(object)
-              if (hzd != "") {
-                idx <- match(hzd, names(h))
-                if (length(idx))
-                  h <- .data.frame.j(h, c(names(h)[idx], names(h)[-idx]), aqp_df_class(object))
-              }
 
               # show first n
               hz.show <- seq(from = 1,
@@ -386,10 +368,7 @@ setMethod(f = 'show',
             # make note of additional hz attributes
             cat(hz.txt)
 
-            # note: use of the j index here is not compatible with data.table
-            #  no need to use aqp:::.data.frame.j here -- this is just for output
-            print(.as.data.frame.aqp(data.frame(h)[, hz.show, drop = FALSE],
-                                     aqp_df_class(object)), row.names = FALSE)
+            print(data.frame(h)[, hz.show, drop = FALSE], row.names = FALSE)
 
             if(n.h > max(rows.show.h))
               cat('[... more horizons ...]\n')
@@ -397,23 +376,36 @@ setMethod(f = 'show',
             # make note of additional site attributes
             cat(site.txt)
 
-            # again: use of the j index here is not compatible with data.table
-            print(.as.data.frame.aqp(data.frame(s)[, site.show, drop = FALSE],
-                                     aqp_df_class(object)), row.names = FALSE)
+            print(data.frame(s)[, site.show, drop = FALSE], row.names = FALSE)
 
             if(n.s > max(rows.show.s))
               cat('[... more sites ...]\n')
 
             # presence of spatial data
-            if (nrow(coordinates(object)) == n.profiles) {
+            if (validSpatialData(object)) {
               cat('\nSpatial Data:\n')
-              show(object@sp@bbox)
-              cat("CRS: ", proj4string(object))
+              cat("  CRS: ", prj(object), ";", sep = "")
+              cat(.spc_bbox(object))
             } else {
               cat('\nSpatial Data:\n[EMPTY]\n')
             }
 
           })
+
+.spc_bbox <- function(x) {
+  crds <- metadata(x)$coordinates
+ 
+  # this bbox outputs for "point" geometries specified in two columns
+  # TODO: extend as needed if other geometry types are added (i.e. wrapper around st_bbox())
+  if (length(crds) != 2) 
+    return("\n")
+  
+  # if all coordinates in X or Y are NA warnings will be generated & Inf/-Inf result
+  suppressWarnings({
+    paste0(" ", crds[1], ": ", min(x[[crds[1]]], na.rm = TRUE), " to ", max(x[[crds[1]]], na.rm = TRUE), "; ",
+                crds[2], ": ", min(x[[crds[2]]], na.rm = TRUE), " to ", max(x[[crds[2]]], na.rm = TRUE), "\n")
+  })
+}
 
 #' @description `as.character()`: Character Representation of SoilProfileCollection Object
 #' @param x a SoilProfileCollection
@@ -426,21 +418,13 @@ setMethod('as.character', 'SoilProfileCollection', function(x, ...) {
 })
 
 #' @title Wrapper method for data.frame subclass conversion
-#'
+#' @noRd
 #' @param x ANY.
 #' @param as.class `"data.frame"`, `"tibble"`, or `"data.table"` default: `"data.frame"`
 #' @param ... Additional arguments to coercion function  `as.data.frame`, `as_tibble` or `as.data.table`
-#'
-#' @return a subclass of `data.frame` corresponding to `as.class`,
-#'
-#' @importFrom data.table as.data.table
-#' @importFrom tibble as_tibble
-#'
+#' @return a subclass of `data.frame` corresponding to `as.class`
 .as.data.frame.aqp <- function(x, as.class = "data.frame", ...) {
   # 2020-05-30: sub-classes of data.frame have more than one class
-  # debug
-  #            if (as.class == 'data.frame')
-  #              stop("foo")
 
   # NULL x -- probably from unusual use cases
   if (class(x)[1] == "NULL")
@@ -495,7 +479,7 @@ setMethod('as.character', 'SoilProfileCollection', function(x, ...) {
            #  make a warning with a stack trace
            if (as.class != "data.frame") {
              message(sprintf("failed to use %s as data.frame class", as.class))
-             metadata(object)$aqp_df_class <- "data.frame"
+             metadata(x)$aqp_df_class <- "data.frame"
              warning(
                "data.table and tbl_df in SoilProfileCollection data.frame slots are EXPERIMENTAL, defaulting to data.frame",
                call. = FALSE
@@ -545,6 +529,7 @@ setGeneric('hzID<-', function(object, value)
 #' @param value a unique vector of equal length to number of horizons \code{nrow(object)}
 #' @aliases hzID<-
 #' @docType methods
+#' @export
 #' @rdname hzID
 setReplaceMethod("hzID", signature(object = "SoilProfileCollection"),
                  function(object, value) {
@@ -579,7 +564,9 @@ setReplaceMethod("hzID", signature(object = "SoilProfileCollection"),
                    return(object)
                  })
 
-## profile IDs
+setGeneric('profile_id<-', function(object, value)
+  standardGeneric('profile_id<-'))
+
 #' Set profile IDs
 #'
 #' @name profile_id<-
@@ -591,9 +578,7 @@ setReplaceMethod("hzID", signature(object = "SoilProfileCollection"),
 #' @aliases profile_id<-,SoilProfileCollection-method
 #' @docType methods
 #' @rdname profile_id
-setGeneric('profile_id<-', function(object, value)
-  standardGeneric('profile_id<-'))
-
+#' @export
 setReplaceMethod("profile_id", signature(object = "SoilProfileCollection"),
                  function(object, value) {
                    # can't be missing
@@ -663,7 +648,9 @@ setReplaceMethod("profile_id", signature(object = "SoilProfileCollection"),
                  }
 )
 
-## horizon depth columns
+setGeneric('horizonDepths<-', function(object, value)
+  standardGeneric('horizonDepths<-'))
+
 #' Set horizon depth column names
 #'
 #' @name horizonDepths<-
@@ -675,9 +662,7 @@ setReplaceMethod("profile_id", signature(object = "SoilProfileCollection"),
 #' @aliases horizonDepths<-,SoilProfileCollection-method
 #' @docType methods
 #' @rdname horizonDepths
-setGeneric('horizonDepths<-', function(object, value)
-  standardGeneric('horizonDepths<-'))
-
+#' @export
 setReplaceMethod("horizonDepths", signature(object = "SoilProfileCollection"),
                  function(object, value) {
                    # can't be missing
@@ -717,6 +702,10 @@ setReplaceMethod("horizonDepths", signature(object = "SoilProfileCollection"),
                    return(object)
                  })
 
+
+setGeneric('horizonNames<-', function(object, value)
+  standardGeneric('horizonNames<-'))
+  
 #' Set horizon column names
 #'
 #' @name horizonNames<-
@@ -728,9 +717,7 @@ setReplaceMethod("horizonDepths", signature(object = "SoilProfileCollection"),
 #' @aliases horizonNames<-,SoilProfileCollection-method
 #' @docType methods
 #' @rdname horizonNames
-setGeneric('horizonNames<-', function(object, value)
-  standardGeneric('horizonNames<-'))
-
+#' @export
 setReplaceMethod("horizonNames", signature(object = "SoilProfileCollection"),
                  function(object, value) {
                    # sanity check
@@ -755,6 +742,9 @@ setReplaceMethod("horizonNames", signature(object = "SoilProfileCollection"),
                    return(object)
                  })
 
+setGeneric('siteNames<-', function(object, value)
+  standardGeneric('siteNames<-'))
+
 #' Set site column names
 #'
 #' @name siteNames<-
@@ -766,10 +756,7 @@ setReplaceMethod("horizonNames", signature(object = "SoilProfileCollection"),
 #' @aliases siteNames<-,SoilProfileCollection-method
 #' @docType methods
 #' @rdname siteNames
-#'
-setGeneric('siteNames<-', function(object, value)
-  standardGeneric('siteNames<-'))
-
+#' @export
 setReplaceMethod("siteNames",
                 signature(object = "SoilProfileCollection"),
                  function(object, value) {
@@ -782,6 +769,10 @@ setReplaceMethod("siteNames",
                    return(object)
                  })
 
+
+setGeneric('hzidname<-', function(object, value)
+  standardGeneric('hzidname<-'))
+
 #' Set horizon ID column name
 #'
 #' @name hzidname<-
@@ -793,6 +784,7 @@ setReplaceMethod("siteNames",
 #' @aliases hzidname<-,SoilProfileCollection-method
 #' @docType methods
 #' @rdname hzidname
+#' @export
 #' @examples
 #' data(sp1)
 #'
@@ -808,9 +800,6 @@ setReplaceMethod("siteNames",
 #' # get horizon designation column
 #' hzidname(sp1)
 #'
-setGeneric('hzidname<-', function(object, value)
-  standardGeneric('hzidname<-'))
-
 setReplaceMethod("hzidname",
                 signature(object = "SoilProfileCollection"),
                  function(object, value) {
@@ -869,6 +858,7 @@ setGeneric("idname", function(object, ...)
 #' @docType methods
 #' @aliases idname
 #' @rdname idname
+#' @export
 setMethod("idname", signature(object = "SoilProfileCollection"),
           function(object)
             return(object@idcol))
@@ -884,7 +874,7 @@ setGeneric("hzidname", function(object, ...)
 #' @docType methods
 #' @aliases hzidname
 #' @rdname hzidname
-#'
+#' @export
 setMethod("hzidname", signature(object = "SoilProfileCollection"),
           function(object)
             return(object@hzidcol))
@@ -900,7 +890,7 @@ setGeneric("hzID", function(object)
 #' @docType methods
 #' @aliases hzID
 #' @rdname hzID
-#'
+#' @export
 setMethod("hzID", signature(object = "SoilProfileCollection"),
           function(object) {
             return(object@horizons[[hzidname(object)]])
@@ -921,6 +911,7 @@ setGeneric("profile_id", function(object)
 #' @docType methods
 #' @aliases profile_id
 #' @rdname profile_id
+#' @export
 setMethod("profile_id", signature(object = "SoilProfileCollection"),
           function(object)
             unique(as.character(object@horizons[[idname(object)]])))
@@ -936,24 +927,10 @@ setGeneric("horizonDepths", function(object)
 #' @docType methods
 #' @aliases horizonDepths
 #' @rdname horizonDepths
+#' @export
 setMethod("horizonDepths", signature(object = "SoilProfileCollection"),
           function(object)
             return(object@depthcols))
-
-
-#' Get coordinates from spatial slot
-#'
-#' @description Get coordinates from spatial slot, if present.
-#'
-#' @param obj a SoilProfileCollection
-#' @docType methods
-#' 
-#' @aliases coordinates
-#' @rdname coordinates
-setMethod("coordinates", signature(obj = "SoilProfileCollection"),
-          function(obj) {
-            return(coordinates(obj@sp))
-          })
 
 ## site data
 setGeneric("site", function(object, ...)
@@ -967,6 +944,7 @@ setGeneric("site", function(object, ...)
 #' @docType methods
 #' @aliases site
 #' @rdname site
+#' @export
 setMethod("site", signature(object = "SoilProfileCollection"),
           function(object) {
             return(.as.data.frame.aqp(object@site, aqp_df_class(object)))
@@ -986,6 +964,7 @@ setGeneric("diagnostic_hz", function(object, ...)
 #' @docType methods
 #' @aliases diagnostic_hz
 #' @rdname diagnostic_hz
+#' @export
 setMethod(f = 'diagnostic_hz', signature(object = 'SoilProfileCollection'),
           function(object) {
             return(.as.data.frame.aqp(object@diagnostic, aqp_df_class(object)))
@@ -1004,6 +983,7 @@ setGeneric("restrictions", function(object, ...)
 #' @docType methods
 #' @aliases restrictions
 #' @rdname restrictions
+#' @export
 setMethod(f = 'restrictions', signature(object = 'SoilProfileCollection'),
           function(object) {
             return(.as.data.frame.aqp(object@restrictions, aqp_df_class(object)))
@@ -1022,6 +1002,7 @@ setGeneric("horizons", function(object, ...)
 #' @docType methods
 #' @aliases horizons
 #' @rdname horizons
+#' @export
 setMethod(f = 'horizons', signature(object = 'SoilProfileCollection'),
           function(object) {
             return(.as.data.frame.aqp(object@horizons, metadata(object)$aqp_df_class))
@@ -1032,15 +1013,16 @@ setMethod(f = 'horizons', signature(object = 'SoilProfileCollection'),
 setGeneric("metadata", function(object, ...)
   standardGeneric("metadata"))
 
-
 #' Retrieve metadata from SoilProfileCollection
 #'
 #' @description Get metadata from SoilProfileCollection. Result is a list. Two entries (aqp_df_class, depth_units) should not be edited in the metadata list directly. There are methods that facilitate changing them -- and propagating their changes throughout the collection. Otherwise, metadata list is a free-form slot used to store arbitrary information about the data, how it was collected, citations, etc.
 #'
 #' @param object a SoilProfileCollection
+#' @export
 #' @docType methods
 #' @aliases metadata
 #' @rdname metadata
+#' @export
 setMethod(f = 'metadata', signature(object = 'SoilProfileCollection'),
           function(object) {
             return(object@metadata)
@@ -1048,11 +1030,7 @@ setMethod(f = 'metadata', signature(object = 'SoilProfileCollection'),
 
 setGeneric("aqp_df_class", function(object)
   standardGeneric("aqp_df_class"))
-           
-# if (!isGeneric("aqp_df_class"))
-  setGeneric("aqp_df_class", function(object)
-    standardGeneric("aqp_df_class"))
-             
+
 #' Get aqp_df_class entry from metadata or return a safe value.
 #'
 #' @description This is an accessor and replacement method for the \code{aqp_df_class} entry in the metadata slot. This entry is used internally by methods that interact with \code{data.frame} objects and slots to ensure that the same class used to promote to the SoilProfileCollection initially is used throughout the process.
@@ -1062,6 +1040,7 @@ setGeneric("aqp_df_class", function(object)
 #' @docType methods
 #' @aliases aqp_df_class
 #' @rdname aqp_df_class
+#' @export
 setMethod(f = 'aqp_df_class', signature(object = 'SoilProfileCollection'),
           function(object) {
             u <- as.character(metadata(object)[['aqp_df_class']])
@@ -1081,6 +1060,7 @@ setGeneric("aqp_df_class<-", function(object, value)
 #' @param value "data.frame", "data.table" or "tbl_df"
 #' @aliases aqp_df_class<-
 #' @rdname aqp_df_class
+#' @export
 setReplaceMethod("aqp_df_class", signature(object = "SoilProfileCollection"),
                  function(object, value) {
                    if (length(value) != 1 | !is.character(value))
@@ -1104,6 +1084,7 @@ setGeneric("depth_units", function(object, ...)
 #' @docType methods
 #' @aliases depth_units
 #' @rdname depth_units
+#' @export
 setMethod(f = 'depth_units', signature(object = 'SoilProfileCollection'),
           function(object) {
             u <- as.character(metadata(object)[['depth_units']])
@@ -1124,6 +1105,7 @@ setGeneric("siteNames", function(object, ...)
 #' @docType methods
 #' @aliases siteNames
 #' @rdname siteNames
+#' @export
 setMethod("siteNames", signature(object = "SoilProfileCollection"),
           function(object) {
             res <- names(object@site)
@@ -1141,12 +1123,46 @@ setGeneric("horizonNames", function(object, ...)
 #' @docType methods
 #' @aliases horizonNames
 #' @rdname horizonNames
+#' @export
 setMethod("horizonNames", signature(object = "SoilProfileCollection"),
           function(object) {
             res <- names(object@horizons)
             return(res)
           })
 
+.hzMetadataNames <- function(object, depths = FALSE, ...) {
+  hzd <- character(0)
+  if (depths) {
+    hzd <- horizonDepths(object)
+  }
+  idn <- c(idname(object),
+    hzidname(object),
+    hzd,
+    hzdesgnname(object),
+    GHL(object),
+    hztexclname(object))
+  idn[!is.na(idn) & nchar(idn) > 0]
+}
+
+setGeneric("hzMetadata", function(object, ...)
+  standardGeneric("hzMetadata"))
+
+#' Get horizon-level metadata
+#'
+#' Get `idname(object)` and `hzidname(object)`, with `hzdesgnname(object)`, `hztexclname(object)` (if defined)
+#'
+#' @param object a SoilProfileCollection
+#' @docType methods
+#' @aliases hzMetadata
+#' @rdname hzMetadata
+#' @export
+setMethod("hzMetadata", signature(object = "SoilProfileCollection"), 
+          function(object) {
+            idn <- .hzMetadataNames(object)
+            .data.frame.j(horizons(object),
+                          col.names = idn[idn %in% horizonNames(object)],
+                          use_class = aqp_df_class(object))
+          })
 
 ##
 ## initialize metadata: object modification in-place
@@ -1155,12 +1171,13 @@ setMethod("horizonNames", signature(object = "SoilProfileCollection"),
 setGeneric('metadata<-', function(object, value)
   standardGeneric('metadata<-'))
 
-#' Set metadata for a SoilProfileCollection
+#' Set Metadata for a SoilProfileCollection
 #'
 #' @param object A SoilProfileCollection
 #' @param value A named list (see examples)
 #' @aliases metadata<-
 #' @rdname metadata
+#' @export
 #' @examples
 #' 
 #' data(sp5)
@@ -1195,6 +1212,7 @@ setGeneric('depth_units<-', function(object, value)
 #' @param value character, a value representing units. Default \code{'cm'}.
 #' @aliases depth_units<-
 #' @rdname depth_units
+#' @export
 #' @examples
 #'
 #' data(sp5)
