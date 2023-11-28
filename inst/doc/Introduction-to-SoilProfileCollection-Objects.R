@@ -199,7 +199,7 @@ prj(sp4)
 sp4.sp <- as(sp4, 'SpatialPointsDataFrame')
 sp4.sf <- as(sp4, 'sf')
 
-## ---- eval=FALSE----------------------------------------------------------------------------------
+## ----eval=FALSE-----------------------------------------------------------------------------------
 #  checkSPC(sp4)
 
 ## -------------------------------------------------------------------------------------------------
@@ -385,24 +385,24 @@ explainPlotSPC(sp4, name = 'name', plot.order = length(sp4):1)
 par(mar = c(4, 3, 2, 2))
 explainPlotSPC(sp4, name = 'name', n = length(sp4) + 2)
 
-## ---- fig.width=5, fig.height=6-------------------------------------------------------------------
+## ----fig.width=5, fig.height=6--------------------------------------------------------------------
 data(osd)
 x <- osd
 
-## ---- fig.width=5, fig.height=6-------------------------------------------------------------------
+## ----fig.width=5, fig.height=6--------------------------------------------------------------------
 par(mar = c(0, 2, 0, 4), xpd = NA)
 plotSPC(x[1, ], cex.names = 1)
 
-## ---- fig.width=7, fig.height=6-------------------------------------------------------------------
+## ----fig.width=7, fig.height=6--------------------------------------------------------------------
 # set margins and turn off clipping
 par(mar = c(0, 2, 0, 4), xpd = NA)
 plotSPC(x[1:2, ], cex.names = 1, width = 0.25)
 
-## ---- fig.width=8, fig.height=6-------------------------------------------------------------------
+## ----fig.width=8, fig.height=6--------------------------------------------------------------------
 par(mar = c(0, 2, 0, 4), xpd = NA)
 plotSPC(x, cex.names = 1, depth.axis = list(line = -0.1), width = 0.3)
 
-## ---- fig.width=8, fig.height=6-------------------------------------------------------------------
+## ----fig.width=8, fig.height=6--------------------------------------------------------------------
 par(mar = c(0, 0, 1, 1))
 plotSPC(
   x,
@@ -506,7 +506,7 @@ plotSPC(sp4)
 # annotate A horizon depth interval with brackets
 addBracket(a, col = 'red', offset = -0.4)
 
-## ---- fig.height=4, fig.width=8-------------------------------------------------------------------
+## ----fig.height=4, fig.width=8--------------------------------------------------------------------
 par(mar = c(0, 0, 0, 0))
 plotSPC(sp4, name = 'name')
 
@@ -522,24 +522,24 @@ addBracket(
   offset = -0.4
 )
 
-## ---- fig.height=4, fig.width=8-------------------------------------------------------------------
+## ----fig.height=4, fig.width=8--------------------------------------------------------------------
 par(mar = c(0, 0, 0, 0)) 
 groupedProfilePlot(sp4, groups = 'group')
 addBracket(a, col = 'red', offset = -0.4)
 
-## ---- fig.height=4, fig.width=8-------------------------------------------------------------------
+## ----fig.height=4, fig.width=8--------------------------------------------------------------------
 par(mar = c(0, 0, 0, 0))
 a.sub <- a[1:4,]
 groupedProfilePlot(sp4, groups = 'group')
 addBracket(a.sub, col = 'red', offset = -0.4)
 
-## ---- fig.height=4, fig.width=8-------------------------------------------------------------------
+## ----fig.height=4, fig.width=8--------------------------------------------------------------------
 a$bottom <- NA
 par(mar = c(0, 0, 0, 0))
 groupedProfilePlot(sp4, groups = 'group')
 addBracket(a, col = 'red', offset = -0.4)
 
-## ---- fig.height=4, fig.width=8-------------------------------------------------------------------
+## ----fig.height=4, fig.width=8--------------------------------------------------------------------
 par(mar = c(0, 0, 0, 0))
 groupedProfilePlot(sp4, groups = 'group')
 addBracket(
@@ -550,7 +550,7 @@ addBracket(
   offset = -0.4
 )
 
-## ---- fig.height=4, fig.width=8-------------------------------------------------------------------
+## ----fig.height=4, fig.width=8--------------------------------------------------------------------
 par(mar = c(0, 0, 0, 0))
 plotSPC(sp4, max.depth = 75)
 
@@ -570,7 +570,7 @@ addBracket(
   offset = -0.4
 )
 
-## ---- eval=FALSE----------------------------------------------------------------------------------
+## ----eval=FALSE-----------------------------------------------------------------------------------
 #  # library(svglite)
 #  # svglite(filename = 'e:/temp/fig.svg', width = 7, height = 6, pointsize = 12)
 #  #
@@ -762,7 +762,7 @@ xyplot(top ~ p.q50 | variable, groups = which, data = g, ylab = 'Depth',
                        points = FALSE)
 )
 
-## ---- fig.height=4.5, fig.width=9-----------------------------------------------------------------
+## ----fig.height=4.5, fig.width=9------------------------------------------------------------------
 library(data.table)
 library(RColorBrewer)
 
@@ -793,7 +793,7 @@ d.gsm <- slab(d, fm = id ~ p1, slab.structure = gsm.depths, slab.fun = mean, na.
 # note: horizon names are lost due to aggregation
 head(d.gsm, 7)
 
-## ---- fig.height=7, fig.width=9-------------------------------------------------------------------
+## ----fig.height=7, fig.width=9--------------------------------------------------------------------
 # reshape to wide format
 # this scales to > 1 aggregated variables
 d.gsm.pedons <- data.table::dcast(
@@ -817,7 +817,7 @@ mtext('original depths', side = 2, line = -1.5)
 plotSPC(d.gsm.pedons, color = 'p1')
 mtext('GSM depths', side = 2, line = -1.5)
 
-## ---- fig.height=7, fig.width=9-------------------------------------------------------------------
+## ----fig.height=7, fig.width=9--------------------------------------------------------------------
 # reshape to wide format
 d.gsm.pedons.2 <- data.table::dcast(
   data.table(d.gsm), 

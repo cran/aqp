@@ -1,4 +1,15 @@
+# aqp 2.0.2 (2023-11-18)
+ * CRAN release
+ * bug fix / enhancements in `evalMissingData()`
+ * new function `col2Munsell()` generalizes and replaces `rgb2munsell()` (thanks Shawn Salley for the suggestion)
+   - `rgb2munsell()` will be deprecated in aqp 2.1 
+ * new function `warpHorizons()` for warping horizon thickness (inflate/deflate) (thanks Shawn Salley for idea / inspiration)
+ * fixed minor bug in `plotColorMixture()` when final mixed color does not exist in spectral library
+ * fixed minor namespace collision in `groupedProfilePlot()`
+ * major updates to `profileInformationIndex()` (vignette pending)
+
 # aqp 2.0.1 (2023-09-03)
+ * CRAN release (CRAN check bugfix)
  * new function `flagOverlappingHz()` for identifying horizons with perfect overlap
  * `fillHzGaps()`, `dice()`, `slab()`, and several other functions now safely handle horizons with perfect overlap (#296)
 

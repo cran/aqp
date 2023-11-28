@@ -245,7 +245,7 @@ evalMethods(x, thresh = 5, q = 4)
 # chaos and failure to converge
 evalMethods(x, thresh = 5, q = 5)
 
-## ---- eval = FALSE--------------------------------------------------------------------------------
+## ----eval = FALSE---------------------------------------------------------------------------------
 #  # threshold too large
 #  evalMethods(x, thresh = 10, q = 3)
 #  
