@@ -664,16 +664,29 @@ plotSPC(s, color = 'ex_Ca_to_Mg')
 # truncate to the interval 5-15cm
 clods <- glom(sp4, z1 = 5, z2 = 15)
 
-par(mar = c(0, 0, 3, 0)) 
-plotSPC(clods, name = 'name', color = 'ex_Ca_to_Mg')
-rect(xleft = 0.5, ybottom = 15, xright = length(sp4) + 0.5, ytop = 5)
+# plot outlines of original profiles
+par(mar = c(0, 0, 3, 1.5)) 
+plotSPC(sp4, color = NA, name = NA, print.id = FALSE, depth.axis = FALSE, lwd = 0.5)
+
+# overlay glom() depth criteria
+rect(xleft = 0.5, ybottom = 15, xright = length(sp4) + 0.5, ytop = 5, lty = 2)
+
+# add SoilProfileCollection with selected horizons
+plotSPC(clods, add = TRUE, cex.names = 0.6, name = 'name', color = 'ex_Ca_to_Mg', name.style = 'center-center')
 
 ## ----fig.height=4, fig.width=8--------------------------------------------------------------------
 # truncate to the interval 5-15cm
 sp4.truncated <- trunc(sp4, 5, 15)
-par(mar = c(0, 0, 3, 0))
-plotSPC(sp4.truncated, name = 'name', color = 'ex_Ca_to_Mg')
-rect(xleft = 0.5, ybottom = 15, xright = length(sp4) + 0.5, ytop = 5)
+
+# plot outlines of original profiles
+par(mar = c(0, 0, 3, 1.5)) 
+plotSPC(sp4, color = NA, name = NA, print.id = FALSE, lwd = 0.5)
+
+# overlay truncation criteria
+rect(xleft = 0.5, ybottom = 15, xright = length(sp4) + 0.5, ytop = 5, lty = 2)
+
+# add truncated SoilProfileCollection
+plotSPC(sp4.truncated, depth.axis = FALSE, add = TRUE, cex.names = 0.6, name = 'name', color = 'ex_Ca_to_Mg', name.style = 'center-center')
 
 ## ----slab, fig.height=4, fig.width=8--------------------------------------------------------------
 # aggregate a couple of the horizon-level attributes, 

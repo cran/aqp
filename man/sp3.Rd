@@ -148,6 +148,6 @@ plotSPC(
 }
 }
 \references{
-http://casoilresource.lawr.ucdavis.edu/
+\url{https://casoilresource.lawr.ucdavis.edu/}
 }
 \keyword{datasets}

@@ -95,6 +95,10 @@ axis(
   line = 2.5, cex.axis=0.75
 )
 
+# label axes
+mtext('Relative\nCompleteness', side = 1, at = 0.25, line = 0.25, cex = 0.8)
+mtext('Absolute\nCompleteness (cm)', side = 1, at = 0.25, line = 2.75, cex = 0.8)
+
 ## -------------------------------------------------------------------------------------------------
 x <- fetchKSSL(series = 'pierre')
 par(mar = c(0, 0, 3, 2))
