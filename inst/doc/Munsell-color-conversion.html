@@ -49,7 +49,7 @@ overflow: visible;
 </style>
 <style type="text/css" data-origin="pandoc">
 pre > code.sourceCode { white-space: pre; position: relative; }
-pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span { line-height: 1.25; }
 pre > code.sourceCode > span:empty { height: 1.2em; }
 .sourceCode { overflow: visible; }
 code.sourceCode > span { color: inherit; text-decoration: inherit; }
@@ -355,15 +355,15 @@ when Munsell notation has been split into vectors of hue, value, and
 chroma. These could be columns in a <code>data.frame</code> or separate
 vectors. The <code>parseMunsell()</code> function is convenient when a
 full Munsell notation is given as a character vector. Note that
-<code>parseMunsell()</code> is a simplified wrapper to
-<code>munsell2rgb()</code>. For example, converting
-<code>10YR 4/6</code> with either function can return:</p>
+<code>parseMunsell()</code> is a wrapper to <code>munsell2rgb()</code>.
+For example, converting <code>10YR 4/6</code> with either function can
+return:</p>
 <ul>
 <li>hex-notation of a color: <code>#805921FF</code>, or</li>
 <li>sRGB color coordinates: <code>0.5002233 0.3489249 0.1287694</code>,
 or</li>
 <li>CIELAB color coordinates:
-<code>40.95021 10.31088 37.49513</code></li>
+<code>40.95021 10.31088 37.49513</code>.</li>
 </ul>
 <p>Selection of the closest <code>n</code> Munsell color “chips”, given
 sRGB or CIELAB colorspace coordinates is performed with the
@@ -394,26 +394,26 @@ package.</a>.</p>
 </div>
 <div id="examples" class="section level2">
 <h2>Examples</h2>
-<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Munsell -&gt; hex color</span></span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">parseMunsell</span>(<span class="st">&#39;5PB 4/6&#39;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="co"># Munsell -&gt; hex color</span></span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="fu">parseMunsell</span>(<span class="st">&#39;5PB 4/6&#39;</span>)</span></code></pre></div>
 <pre><code>#&gt; [1] &quot;#476189FF&quot;</code></pre>
-<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Munsell -&gt; sRGB</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="fu">parseMunsell</span>(<span class="st">&#39;5PB 4/6&#39;</span>,  <span class="at">return_triplets =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="co"># Munsell -&gt; sRGB</span></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="fu">parseMunsell</span>(<span class="st">&#39;5PB 4/6&#39;</span>,  <span class="at">return_triplets =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
 <pre><code>#&gt;           r         g         b
 #&gt; 1 0.2774433 0.3816871 0.5373067</code></pre>
-<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Munsell -&gt; CIELAB</span></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="fu">parseMunsell</span>(<span class="st">&#39;5PB 4/6&#39;</span>,  <span class="at">returnLAB =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="co"># Munsell -&gt; CIELAB</span></span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="fu">parseMunsell</span>(<span class="st">&#39;5PB 4/6&#39;</span>,  <span class="at">returnLAB =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
 <pre><code>#&gt;          L        A         B
 #&gt; 1 40.78393 1.583845 -25.09816</code></pre>
-<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># hex color -&gt; Munsell</span></span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="fu">col2Munsell</span>(<span class="st">&#39;#476189FF&#39;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="co"># hex color -&gt; Munsell</span></span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a><span class="fu">col2Munsell</span>(<span class="st">&#39;#476189FF&#39;</span>)</span></code></pre></div>
 <pre><code>#&gt;   hue value chroma     sigma
 #&gt; 1 5PB     4      6 0.2196242</code></pre>
-<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># neutral color</span></span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="fu">parseMunsell</span>(<span class="st">&#39;N 5/&#39;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="co"># neutral color</span></span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a><span class="fu">parseMunsell</span>(<span class="st">&#39;N 5/&#39;</span>)</span></code></pre></div>
 <pre><code>#&gt; [1] &quot;#313233FF&quot;</code></pre>
-<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># non-standard notation</span></span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="fu">getClosestMunsellChip</span>(<span class="st">&#39;3.3YR 4.4/6.1&#39;</span>, <span class="at">convertColors =</span> <span class="cn">FALSE</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a><span class="co"># non-standard notation</span></span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a><span class="fu">getClosestMunsellChip</span>(<span class="st">&#39;3.3YR 4.4/6.1&#39;</span>, <span class="at">convertColors =</span> <span class="cn">FALSE</span>)</span></code></pre></div>
 <pre><code>#&gt; [1] &quot;2.5YR 4/6&quot;</code></pre>
 </div>
 

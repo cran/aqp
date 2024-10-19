@@ -90,6 +90,18 @@ setReplaceMethod("depths", "data.frame",
   return(depth)
 }
 
+.checkDepthOrder <- function(x, depthcols) {
+  if (any(x[[depthcols[2]]] < x[[depthcols[1]]], na.rm = TRUE)) {
+    warning("One or more horizon bottom depths are shallower than top depth. Check depth logic with aqp::checkHzDepthLogic()", call. = FALSE)
+  }
+}
+
+.screenDepths <- function(x, depthcols = horizonDepths(x)) {
+  .checkNAdepths(x[[depthcols[1]]], "top")
+  .checkNAdepths(x[[depthcols[2]]], "bottom")
+  .checkDepthOrder(x, depthcols)
+}
+
 # create 0-length spc from id and horizon depth columns (`idn`, `hzd`)
 #  - allows template horizon (`hz`) and site (`st`) data to be provided (for additional columns)
 .prototypeSPC <- function(idn, hzd, 
@@ -177,6 +189,9 @@ setReplaceMethod("depths", "data.frame",
   # enforce numeric depths and provide QC warnings as needed
   data[[depthcols[1]]] <- .checkNAdepths(data[[depthcols[1]]], "top")
   data[[depthcols[2]]] <- .checkNAdepths(data[[depthcols[2]]], "bottom")
+  
+  # warn if bottom depth shallower than top (old style O horizons, data entry issues, etc.)
+  .checkDepthOrder(data, depthcols)
   
   tdep <- data[[depthcols[1]]]
 
@@ -415,14 +430,16 @@ setReplaceMethod("site", signature(object = "SoilProfileCollection"),
 setGeneric('replaceHorizons<-', function(object, value)
   standardGeneric('replaceHorizons<-'))
 
-#' Replace Data in Horizon Slot
+#' @title Replace Data in Horizon Slot
 #'
 #' @name replaceHorizons<-
 #'
-#' @description Replaces horizon data with new data.frame object.
+#' @description Replaces horizon data with new `data.frame` object.
 #'
-#' @param object A SoilProfileCollection
-#' @param value An object inheriting \code{data.frame}
+#' @param object A `SoilProfileCollection`
+#' 
+#' @param value An object inheriting `data.frame`
+#' 
 #' @aliases replaceHorizons<-,SoilProfileCollection-method
 #' @docType methods
 #'
@@ -444,7 +461,7 @@ setGeneric('replaceHorizons<-', function(object, value)
 #' length(horizonNames(sp2))
 #'
 #' # remove all but essential ones
-#' replaceHorizons(p) <- horizons(p)[,c(idname(p),hzidname(p),horizonDepths(p))]
+#' replaceHorizons(p) <- horizons(p)[,c(idname(p), hzidname(p), horizonDepths(p))]
 #'
 #' # inspect result (a clean slate)
 #' horizons(p)
