@@ -32,9 +32,8 @@
 #' 
 #' @author D.E. Beaudette
 #' 
-#' 
 #'
-#' @return When \code{method = "grid" or "manual"} a vector of color order is returned. When \code{method = "MDS"}, the output from \code{MASS::cmdscale}.
+#' @return When `method` = "grid" or "manual", a vector of color order is returned. When `method = "MDS"`, the output from [stats::cmdscale()].
 #' @export
 #'
 #' @examples
@@ -61,10 +60,6 @@
 #' previewColors(cols.hcl, method = 'MDS', pt.cex = 1)
 #' 
 previewColors <- function(cols, method = c('grid', 'MDS', 'manual'), labels = NULL, labels.cex = 1, col.order = NULL, nrow = ceiling(sqrt(length(cols))), ncol = nrow, border.col = 'black', pt.cex = 2, pt.pch = 15) {
-
-  # sanity check, need this for color distance eval
-  if(!requireNamespace('farver', quietly = TRUE))
-    stop('package `farver` is required', call.=FALSE)
 
   # remove NA
   cols <- na.omit(cols)

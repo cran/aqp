@@ -25,6 +25,7 @@
 #' @seealso [colorContrast()]
 #' @keywords hplots
 #' @export
+#' 
 #' @examples
 #'
 #' # keep examples from using more than 2 cores
@@ -39,7 +40,7 @@
 #'
 #' # graphical display
 #' colorContrastPlot(m1, m2)
-#'
+#' 
 colorContrastPlot <- function(
            m1,
            m2,
@@ -63,7 +64,7 @@ colorContrastPlot <- function(
   names(colors) <- labels
 
   # basic plot
-  colorspace::swatchplot(colors, cex=label.cex, font=label.font, ...)
+  colorspace::swatchplot(colors, cex=label.cex, font = label.font, ...)
 
   # eval constrat metrics
   d <- colorContrast(m1, m2)

@@ -51,7 +51,7 @@ Care should be taken when using the resulting sRGB values; they are close to the
 \examples{
 
 # neutral hues (N) can be defined with chroma of 0 or NA 
-g <- expand.grid(hue='N', value = 2:8, chroma = 0, stringsAsFactors = FALSE)
+g <- expand.grid(hue = 'N', value = 2:8, chroma = 0, stringsAsFactors = FALSE)
 (m <- munsell2rgb(g$hue, g$value, g$chroma))
 soilPalette(m)
 
@@ -82,17 +82,17 @@ with(d, munsell2rgb(hue, value, chroma, returnLAB = TRUE))
 
 # plot: note that we are setting panel order from red --> yellow
 library(lattice)
+
 xyplot(
   value ~ factor(chroma) | factor(hue, levels = hues),
   main = "Common Soil Colors", layout = c(4, 1), scales = list(alternating = 1),
   strip = strip.custom(bg = grey(0.85)),
-  data = d, as.table = TRUE, subscripts = TRUE, 
+  data = d, as.table = TRUE, subscripts = TRUE,
   xlab = 'Chroma', ylab = 'Value',
   panel = function(x, y, subscripts, ...) {
     panel.xyplot(x, y, pch = 15, cex = 4, col = d$color[subscripts])
   }
 )
-
 
 
 # convert a non-standard color to closest "chip" in `munsell` look-up table

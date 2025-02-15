@@ -5,6 +5,8 @@ knitr::opts_chunk$set(
   background = '#F7F7F7',
   fig.align = 'center',
   dev = 'png',
+  dpi = as.integer(Sys.getenv("R_AQP_VIGNETTE_IMAGE_DPI", unset = 32)),
+  optipng = knitr::hook_optipng,
   comment = "#>"
 )
 options(width = 100, stringsAsFactors = FALSE, timeout = 600)
@@ -136,7 +138,7 @@ title('Electrostatic\nq = 0.5', line = -3.5, adj = 0.5)
 testIt(x, fixOverlapArgs = list(method = 'E', q = 0.25))
 title('Electrostatic\nq = 0.25', line = -3.5, adj = 0.5)
 
-## ----fig.width=8, fig.height=5--------------------------------------------------------------------
+## ----eval=requireNamespace("soilDB", quietly=TRUE), fig.width=8, fig.height=5---------------------
 library(aqp)
 library(soilDB)
 
@@ -246,51 +248,51 @@ evalMethods(x, thresh = 5, q = 4)
 evalMethods(x, thresh = 5, q = 5)
 
 ## ----eval = FALSE---------------------------------------------------------------------------------
-#  # threshold too large
-#  evalMethods(x, thresh = 10, q = 3)
-#  
-#  
-#  # large threshold
-#  x <- c(0, 5, 12, 18, 20, 35, 40, 55, 90, 120, 145, 150)
-#  evalMethods(x, thresh = 9, q = 2)
-#  
-#  # single iteration enough
-#  x <- c(0, 3, 20, 35, 40, 55, 90, 120, 145, 150)
-#  evalMethods(x, thresh = 6, q = 1)
-#  
-#  # clusters
-#  x <- sort(c(0, jitter(rep(10, 3)), jitter(rep(25, 3)), jitter(rep(90, 3)), 150))
-#  evalMethods(x, thresh = 6, q = 3)
-#  evalMethods(x, thresh = 6, q = 2)
-#  
-#  
-#  ## impact of scale / offset
-#  x <- c(0, 5, 12, 18, 20, 35, 40, 50, 120, 145, 150)
-#  
-#  # works as expected
-#  evalMethods(x, thresh = 5, q = 1.1)
-#  
-#  # works as expected, as long as threshold is scaled
-#  evalMethods(x / 10, thresh = 5 / 10, q = 1.1)
-#  
-#  # works as expected, as long as threshold is scaled
-#  evalMethods(x * 10, thresh = 5 * 10, q = 1.1)
-#  
-#  
-#  # all work as expected, threshold not modified
-#  evalMethods(x + 10, thresh = 5, q = 1.1)
-#  evalMethods(x + 100, thresh = 5, q = 1.1)
-#  evalMethods(x + 1000, thresh = 5, q = 1.1)
-#  
-#  # works as expected
-#  x <- c(315, 325, 341, 353, 366, 374, 422)
-#  fixOverlap(x, thresh = 9.7, q = 1, method = 'E')
-#  evalMethods(x, thresh = 9.7, q = 1)
-#  
-#  
-#  x <- c(1.0075, 1.1200, 1.3450, 1.6450, 1.8700, 1.8825)
-#  fixOverlap(x, thresh = 0.05442329, q = 1)
-#  evalMethods(x, thresh = 0.05442329, q = 1)
+# # threshold too large
+# evalMethods(x, thresh = 10, q = 3)
+# 
+# 
+# # large threshold
+# x <- c(0, 5, 12, 18, 20, 35, 40, 55, 90, 120, 145, 150)
+# evalMethods(x, thresh = 9, q = 2)
+# 
+# # single iteration enough
+# x <- c(0, 3, 20, 35, 40, 55, 90, 120, 145, 150)
+# evalMethods(x, thresh = 6, q = 1)
+# 
+# # clusters
+# x <- sort(c(0, jitter(rep(10, 3)), jitter(rep(25, 3)), jitter(rep(90, 3)), 150))
+# evalMethods(x, thresh = 6, q = 3)
+# evalMethods(x, thresh = 6, q = 2)
+# 
+# 
+# ## impact of scale / offset
+# x <- c(0, 5, 12, 18, 20, 35, 40, 50, 120, 145, 150)
+# 
+# # works as expected
+# evalMethods(x, thresh = 5, q = 1.1)
+# 
+# # works as expected, as long as threshold is scaled
+# evalMethods(x / 10, thresh = 5 / 10, q = 1.1)
+# 
+# # works as expected, as long as threshold is scaled
+# evalMethods(x * 10, thresh = 5 * 10, q = 1.1)
+# 
+# 
+# # all work as expected, threshold not modified
+# evalMethods(x + 10, thresh = 5, q = 1.1)
+# evalMethods(x + 100, thresh = 5, q = 1.1)
+# evalMethods(x + 1000, thresh = 5, q = 1.1)
+# 
+# # works as expected
+# x <- c(315, 325, 341, 353, 366, 374, 422)
+# fixOverlap(x, thresh = 9.7, q = 1, method = 'E')
+# evalMethods(x, thresh = 9.7, q = 1)
+# 
+# 
+# x <- c(1.0075, 1.1200, 1.3450, 1.6450, 1.8700, 1.8825)
+# fixOverlap(x, thresh = 0.05442329, q = 1)
+# evalMethods(x, thresh = 0.05442329, q = 1)
 
 ## ----fig.width=8, fig.height=6--------------------------------------------------------------------
 tracePlot <- function(x, z, cex.axis.labels = 0.85) {

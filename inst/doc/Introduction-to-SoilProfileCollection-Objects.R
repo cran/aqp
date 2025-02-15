@@ -5,6 +5,8 @@ knitr::opts_chunk$set(
   background = '#F7F7F7',
   fig.align = 'center',
   dev = 'png',
+  dpi = as.integer(Sys.getenv("R_AQP_VIGNETTE_IMAGE_DPI", unset = 32)),
+  optipng = knitr::hook_optipng,
   comment = "#>"
 )
 options(width = 100, stringsAsFactors = FALSE, timeout = 600)
@@ -13,12 +15,12 @@ options(width = 100, stringsAsFactors = FALSE, timeout = 600)
 data.table::setDTthreads(Sys.getenv("OMP_THREAD_LIMIT", unset = 2))
 
 ## ----install, eval=FALSE--------------------------------------------------------------------------
-#  # install CRAN release + dependencies
-#  install.packages('aqp', dependencies = TRUE)
-#  install.packages('remotes', dependencies = TRUE)
-#  
-#  # install latest version from GitHub
-#  remotes::install_github("ncss-tech/aqp", dependencies = FALSE)
+# # install CRAN release + dependencies
+# install.packages('aqp', dependencies = TRUE)
+# install.packages('remotes', dependencies = TRUE)
+# 
+# # install latest version from GitHub
+# remotes::install_github("ncss-tech/aqp", dependencies = FALSE)
 
 ## ----load-packages--------------------------------------------------------------------------------
 library(aqp)
@@ -46,7 +48,7 @@ class(sp4)
 print(sp4)
 
 ## ----promote_to_spc, eval=FALSE-------------------------------------------------------------------
-#  idcolumn ~ hz_top_column + hz_bottom_column
+# idcolumn ~ hz_top_column + hz_bottom_column
 
 ## ----fig.width = 6--------------------------------------------------------------------------------
 # character vector of horizon templates
@@ -195,12 +197,14 @@ prj(sp4) <- '+proj=utm +zone=11 +datum=NAD83'
 # return CRS information
 prj(sp4)
 
-# extract spatial data + site level attributes in new spatial object
-sp4.sp <- as(sp4, 'SpatialPointsDataFrame')
-sp4.sf <- as(sp4, 'sf')
+if (requireNamespace("sf", quietly = TRUE)) {
+  # extract spatial data + site level attributes in new spatial object
+  sp4.sp <- as(sp4, 'SpatialPointsDataFrame')
+  sp4.sf <- as(sp4, 'sf')
+}
 
 ## ----eval=FALSE-----------------------------------------------------------------------------------
-#  checkSPC(sp4)
+# checkSPC(sp4)
 
 ## -------------------------------------------------------------------------------------------------
 spc_in_sync(sp4)
@@ -213,103 +217,103 @@ checkHzDepthLogic(sp4)
 checkHzDepthLogic(sp4, byhz = TRUE)
 
 ## ----coercion, eval=FALSE-------------------------------------------------------------------------
-#  # check our work by viewing the internal structure
-#  str(sp4)
-#  
-#  # create a data.frame from horizon+site data
-#  as(sp4, 'data.frame')
-#  
-#  # or, equivalently:
-#  as.data.frame(sp4)
-#  
-#  # convert SoilProfileCollection to a named list containing all slots
-#  as(sp4, 'list')
-#  
-#  # extraction of site + spatial data as SpatialPointsDataFrame
-#  as(sp4, 'SpatialPointsDataFrame')
+# # check our work by viewing the internal structure
+# str(sp4)
+# 
+# # create a data.frame from horizon+site data
+# as(sp4, 'data.frame')
+# 
+# # or, equivalently:
+# as.data.frame(sp4)
+# 
+# # convert SoilProfileCollection to a named list containing all slots
+# as(sp4, 'list')
+# 
+# # extraction of site + spatial data as SpatialPointsDataFrame
+# as(sp4, 'SpatialPointsDataFrame')
 
 ## ----eval=FALSE-----------------------------------------------------------------------------------
-#  # explicit string matching
-#  idx <- which(sp4$group == 'A')
-#  
-#  # numerical expressions
-#  idx <- which(sp4$elevation < 1000)
-#  
-#  # regular expression, matches any profile ID containing 'shasta'
-#  idx <- grep('shasta', profile_id(sp4), ignore.case = TRUE)
-#  
-#  # perform subset based on index
-#  sp4[idx, ]
+# # explicit string matching
+# idx <- which(sp4$group == 'A')
+# 
+# # numerical expressions
+# idx <- which(sp4$elevation < 1000)
+# 
+# # regular expression, matches any profile ID containing 'shasta'
+# idx <- grep('shasta', profile_id(sp4), ignore.case = TRUE)
+# 
+# # perform subset based on index
+# sp4[idx, ]
 
 ## ----eval=FALSE-----------------------------------------------------------------------------------
-#  subset(sp4, group == 'A')
-#  subset(sp4, elevation < 1000)
-#  subset(sp4, grepl('shasta', id, ignore.case = TRUE))
+# subset(sp4, group == 'A')
+# subset(sp4, elevation < 1000)
+# subset(sp4, grepl('shasta', id, ignore.case = TRUE))
 
 ## ----eval = FALSE---------------------------------------------------------------------------------
-#  sp4[, 2]
+# sp4[, 2]
 
 ## ----eval = FALSE---------------------------------------------------------------------------------
-#  sp4[, , .FIRST]
-#  sp4[, , .LAST]
+# sp4[, , .FIRST]
+# sp4[, , .LAST]
 
 ## ----concatenation, eval=FALSE--------------------------------------------------------------------
-#  # subset data into chunks
-#  s1 <- sp4[1:2, ]
-#  s2 <- sp4[4, ]
-#  s3 <- sp4[c(6, 8, 9), ]
-#  
-#  # combine subsets
-#  s <- combine(list(s1, s2, s3))
-#  
-#  # double-check result
-#  plotSPC(s)
+# # subset data into chunks
+# s1 <- sp4[1:2, ]
+# s2 <- sp4[4, ]
+# s3 <- sp4[c(6, 8, 9), ]
+# 
+# # combine subsets
+# s <- combine(list(s1, s2, s3))
+# 
+# # double-check result
+# plotSPC(s)
 
 ## ----eval=FALSE-----------------------------------------------------------------------------------
-#  # sample data as data.frame objects
-#  data(sp1)
-#  data(sp3)
-#  
-#  # rename IDs horizon top / bottom columns
-#  sp3$newid <- sp3$id
-#  sp3$hztop <- sp3$top
-#  sp3$hzbottom <- sp3$bottom
-#  
-#  # remove originals
-#  sp3$id <- NULL
-#  sp3$top <- NULL
-#  sp3$bottom <- NULL
-#  
-#  # promote to SoilProfileCollection
-#  depths(sp1) <- id ~ top + bottom
-#  depths(sp3) <- newid ~ hztop + hzbottom
-#  
-#  # label each group via site-level attribute
-#  site(sp1)$g <- 'sp1'
-#  site(sp3)$g <- 'sp3'
-#  
-#  # combine
-#  x <- combine(list(sp1, sp3))
-#  
-#  # make grouping variable into a factor for groupedProfilePlot
-#  x$g <- factor(x$g)
-#  
-#  # check results
-#  str(x)
-#  
-#  # graphical check
-#  # convert character horizon IDs into numeric
-#  x$.horizon_ids_numeric <- as.numeric(hzID(x))
-#  
-#  par(mar = c(0, 0, 3, 1))
-#  plotSPC(x, color='.horizon_ids_numeric', col.label = 'Horizon ID')
-#  groupedProfilePlot(x, 'g', color='.horizon_ids_numeric', col.label = 'Horizon ID', group.name.offset = -15)
+# # sample data as data.frame objects
+# data(sp1)
+# data(sp3)
+# 
+# # rename IDs horizon top / bottom columns
+# sp3$newid <- sp3$id
+# sp3$hztop <- sp3$top
+# sp3$hzbottom <- sp3$bottom
+# 
+# # remove originals
+# sp3$id <- NULL
+# sp3$top <- NULL
+# sp3$bottom <- NULL
+# 
+# # promote to SoilProfileCollection
+# depths(sp1) <- id ~ top + bottom
+# depths(sp3) <- newid ~ hztop + hzbottom
+# 
+# # label each group via site-level attribute
+# site(sp1)$g <- 'sp1'
+# site(sp3)$g <- 'sp3'
+# 
+# # combine
+# x <- combine(list(sp1, sp3))
+# 
+# # make grouping variable into a factor for groupedProfilePlot
+# x$g <- factor(x$g)
+# 
+# # check results
+# str(x)
+# 
+# # graphical check
+# # convert character horizon IDs into numeric
+# x$.horizon_ids_numeric <- as.numeric(hzID(x))
+# 
+# par(mar = c(0, 0, 3, 1))
+# plotSPC(x, color='.horizon_ids_numeric', col.label = 'Horizon ID')
+# groupedProfilePlot(x, 'g', color='.horizon_ids_numeric', col.label = 'Horizon ID', group.name.offset = -15)
 
 ## ----eval=FALSE-----------------------------------------------------------------------------------
-#  # continuing from above
-#  # split subsets of x into a list of SoilProfileCollection objects using site-level attribute 'g'
-#  res <- split(x, 'g')
-#  str(res, 1)
+# # continuing from above
+# # split subsets of x into a list of SoilProfileCollection objects using site-level attribute 'g'
+# res <- split(x, 'g')
+# str(res, 1)
 
 ## ----fig.height=4, fig.width=8--------------------------------------------------------------------
 d <- duplicate(sp4[1, ], times = 8)
@@ -447,7 +451,6 @@ plotSPC(
   sp4,
   name = 'name',
   color = 'clay',
-  col.palette = RColorBrewer::brewer.pal(10, 'Spectral'),
   col.label = 'Clay Content (%)'
 )
 
@@ -457,7 +460,6 @@ plotSPC(
   sp4,
   name = 'name',
   color = 'name',
-  col.palette = RColorBrewer::brewer.pal(5, 'Set1'),
   col.label = 'Original Horizon Name'
 )
 
@@ -471,7 +473,6 @@ plotSPC(
   sp4,
   name = 'name',
   color = 'genhz',
-  col.palette = RColorBrewer::brewer.pal(3, 'Spectral'),
   col.label = 'Generalized Horizon Name'
 )
 
@@ -571,13 +572,13 @@ addBracket(
 )
 
 ## ----eval=FALSE-----------------------------------------------------------------------------------
-#  # library(svglite)
-#  # svglite(filename = 'e:/temp/fig.svg', width = 7, height = 6, pointsize = 12)
-#  #
-#  # par(mar = c(0,2,0,4), xpd = NA)
-#  # plotSPC(x, cex.names=1, depth.axis = list(line = -0.2), width=0.3)
-#  #
-#  # dev.off()
+# # library(svglite)
+# # svglite(filename = 'e:/temp/fig.svg', width = 7, height = 6, pointsize = 12)
+# #
+# # par(mar = c(0,2,0,4), xpd = NA)
+# # plotSPC(x, cex.names=1, depth.axis = list(line = -0.2), width=0.3)
+# #
+# # dev.off()
 
 ## ----profileApply-1-------------------------------------------------------------------------------
 # max() returns the depth of a soil profile
@@ -631,10 +632,10 @@ axis(1, at = 1:length(sp4), labels = round(sp4$wt.mean.ca.to.mg, 3), cex.axis = 
 mtext(1, line = 2.25, text = 'Horizon Thickness Weighted Mean Ex. Ca:Mg', cex = 0.75)
 
 ## ----slice-formula, eval=FALSE--------------------------------------------------------------------
-#  # slice select horizon-level attributes
-#  seq ~ var.1 + var.2 + var.3 + ...
-#  # slice all horizon-level attributes
-#  seq ~ .
+# # slice select horizon-level attributes
+# seq ~ var.1 + var.2 + var.3 + ...
+# # slice all horizon-level attributes
+# seq ~ .
 
 ## ----fig.height=4, fig.width=8--------------------------------------------------------------------
 # resample to 1cm slices
@@ -648,17 +649,17 @@ par(mar = c(0, 0, 3, 0)) # tighten figure margins
 plotSPC(s, color = 'ex_Ca_to_Mg')
 
 ## ----eval=FALSE-----------------------------------------------------------------------------------
-#  # slice from 0 to max depth in the collection
-#  s <- dice(sp4, fm= 0:max(sp4) ~ sand + silt + clay + name + ex_Ca_to_Mg)
-#  
-#  # extract all data over the range of 5--10 cm:
-#  plotSPC(s[, 5:10])
-#  
-#  # extract all data over the range of 25--50 cm:
-#  plotSPC(s[, 25:50])
-#  
-#  # extract all data over the range of 10--20 and 40--50 cm:
-#  plotSPC(s[, c(10:20, 40:50)])
+# # slice from 0 to max depth in the collection
+# s <- dice(sp4, fm= 0:max(sp4) ~ sand + silt + clay + name + ex_Ca_to_Mg)
+# 
+# # extract all data over the range of 5--10 cm:
+# plotSPC(s[, 5:10])
+# 
+# # extract all data over the range of 25--50 cm:
+# plotSPC(s[, 25:50])
+# 
+# # extract all data over the range of 10--20 and 40--50 cm:
+# plotSPC(s[, c(10:20, 40:50)])
 
 ## ----fig.height=4, fig.width=8--------------------------------------------------------------------
 # truncate to the interval 5-15cm
@@ -777,7 +778,6 @@ xyplot(top ~ p.q50 | variable, groups = which, data = g, ylab = 'Depth',
 
 ## ----fig.height=4.5, fig.width=9------------------------------------------------------------------
 library(data.table)
-library(RColorBrewer)
 
 # 9 random profiles
 # 1 simulated property via logistic power peak (LPP) function
@@ -813,7 +813,7 @@ d.gsm.pedons <- data.table::dcast(
   data.table(d.gsm), 
   formula = id + top + bottom ~ variable, 
   value.var = 'value'
-  )
+)
 
 # init SPC
 depths(d.gsm.pedons) <- id ~ top + bottom
@@ -851,20 +851,12 @@ plotSPC(
   name = '',
   color = 'p1',
   col.label = 'Contributing Fraction',
-  col.palette = RColorBrewer::brewer.pal(10, 'Spectral')
 )
 mtext('GSM depths', side = 2, line = -1.5)
 
-## ----setup2, echo=FALSE, results='hide', warning=FALSE--------------------------------------------
-# handle sharpshootR dependency of last chunk
-knitr::opts_chunk$set(
-  eval = isTRUE(R.version$major >= 4 &&
-          try(requireNamespace("sharpshootR", quietly = TRUE), silent = TRUE))
-)
-
 ## ----fig.height=6, fig.width=10-------------------------------------------------------------------
 library(cluster)
-library(sharpshootR)
+library(ape)
 
 # start fresh
 data(sp4)
@@ -883,9 +875,9 @@ round(d, 1)
 # visualize dissimilarity matrix via divisive hierarchical clustering
 d.diana <- diana(d)
 
-# this function is from the sharpshootR package
-# requires some manual adjustments
+# may require some margin adjustments
 par(mar = c(0, 0, 4, 0))
+
 plotProfileDendrogram(
   sp4,
   d.diana,

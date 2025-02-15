@@ -92,14 +92,12 @@
 #' groupedProfilePlot(wilson2022, groups = 'pm', 
 #' group.name.offset = -15, label = 'biome', 
 #' name.style = 'center-center', color = 'CIA', 
-#' cex.names = 0.66, cex.id = 0.66, width = 0.3, 
-#' depth.axis = FALSE, hz.depths = TRUE)
+#' cex.names = 0.66, cex.id = 0.66, width = 0.3)
 #' 
 #' groupedProfilePlot(wilson2022, groups = 'biome', 
 #' group.name.offset = -15, label = 'pm', 
 #' name.style = 'center-center', color = 'Fet', 
-#' cex.names = 0.66, cex.id = 0.66, width = 0.3, 
-#' depth.axis = FALSE, hz.depths = TRUE)
+#' cex.names = 0.66, cex.id = 0.66, width = 0.3)
 #' 
 "wilson2022"
 
@@ -366,7 +364,7 @@ NULL
 #'                show.tip.label = FALSE)
 #' 
 #' # get the last plot geometry
-#' lastPP <- get("last_plot.phylo", envir = .PlotPhyloEnv)
+#' lastPP <- get("last_plot.phylo", envir = ape::.PlotPhyloEnv)
 #' 
 #' # the original labels, and new (indexed) order of pedons in dendrogram
 #' d.labels <- attr(d, 'Labels')
@@ -1013,50 +1011,51 @@ NULL
 #' @keywords datasets
 #'
 #' @examples
-#' 
+#'
 #' # keep examples from using more than 2 cores
 #' data.table::setDTthreads(Sys.getenv("OMP_THREAD_LIMIT", unset = 2))
 #' 
 #' # load
 #' data(jacobs2000)
-#'
+#' 
 #' # basic plot
-#' par(mar=c(0, 1, 3, 1.5))
+#' par(mar = c(0, 1, 3, 1.5))
 #' plotSPC(jacobs2000, name='name', color='matrix_color', width=0.3)
+#' 
 #' # add concentrations
 #' addVolumeFraction(jacobs2000, 'concentration_pct',
-#' col = jacobs2000$concentration_color, pch = 16, cex.max = 0.5)
-#'
+#'                   col = jacobs2000$concentration_color, pch = 16, cex.max = 0.5)
+#' 
 #' # add depletions
 #' plotSPC(jacobs2000, name='name', color='matrix_color', width=0.3)
 #' addVolumeFraction(jacobs2000, 'depletion_pct',
-#' col = jacobs2000$depletion_color, pch = 16, cex.max = 0.5)
-#'
+#'                   col = jacobs2000$depletion_color, pch = 16, cex.max = 0.5)
+#' 
 #' # time saturated
 #' plotSPC(jacobs2000, color='time_saturated', cex.names=0.8, col.label = 'Time Saturated')
-#'
+#' 
+#' 
 #' # color contrast: matrix vs. concentrations
 #' cc <- colorContrast(jacobs2000$matrix_color_munsell, jacobs2000$concentration_munsell)
 #' cc <- na.omit(cc)
-#'
+#' 
 #' cc <- cc[order(cc$dE00), ]
 #' cc <- unique(cc)
-#'
-#' par(bg='black', fg='white')
+#' 
+#' par(bg = 'black', fg = 'white')
 #' colorContrastPlot(cc$m1[1:10], cc$m2[1:10], labels = c('matrix', 'concentration'))
 #' colorContrastPlot(cc$m1[11:21], cc$m2[11:21], labels = c('matrix', 'concentration'))
-#'
-#'
+#' 
+#' 
 #' # color contrast: depletion vs. concentrations
 #' cc <- colorContrast(jacobs2000$depletion_munsell, jacobs2000$concentration_munsell)
 #' cc <- na.omit(cc)
-#'
+#' 
 #' cc <- cc[order(cc$dE00), ]
 #' cc <- unique(cc)
-#'
-#' par(bg='black', fg='white')
+#' 
+#' par(bg = 'black', fg = 'white')
 #' colorContrastPlot(cc$m1, cc$m2, labels = c('depletion', 'concentration'))
-#'
 #'
 "jacobs2000"
 

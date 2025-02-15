@@ -9,7 +9,7 @@
 #' 
 #' @author D.E. Beaudette
 #' @export
-#' @examples 
+#' @examples
 #' 
 #' # test with shades of grey
 #' s <- seq(0, 1, by = 0.05)

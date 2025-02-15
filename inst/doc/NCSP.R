@@ -5,6 +5,8 @@ knitr::opts_chunk$set(
   background = '#F7F7F7',
   fig.align = 'center',
   dev = 'png',
+  dpi = as.integer(Sys.getenv("R_AQP_VIGNETTE_IMAGE_DPI", unset = 32)),
+  optipng = knitr::hook_optipng,
   comment = "#>"
 )
 
@@ -16,8 +18,6 @@ options(width = 100, stringsAsFactors = FALSE, timeout = 600)
 ## -------------------------------------------------------------------------------------------------
 library(aqp)
 library(cluster)
-library(sharpshootR)
-library(ape)
 
 # load data and make a copy
 data("osd")
@@ -79,6 +79,8 @@ D <- Reduce(
 ) / sum(c(w1, w2))
 
 ## ----fig.width=8.5, fig.height=6------------------------------------------------------------------
+library(ape)
+
 # divisive hierarchical clustering
 h <- as.hclust(diana(D))
 
@@ -86,8 +88,8 @@ h <- as.hclust(diana(D))
 par(mar = c(1, 0, 0, 1))
 plotProfileDendrogram(z, clust = h, scaling.factor = 0.0075, y.offset = 0.15, width = 0.33, color = 'genhz', name = NA)
 
-# annotate dendorgram with subgroup classification
-# this handy function provided by the {ape} package
+# annotate dendrogram with subgroup classification
+# this handy function provided by the ape package
 tiplabels(pch = 15, col = c(2, 3)[z$subgroup], cex = 1.5, offset = 0.05)
 
 # helpful legend

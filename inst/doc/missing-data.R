@@ -5,6 +5,8 @@ knitr::opts_chunk$set(
   background = '#F7F7F7',
   fig.align = 'center',
   dev = 'png',
+  dpi = as.integer(Sys.getenv("R_AQP_VIGNETTE_IMAGE_DPI", unset = 32)),
+  optipng = knitr::hook_optipng,
   comment = "#>"
 )
 
@@ -15,7 +17,6 @@ options(width = 100, stringsAsFactors = FALSE, timeout = 600)
 
 ## -------------------------------------------------------------------------------------------------
 library(aqp)
-library(soilDB)
 
 ## -------------------------------------------------------------------------------------------------
 # example data
@@ -99,7 +100,8 @@ axis(
 mtext('Relative\nCompleteness', side = 1, at = 0.25, line = 0.25, cex = 0.8)
 mtext('Absolute\nCompleteness (cm)', side = 1, at = 0.25, line = 2.75, cex = 0.8)
 
-## -------------------------------------------------------------------------------------------------
+## ----eval=requireNamespace("soilDB", quietly=TRUE)------------------------------------------------
+library(soilDB)
 x <- fetchKSSL(series = 'pierre')
 par(mar = c(0, 0, 3, 2))
 

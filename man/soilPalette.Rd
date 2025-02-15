@@ -29,6 +29,9 @@ soilPalette(
 
 \item{\dots}{further arguments to \code{colorspace::swatchplot}}
 }
+\value{
+nothing is returned, function called for graphic output
+}
 \description{
 A very simple function for generating labeled swatches of soil colors. Largely based on \code{colorspace::swatchplot}.
 }
