@@ -1,4 +1,55 @@
 
+
+
+
+#' @title Generate a `SoilProfileCollection` of random profiles
+#' 
+#' @description
+#' This function provides a convenient abstraction of `lapply()`, [random_profile()], and [combine()] which are typically used together to create a `SoilProfileCollection` object with >1 soil profiles. `rp()` creates zero-padded integer IDs for logical sorting and indexing of profiles. For more complex IDs or additional flexibility, see [random_profile()]. See [random_profile()] for all possible arguments.
+#' 
+#'
+#' @param size integer, number of requested profiles 
+#' @param prefix prefix added to zero-padded, integer IDs
+#' @param ... additional arguments to [random_profile()]
+#' 
+#' @returns a `SoilProfileCollection` object
+#' @export
+#'
+#' @examples
+#' 
+#' # generate a SoilProfileCollection object with 10 profiles
+#' # using 0-padded, integer IDs for intuitive sorting
+#' spc <- rp(10, method = 'LPP')
+#' plotSPC(spc, color = 'p1')
+#' 
+#' # apply a prefix to the IDs
+#' spc <- rp(10, prefix = 'A-', method = 'LPP')
+#' plotSPC(spc, color = 'p1')
+#' 
+rp <- function(size, prefix = NULL, ...) {
+  
+  # format string for just enough 0-padding 
+  .padwidth <- nchar(size) + 1
+  
+  # optionally add prefix create formatting string
+  if(is.null(prefix)) {
+    .fmt <- sprintf("%%0%sd", .padwidth)
+  } else {
+    .fmt <- sprintf("%s%%0%sd", prefix, .padwidth)
+  }
+  
+  # generate IDs
+  .s <- sprintf(.fmt, 1:size)
+  
+  # typical pattern of random_profile() then combine()
+  .x <- lapply(.s, random_profile, SPC = TRUE, ...)
+  .x <- combine(.x)
+  
+  return(.x)
+}
+
+
+# logistic power peak function
 .lpp <- function(x, a, b, u, d, e) {
   # the exponential term
   f.exp <- exp((x + d * log(e) - u) / d)
@@ -10,6 +61,7 @@
   res <- a + f1 * f2
   return(res)
   }
+
 
 #' @title Random Profile
 #'
@@ -29,9 +81,12 @@
 #' description of the method is outlined in (Brenton et al, 2011). Simulated
 #' horizon distinctness codes are based on the USDA-NCSS field description
 #' methods.
+#' 
 #' Simulated distinctness codes are constrained according to horizon thickness,
 #' i.e. a gradual boundary (+/- 5cm) will not be simulated for horizons that
 #' are thinner than 3x this vertical distance
+#' 
+#' The [rp()] function is a convenient wrapper to this function, when requesting a simulated `SoilProfileCollection` of specified size.
 #'
 #' @aliases random_profile .lpp
 #' @param id a character or numeric id used for this profile
@@ -52,7 +107,7 @@
 #' @return A `data.frame` or `SoilProfileCollection` object.
 #' @note See examples for ideas on simulating several profiles at once.
 #' @author Dylan E. Beaudette
-#' @seealso [hzDistinctnessCodeToOffset()]
+#' @seealso [rp()], [hzDistinctnessCodeToOffset()]
 #' @references Myers, D. B.; Kitchen, N. R.; Sudduth, K. A.; Miles, R. J.;
 #' Sadler, E. J. & Grunwald, S. Peak functions for modeling high resolution
 #' soil profile data Geoderma, 2011, 166, 74-83.
