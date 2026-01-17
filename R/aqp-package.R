@@ -37,7 +37,7 @@
 #' 
 #' @importFrom methods setClass setOldClass representation prototype new isGeneric setGeneric setReplaceMethod setMethod .hasSlot as new slot slot<- slotNames
 #' 
-#' @importFrom stats TukeyHSD aggregate aov approxfun as.dist as.formula cmdscale complete.cases dist formula median model.frame na.omit na.pass quantile rnorm runif sd splinefun terms update weighted.mean cov as.hclust
+#' @importFrom stats TukeyHSD aggregate aov approxfun as.dist as.formula cmdscale complete.cases dist formula median model.frame na.omit na.pass quantile rnorm runif sd splinefun terms update weighted.mean cov as.hclust xtabs
 #' 
 #' @importFrom utils object.size packageVersion combn
 #' 
@@ -50,8 +50,6 @@
 #' @importFrom lattice levelplot xyplot panel.abline panel.grid panel.lines panel.points panel.polygon panel.rect panel.segments panel.text strip.custom trellis.par.get
 #' 
 #' @importFrom digest digest
-#' 
-#' @importFrom stringr str_c fixed str_split str_extract_all str_length str_trim
 #' 
 #' @importFrom farver convert_colour compare_colour
 #' 

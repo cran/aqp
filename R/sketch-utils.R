@@ -95,8 +95,11 @@
            # alternating colors
            .cols <- c('white', grey(0.3))
            
+           # remove depth units by splitting on space
+           .labels <- sapply(strsplit(.labels, split = ' ', fixed = TRUE), function(i) i[1])
+           
            # width of tape based on widest depth annotation
-           .w <- strwidth(as.character(max(.at)), units = 'user', cex = .cex) / 1.5
+           .w <- strwidth(as.character(max(.labels)), units = 'user', cex = .cex) * 0.9
            
            ## not currently used, "line" depends on aspect ratio of figure
            # convert line notation to user coordinates
@@ -137,11 +140,12 @@
            # use at - (text height)
            # .labY <- .at[-1] - (diff(.at) / 2)
            .labY <- .at
-           # select labels
+           
+           # label tape sections
            text(
              x = .x, 
              y = .labY, 
-             labels = .at, 
+             labels = .labels, 
              cex = .cex, 
              col = invertLabelColor(.cols), 
              offset = 0.25,
@@ -176,8 +180,10 @@
   }
 }
 
-## generalize and make into an exported function
+## TODO: switch to .detectColorSpec()
+## TODO: allow direct interpretation of Munsell notation
 
+# generalize and make into an exported function
 .interpretHorizonColor <- function(h, color, default.color, col.palette, col.palette.bias, n.legend) {
   
   # this is optionally replaced with real data when using thematic colors
@@ -353,6 +359,7 @@
 }
 
 
+## TODO: switch to .detectColorSpec()
 # Test for valid colors in vector `x`:
 #   1. named colors from colors()
 #   2. RGB / RGBA encoding of colors

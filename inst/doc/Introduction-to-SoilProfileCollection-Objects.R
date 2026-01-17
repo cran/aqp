@@ -257,6 +257,10 @@ checkHzDepthLogic(sp4, byhz = TRUE)
 # sp4[, , .FIRST]
 # sp4[, , .LAST]
 
+## ----eval = FALSE---------------------------------------------------------------------------------
+# sp4[, , .FIRST, .TOP]
+# sp4[, , .LAST, .HZID]
+
 ## ----concatenation, eval=FALSE--------------------------------------------------------------------
 # # subset data into chunks
 # s1 <- sp4[1:2, ]
