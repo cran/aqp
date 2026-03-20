@@ -44,7 +44,7 @@
 }
 
 
-
+## TODO: profile this function, it is much slower than depth slices
 # compute LAB coordinates from clusters of slices
 .pigments.pam <- function(x, k) {
   
@@ -88,11 +88,17 @@
     white_from = 'D65'
   )
   
-  # convert to dist object, note transpose
-  dE00 <- as.dist(t(dE00))
+  # convert to dist object
+  # note transpose
+  dE00 <- as.dist(
+    t(dE00)
+  )
   
-  # use PAM to cluster, note `pamonce = 5` used for optimization
-  cl <- cluster::pam(dE00, k = k, diss = TRUE, pamonce = 5)
+  # partitioning around medoids
+  # optimization notes: 
+  #       * pamonce = 5, 6 will hang on some soils (AMELAR OSD)
+  #       * pamonce = 3 seems more stable
+  cl <- cluster::pam(dE00, k = k, diss = TRUE, pamonce = 3)
   
   # subset medoids
   x.medoids <- x.slices[cl$id.med, c(idname(x), 'L', 'A', 'B')]
@@ -144,8 +150,9 @@
   h <- h[idx, ]
   
   # TODO finish this
-  if(nrow(h) == 0)
+  if(nrow(h) == 0) {
     return(NULL)
+  }
   
   # determine sampling depths via quantiles
   hd <- horizonDepths(x)
@@ -261,6 +268,10 @@
 #'
 #' @details 
 #' 
+#' Missing colors (NA) are ignored in the creation of soil color signatures.
+#' 
+#' 
+#' 
 #' Interpreation of color signature.
 #' 
 #' Choices related to weighting, scaling, and distance metric.
@@ -357,6 +368,8 @@ soilColorSignature <- function(
   method <- match.arg(method)
   space <- match.arg(space)
   
+  ## TODO: think about how to avoid making another copy of hz data
+  ##       iterate over these data vs. SPC
   # extract horizons
   h <- horizons(spc)
   
@@ -375,17 +388,39 @@ soilColorSignature <- function(
   
   
   # conditionally convert colors to CIELAB
+  # specific NA handling required
   lab.colors <- switch(
     .spec,
     
+    # hex encoded sRGB color coordinates
     `hex-sRGB` = {
-      # hex encoded sRGB color coordinates
-      # must rescale to [0,1]
-      convertColor(t(col2rgb(h[[color]]) / 255), from = 'sRGB', to = 'Lab', from.ref.white = 'D65', to.ref.white = 'D65')
+      # NOTES: 
+      #  * rescale to [0,1]
+      #  * NA -> LAB [100, 0, 0] 
+      
+      # keep track of NA
+      na.idx <- which(is.na(h[[color]]))
+      
+      # convert
+      .conv <- convertColor(
+        t(col2rgb(h[[color]]) / 255), 
+        from = 'sRGB', 
+        to = 'Lab', 
+        from.ref.white = 'D65', 
+        to.ref.white = 'D65'
+      )
+      
+      # pad with NA if present
+      if(length(na.idx > 0)) {
+        .conv[na.idx, ] <- cbind(NA_real_, NA_real_, NA_real_)
+      }
+      
+      .conv
+      
     },
     
+    # 3 columns subset from a data.frame
     `color-coordinate-data.frame` = {
-      # 3 columns subset from a data.frame
       .m <- as.matrix(h[, color])
       
       # convert to CIELAB
@@ -397,6 +432,7 @@ soilColorSignature <- function(
           stop('color space coordinates do not appear to be sRGB [0,1]: check `space` argument')
         }
         
+        # NA are left in place
         .res <- convertColor(.m, from = 'sRGB', to = 'Lab', from.ref.white = 'D65', to.ref.white = 'D65')
       }
       
@@ -408,8 +444,9 @@ soilColorSignature <- function(
       .res
     },
     
+    # plain Munsell notation
     `munsell` = {
-      # plain Munsell notation
+      # NA are left in place
       parseMunsell(h[[color]], returnLAB = TRUE)
     },
     

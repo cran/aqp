@@ -5,13 +5,13 @@
 \name{site,SoilProfileCollection-method}
 \alias{site,SoilProfileCollection-method}
 \alias{site}
-\alias{site<-}
 \alias{site<-,SoilProfileCollection-method}
+\alias{site<-}
 \title{Retrieve site data from SoilProfileCollection}
 \usage{
 \S4method{site}{SoilProfileCollection}(object)
 
-site(object) <- value
+\S4method{site}{SoilProfileCollection}(object) <- value
 }
 \arguments{
 \item{object}{A SoilProfileCollection}

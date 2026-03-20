@@ -128,13 +128,13 @@ setReplaceMethod("depths", "data.frame",
   # add other columns
   if (ncol(hz) > 0) {
     hz$.dummyVar <- ""[nrow(hz)]
-    nuhz <- cbind(nuhz, hz[0, !colnames(hz) %in% colnames(nuhz), drop = FALSE][iid,])
+    nuhz <- cbind(nuhz, .create_placeholder_df(hz[, !colnames(hz) %in% colnames(nuhz), drop = FALSE], length(iid)))
     nuhz$.dummyVar <- NULL
   }
   
   if (ncol(st) > 0) {
     st$.dummyVar <- ""[nrow(st)]
-    nust <- cbind(nust, st[0, !colnames(st) %in% colnames(nust), drop = FALSE][iid,])
+    nust <- cbind(nust, .create_placeholder_df(st[, !colnames(st) %in% colnames(nust), drop = FALSE], length(iid)))
     nust$.dummyVar <- NULL
   }
     
@@ -253,8 +253,6 @@ setGeneric('site<-', function(object, value)
 
 #' Create or Add Data to Site Slot
 #'
-#' @name site<-
-#'
 #' @description
 #' There are two options available via the \code{site<-} setter.
 #'
@@ -264,10 +262,8 @@ setGeneric('site<-', function(object, value)
 #'
 #' @param object A SoilProfileCollection
 #' @param value A formula or object inheriting \code{data.frame}
-#' @aliases site<-,SoilProfileCollection-method
-#' @usage site(object) <- value
-#'
 #' @rdname site
+#' @aliases site<-
 #' @export
 #' @examples
 #'
@@ -319,9 +315,9 @@ setReplaceMethod("site", signature(object = "SoilProfileCollection"),
       hz.names <- horizonNames(object)
       si.names <- siteNames(object)
       
-      # short circuit:ensure that site(x)$<-NULL works
-      if (all(new.cols %in% si.names) &
-               idn %in% new.cols & 
+      # short circuit: ensure that site(x)$colname <- NULL works
+      if (all(new.cols %in% si.names) &&
+               idn %in% new.cols && 
                 nrow(value) == length(object)) {
         
           if (!all(value[[idn]] %in% pid)) {
@@ -333,6 +329,16 @@ setReplaceMethod("site", signature(object = "SoilProfileCollection"),
           sort.idx <- match(pid, value[[idn]])
           object@site <- .as.data.frame.aqp(value[sort.idx,, drop = FALSE], adf)
           return(object)
+      }
+      
+      # short circuit: other site(x)$colname cases that do not need a merge
+      #   (only one new column, in existing site order)
+      difcols <- setdiff(new.cols, si.names)
+      if (length(difcols) == 1 &&
+          idn %in% new.cols && 
+          all(value[[idn]] == pid)) {
+        object@site[[difcols]] <- value[[difcols]]
+        return(object)
       }
       
       # check there is >1 column shared b/w existing site and value
@@ -348,12 +354,10 @@ setReplaceMethod("site", signature(object = "SoilProfileCollection"),
         stop('duplicate names in new site / existing horizon data not allowed', call. = FALSE)
       }
       
-      # existing site data (may be absent == 0-row data.frame)
+      # existing site data
       s <- object@site
       
-      # join to existing data: by default it will only be on idname(object)
-      
-      # LEFT JOIN
+      # LEFT JOIN to existing data on all matching columns
       site.new <- merge(s, value, all.x = TRUE, sort = FALSE)
       
       new.id.order <- site.new[[idn]]

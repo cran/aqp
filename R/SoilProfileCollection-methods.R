@@ -92,6 +92,102 @@ setMethod("names", signature("SoilProfileCollection"),
             return(res)
           })
 
+#' @details
+#' The `.DollarNames` SoilProfileCollection method is implemented to support
+#' auto-completion after the `$` operator. There is a custom help handler
+#' implemented for interactive use in RStudio to integrate help text and data
+#' viewer functionality with auto-completion. This custom help handler can be
+#' disabled by setting `options(.aqp.rs.rpc.integration=FALSE)`.
+#' 
+#' @param pattern A regular expression. Only matching names are returned.
+#' @docType methods
+#' @importFrom utils .DollarNames
+#' @rdname names
+#' @export
+.DollarNames.SoilProfileCollection <- function(x, pattern) {
+  n <- names(x)
+  res <- n[grep(paste0("^", pattern), n)]
+  
+  # when running interactively in RStudio, attach a custom SPC help handler
+  if (interactive() &&
+      getOption(".aqp.rs.rpc.integration", default = TRUE) &&
+      !is.null(.Platform$GUI) && .Platform$GUI == "RStudio") {
+    attr(res, 'helpHandler') <- "aqp:::.aqp.rs.rpc.spc.HelpHandler"
+  }
+  
+  res
+}
+
+#' Custom RStudio Help Handler for SoilProfileCollection objects
+#' 
+#' SoilProfileCollection Custom Help Handler for `$` auto-completion and data
+#' preview in RStudio.
+#' 
+#' Supports handling for the following internal `tools:rstudio` functions:
+#'   - `"completion"` via `.rs.rpc.get_custom_help()`
+#'   - `"url"` via `.rs.rpc.show_custom_help_topic()`
+#'   - `"parameter"` is not implemented
+#'
+#' @param object character. Either `"completion"`, `"parameter"`, or `"url"`.
+#' @param topic character. The help topic (e.g. the column name in `$` auto-completion).
+#' @param source character. The topic source (e.g. the parent object name in `$` auto-completion).
+#' @param ... 
+#' @importFrom utils capture.output str
+#' @returns list or character
+#' @noRd
+.aqp.rs.rpc.spc.HelpHandler <- function(object, topic, source, ...) {
+  if (!exists(".rs.rpc.show_help_topic")) {
+    .rs.rpc.show_help_topic <- function(...) NULL
+  }
+  res <- try({
+    obj <- get(source)
+    
+    switch(
+      tolower(object),
+      # this supports tab auto-completion for SoilProfileCollection $ S4 method
+      "completion" = {
+        # handle [[ vs. $ semantics
+        if (topic != obj@idcol) {
+          val <- obj[[topic]]
+          slt <- ifelse(length(val) == length(obj), "site", "horizons")
+        } else {
+          # obj[[idname(obj)]] returns the site-level ID
+          val <- obj@horizons[[topic]]
+          slt <- "horizons"
+        }
+        
+        out <- list(
+          title = paste0(slt, "(", source, ")"),
+          signature = topic,
+          returns = class(val),
+          description = utils::capture.output(utils::str(val)),
+          details = "",
+          sections = list()
+        )
+      },
+      
+      # this supports "F1 for more information" in help tooltip
+      "url" = {
+        try(.rs.rpc.show_help_topic("$", "aqp", "method"), silent = TRUE)
+        NULL
+      }
+    )
+  }, silent = TRUE)
+  
+  if (inherits(res, 'try-error')) {
+    res <- list(
+      title = source,
+      signature = topic,
+      returns = "",
+      description = "",
+      details = "",
+      sections = ""
+    )
+  }
+  
+  res
+}
+
 # overload min() to give us the min depth within a collection
 #' Get the minimum bottom depth in a SoilProfileCollection
 #' @description Get the shallowest depth of description out of all profiles in a SoilProfileCollection. Data missing one or more of: bottom depth, profile ID, or any optional attribute are omitted using \code{complete.cases}.
@@ -461,6 +557,16 @@ setMethod("subsetHz", signature(x = "SoilProfileCollection"), function(x, ..., d
   x
 })
 
+# produces an "all NA" data.frame with n rows, based on schema of x
+.create_placeholder_df <- function(x, n, as.class = "data.frame") {
+  if (n == 0) {
+    return(x[0, ])
+  }
+  template <- x[rep(NA_integer_, n), , drop = FALSE]
+  rownames(template) <- NULL
+  .as.data.frame.aqp(template, as.class)
+}
+
 #' @description  used to implement "drop=FALSE" for various methods that remove horizons from SoilProfileCollection object
 #' @noRd
 .insert_dropped_horizons <- function(object = SoilProfileCollection(), 
@@ -476,22 +582,23 @@ setMethod("subsetHz", signature(x = "SoilProfileCollection"), function(x, ..., d
   newid <- sites[[pid]][which(sites[[pid]] %in% i.idx2)]
   
   # create ID-only empty data using original data as templates
-  h.empty <- horizons[0, , drop = FALSE][seq_along(i.idx2), , drop = FALSE]
-  h.empty[[pid]] <- newid
-  s.empty <- sites[0, , drop = FALSE][seq_along(i.idx2), , drop = FALSE]
-  s.empty[[pid]] <- newid
-  
-  # reorder to original id (+ top depth for horizons)
-  horizons <- rbind(horizons, h.empty)
-  horizons <- horizons[order(horizons[[pid]], horizons[[depths[1]]]),]
-  
-  sites <- sites[which(!sites[[pid]] %in% h.empty[[pid]]), , drop = FALSE]
-  sites <- rbind(sites, s.empty)
-  sites <- sites[order(sites[[pid]]), , drop = FALSE]
+  if (length(newid) > 0) {
+    h.empty <- .create_placeholder_df(horizons, length(newid), aqp_df_class(object))
+    h.empty[[pid]] <- newid
+    s.empty <- .create_placeholder_df(sites, length(newid), aqp_df_class(object))
+    s.empty[[pid]] <- newid
+    # reorder to original id (+ top depth for horizons)
+    horizons <- data.table::rbindlist(list(horizons, h.empty))
+    horizons <- horizons[order(horizons[[pid]], horizons[[depths[1]]]), ]
+    
+    sites <- sites[which(!sites[[pid]] %in% h.empty[[pid]]), , drop = FALSE]
+    sites <- data.table::rbindlist(list(sites, s.empty))
+    sites <- sites[order(sites[[pid]]), , drop = FALSE]
+  }
   
   if (inherits(object, 'SoilProfileCollection') && SPC) {
-    object@site <- sites
-    replaceHorizons(object) <- horizons
+    object@site <- .as.data.frame.aqp(sites, aqp_df_class(object))
+    replaceHorizons(object) <- .as.data.frame.aqp(horizons, aqp_df_class(object))
     return(object)
   } else {
     return(list(
@@ -506,6 +613,10 @@ setMethod("subsetHz", signature(x = "SoilProfileCollection"), function(x, ..., d
 
 # functions tailored for use with magrittr %>% operator / tidyr
 
+# if (!isGeneric("grepSPC"))
+setGeneric("grepSPC", function(object, attr, pattern, ...)
+  standardGeneric("grepSPC"))
+
 #' @title Subset SPC with pattern-matching for text-based attributes
 #' @name grepSPC
 #' @aliases grepSPC,SoilProfileCollection-method
@@ -519,11 +630,6 @@ setMethod("subsetHz", signature(x = "SoilProfileCollection"), function(x, ..., d
 #'
 #' @rdname grepSPC
 #' @export grepSPC
-
-# if (!isGeneric("grepSPC"))
-  setGeneric("grepSPC", function(object, attr, pattern, ...)
-    standardGeneric("grepSPC"))
-
 setMethod("grepSPC", signature(object = "SoilProfileCollection"),
           function(object, attr, pattern, ...) {
 
@@ -546,6 +652,10 @@ setMethod("grepSPC", signature(object = "SoilProfileCollection"),
 
           })
 
+# if (!isGeneric("subApply"))
+setGeneric("subApply", function(object, .fun, ...)
+  standardGeneric("subApply"))
+
 #' @title Subset SPC based on result of performing function on each profile
 #' @name subApply
 #' @aliases subApply,SoilProfileCollection-method
@@ -558,11 +668,6 @@ setMethod("grepSPC", signature(object = "SoilProfileCollection"),
 #'
 #' @rdname subApply
 #' @export subApply
-
-# if (!isGeneric("subApply"))
-  setGeneric("subApply", function(object, .fun, ...)
-    standardGeneric("subApply"))
-
 setMethod("subApply", signature(object = "SoilProfileCollection"),
           function(object, .fun, ...) {
 
@@ -580,8 +685,8 @@ setMethod("subApply", signature(object = "SoilProfileCollection"),
 ## h: horizon-level subsetting criteria (properly quoted)
 ## result: SoilProfileCollection with all profiles that match _either_ criteria- i.e. greedy matching
 # if (!isGeneric("subsetProfiles"))
-  setGeneric("subsetProfiles", function(object, s, h, ...)
-    standardGeneric("subsetProfiles"))
+setGeneric("subsetProfiles", function(object, s, h, ...)
+  standardGeneric("subsetProfiles"))
 
 #' DEPRECATED use subset
 #'

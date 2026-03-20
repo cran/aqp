@@ -583,8 +583,8 @@ gradient such as topographic sequence</li>
 Munsell notation</li>
 <li><code>munsell2rgb()</code>: convert Munsell notation to sRGB or
 CIELAB color coordinates</li>
-<li><code>parseMunsell()</code>: parse and optionally convert a munsell
-color</li>
+<li><code>parseMunsell()</code>: parse and optionally convert Munsell
+color notation</li>
 <li><code>spec2Munsell()</code>: estimate the closest Munsell color
 given reflectance spectra in the visible range</li>
 <li><code>getClosestMunsellChip()</code>: estimate a reasonably close
@@ -624,6 +624,10 @@ CIELAB coordinates</li>
 <div id="utility-1" class="section level3">
 <h3>Utility</h3>
 <ul>
+<li><code>validateMunsell()</code>: test for errors in Munsell notation
+that prevent correct interpretation</li>
+<li><code>launderMunsell()</code>: correct minor errors in Munsell
+notation</li>
 <li><code>huePosition()</code>: generate an ordered factor of the
 standard Munsell hues</li>
 <li><code>huePositionCircle()</code>: graphical representation of the

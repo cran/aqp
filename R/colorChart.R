@@ -9,6 +9,8 @@
 #' 
 #' @param annotate logical, annotate color chip frequency
 #' 
+#' @param launderColors logical, fix common errors with encoding neutral colors, see [launderMunsell()]
+#' 
 #' @param chip.cex scaling factor applied to each color chip
 #' 
 #' @param chip.cex.min lower limit for color chip frequency depiction
@@ -73,18 +75,29 @@
 #' # increase the possible range of color chip sizes
 #' colorChart(s[[1]], chip.cex = 4, chip.cex.min = 0.01, chip.cex.max = 2)
 #' 
-#' # slightly funky support for neutral hues
+#' # demonstrate support for neutral chips
 #' N <- sprintf('N %s/', 2:8)
 #' cols <- c(rep(N, times = 5), ric.big)
 #' 
-#' # note special panel used to show neutral hues
+#' # note special panel used to show neutral chips
 #' colorChart(cols, size = FALSE, annotate = TRUE)
 #' 
 #' # filter proportions below given threshold
 #' colorChart(cols, size = FALSE, annotate = TRUE, threshold = 0.01,
 #'            chip.cex = 4, annotate.type = 'percentage')
+#'            
+#' # extreme values
+#' colorChart(c('N 8/', '10YR 4/12', '10YR 3/1', '10YR 10/4'))
 #' 
-colorChart <- function(m, g = factor('All'), size = TRUE, annotate = FALSE, chip.cex = 3, chip.cex.min = 0.1, chip.cex.max = 1.5, chip.border.col = 'black', annotate.cex = chip.cex * 0.25, annotate.type = c('count', 'percentage'), threshold = NULL) {
+#' # unusual notation, 10YR 4/0 --> effectively N 4/
+#' colorChart(c('N 8/', 'N 4/', '10YR 4/0', '5G 6/6', '5Y 10/4'))
+#' 
+#' # demonstrate groups
+#' m <- c('10YR 4/4', 'N 2/', 'N 3/', '5Y 6/6', '5P 4/4')
+#' g <- factor(c(1, 1, 2, 2, 2))
+#' colorChart(m, g)
+#' 
+colorChart <- function(m, g = factor('All'), size = TRUE, annotate = FALSE, launderColors = TRUE, chip.cex = 3, chip.cex.min = 0.1, chip.cex.max = 1.5, chip.border.col = 'black', annotate.cex = chip.cex * 0.25, annotate.type = c('count', 'percentage'), threshold = NULL) {
   
   # requires latticeExtra and scales
   if(!requireNamespace('latticeExtra', quietly = TRUE) || !requireNamespace('scales', quietly = TRUE)) {
@@ -152,19 +165,22 @@ colorChart <- function(m, g = factor('All'), size = TRUE, annotate = FALSE, chip
     annotate.type <- match.arg(annotate.type)
   }
   
+  # optionally launder Munsell notation:
+  #  - interpret poorly specified N chips
+  m <- launderMunsell(m)
+  
+  
   # extract pieces / convert colors
   z <- data.frame(
     .munsell = m,
-    .groups = g,
-    stringsAsFactors = FALSE
+    .groups = g
   )
   
   # remove obvious NA in colors or groups
   z <- na.omit(z)
   
   # bogus colors can creep-in when composing Munsell notation from pieces
-  # remove anything like 'NA NA/NA'
-  idx <- grep('NA', z$.munsell, fixed = TRUE, invert = TRUE)
+  idx <- which(validateMunsell(z$.munsell))
   z <- z[idx, ]
   
   # within-group counts + proportions
@@ -257,11 +273,12 @@ colorChart <- function(m, g = factor('All'), size = TRUE, annotate = FALSE, chip
   # * consider reporting Shannon entropy / group
   #   print(shannonEntropy(tab$prop))
   
-  # set reasonable limits: 
+  
+  # set reasonable [x, y] limits: 
   # value / chroma: 2-8 unless data extend beyond those limits
-  # exception for N hues (chroma 0), min value is chroma of 1
+  # exception for N hues (chroma 0), typical min value is chroma of 1 (not always)
   x.lim <- c(
-    pmin(pmax(min(tab$chroma), 1), 2) - 0.5,
+    pmin(min(tab$chroma[which(!tab$hue == 'N')]), 2) - 0.5,
     pmax(max(tab$chroma), 8) + 0.5
   )
   
@@ -274,6 +291,7 @@ colorChart <- function(m, g = factor('All'), size = TRUE, annotate = FALSE, chip
   pp <- lattice::xyplot(
     value ~ chroma | hue + .groups, 
     data = tab,
+    drop = TRUE, 
     as.table = TRUE,
     subscripts = TRUE, 
     # this works until we attempt to use neutral hues
@@ -281,8 +299,8 @@ colorChart <- function(m, g = factor('All'), size = TRUE, annotate = FALSE, chip
     ylim = y.lim,
     # simple version when no neutral hues
     scales = list(
-      alternating = 3, 
-      y = list(rot = 0)
+      x = list(alternating = 1), 
+      y = list(rot = 0, alternating = 3)
     ), 
     main = '', 
     xlab = 'Chroma', 
@@ -290,10 +308,55 @@ colorChart <- function(m, g = factor('All'), size = TRUE, annotate = FALSE, chip
     panel = panel.colorChart
   )
   
-  ## TODO: simplify this
-  ## more complex figure required when neutral hues are present
+  
+  ## get hues to iterate over
   ll <- levels(tab$hue)
+  
+  ## in the presence of N chips, custom x-axis and limits, and panel size required
   if('N' %in% ll) {
+    
+    ## NOTE: with complex hue x group structure, in the presence of N chips
+    #        we need to compute panel-specific limits and axes labels
+    #        applying these custom parameters won't work if any panel has no data
+    #        therefore, generate fake data for every combination of hue x groups
+    # 
+    #        see:
+    #        https://stackoverflow.com/questions/11161739/how-to-specify-different-ylim-values-for-each-panel-in-xyplot
+    #
+    #
+    # side-effect: unused levels must be removed prior to calling colorChart()
+    #
+    # solution:    keep track of panels with data, then assigning scales / limits accordingly
+    
+    # (hue x group) combinations before adding fake obs
+    int.b <- levels(interaction(tab$hue, tab$.groups, drop = TRUE))
+    
+    ## HACK: add a single bogus point for every hue x group combination
+    #        this ensures that limits are correctly established
+    #        only required when there are neutral colors
+    .fake <- expand.grid(hue = levels(tab$hue), .groups = levels(tab$.groups))
+    
+    .fake <- data.frame(
+      .groups = .fake$.groups,
+      .munsell = '', 
+      count = 1, 
+      total = 1, 
+      prop = 0,
+      .color = '#FFFFFFFF',
+      hue = .fake$hue,
+      value = 100, 
+      chroma = 100,
+      chip.size = 0.1,
+      transformed.col = '#FFFFFFFF'
+    )
+    
+    tab <- rbind(tab, .fake)
+    
+    ## end HACK
+    
+    # (hue x group) combinations after adding fake obs
+    int.a <- levels(interaction(tab$hue, tab$.groups))
+    
     
     # standards x-limits
     x.at <- seq(x.lim[1] + 0.5, x.lim[2] - 0.5, by = 1)
@@ -307,14 +370,21 @@ colorChart <- function(m, g = factor('All'), size = TRUE, annotate = FALSE, chip
     
     # limits for as many columns
     x.limits.list <- c(
-      list(c(0,0)), 
+      list(c(0, 0)), 
       lapply(1:(length(ll)-1), FUN = function(i) {x.lim})
     )
     
-    # replicate to cover all columns * rows
+    
+    # replicate scales to cover all columns * rows
     n.groups <- length(levels(tab$.groups))
     x.at.list <- rep(x.at.list, times = n.groups)
     x.limits.list <- rep(x.limits.list, times = n.groups)
+    
+    # index just those panels (hue x group) with no data (before adding fake obs)
+    nd.idx <- which(is.na(match(int.a, int.b, nomatch = NA)))
+    
+    # suppress scales in these panels
+    x.at.list[nd.idx] <- list('')
     
     pp <- lattice::xyplot(
       value ~ chroma | hue + .groups, 
@@ -352,9 +422,6 @@ colorChart <- function(m, g = factor('All'), size = TRUE, annotate = FALSE, chip
     sub.txt <- sprintf('chip labels represent %ss', annotate.type)
     pp <- update(pp, sub = list(sub.txt, font = 1))
   }
-  
-  
-  
   
   return(pp)  
 }

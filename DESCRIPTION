@@ -1,5 +1,5 @@
 Package: aqp
-Version: 2.3
+Version: 2.3.1
 Title: Algorithms for Quantitative Pedology
 Authors@R: c(person(given="Dylan", family="Beaudette", role = c("aut", "cre"), email = "dylan.beaudette@usda.gov", comment = c(ORCID="0009-0008-2780-4785")), 
              person(given="Pierre", family="Roudier", email="roudierp@landcareresearch.co.nz", role = c("aut", "ctb")), 
@@ -32,5 +32,5 @@ RoxygenNote: 7.3.3
 VignetteBuilder: knitr
 Config/Needs/website: rmarkdown
 NeedsCompilation: no
-Packaged: 2026-01-16 22:13:24 UTC; Dylan.Beaudette
-Date/Publication: 2026-01-17 06:10:52 UTC
+Packaged: 2026-03-19 17:12:25 UTC; Dylan.Beaudette
+Date/Publication: 2026-03-20 06:11:09 UTC

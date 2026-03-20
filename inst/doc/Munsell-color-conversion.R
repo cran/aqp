@@ -49,3 +49,56 @@ parseMunsell('N 5/')
 # non-standard notation
 getClosestMunsellChip('3.3YR 4.4/6.1', convertColors = FALSE)
 
+## ----fig.width=10, fig.height=4-------------------------------------------------------------------
+# example moist soil colors from the Musick soil series
+m <- c("7.5YR 2.5/1", "10YR 3/2", "7.5YR 4/3", "2.5YR 3/6", "2.5YR 3/6", 
+       "2.5YR 4/6", "5YR 4/6", "7.5YR 5/4")
+
+mm <- parseMunsell(m, convertColors = FALSE)
+
+d.p <- estimateSoilColor(
+  hue = mm$hue, 
+  value = mm$value, 
+  chroma = mm$chroma, 
+  method = 'procrustes', 
+  sourceMoistureState = 'moist'
+)
+
+d.ols <- estimateSoilColor(
+  hue = mm$hue, 
+  value = mm$value, 
+  chroma = mm$chroma, 
+  method = 'ols', 
+  sourceMoistureState = 'moist'
+)
+
+d.p <- sprintf("%s %s/%s", d.p$hue, d.p$value, d.p$chroma)
+d.ols <- sprintf("%s %s/%s", d.ols$hue, d.ols$value, d.ols$chroma)
+
+colorContrastPlot(m, d.p, labels = c('Moist', 'Estimated\nDry'), d.cex = 0.9)
+
+# it is the same
+# colorContrastPlot(m, d.ols, labels = c('Moist', 'Estimated\nDry'), d.cex = 0.9)
+
+## ----fig.width=6, fig.height=3--------------------------------------------------------------------
+data("Ohz.colors")
+
+Ohz.colors$col <- parseMunsell(Ohz.colors$L1.munsell)
+
+op <- par(mfrow = c(2, 1), mar = c(0.5, 0.5, 1.5, 0))
+
+with(
+  Ohz.colors[Ohz.colors$state == 'dry', ],
+  soilPalette(colors = col, lab = sprintf("%s\n%s", genhz, L1.munsell), lab.cex = 1)
+)
+title(main = 'Dry Colors')
+
+with(
+  Ohz.colors[Ohz.colors$state == 'moist', ],
+  soilPalette(colors = col, lab = sprintf("%s\n%s", genhz, L1.munsell), lab.cex = 1)
+)
+title(main = 'Moist Colors')
+
+# restore original base graphics state
+par(op)
+
