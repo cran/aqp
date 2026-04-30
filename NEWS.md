@@ -1,3 +1,13 @@
+# aqp 2.3.2 (2026-04-29)
+ * new function `formatMunsell()` for safely formatting Munsell colors from hue, value, and chroma
+ * `launderMunsell()` gains additional formatting fixes / failures to NA
+ * new option to enable function verbosity: `options(.aqp.verbose = TRUE)` default: `FALSE`
+ * added N 1/ chip to Munsell LUT and estimated neutral chip reflectance spectra
+ * slight adjustments to Munsell neutral chips: 
+   - N 2-7     (darker)
+   - N 9-9.5/ (lighter)
+ * `estimateSoilColor()` much faster when given duplicate colors to estimate
+
 # aqp 2.3.1 (2026-03-19)
  * CRAN release
  * new example data `Ohz.colors`, useful for estimating organic soil material color
@@ -27,7 +37,7 @@
    - new examples with graphical explanation
    
  * major changes to `addBracket()`:
-   - when not specified, horizon depth names taken from last call to `plotSPC()
+   - when not specified, horizon depth names taken from last call to `plotSPC()`
    - new arguments: `labcol` (label column), `agg` (aggregate multiple brackets / profile), `hzDepths` (override bracket top and bottom depth column names)
  
  * code-completion and preview for SPC objects in RStudio (@brownag)

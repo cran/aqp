@@ -6,7 +6,10 @@
 ##       * allow various specifications for color
 ##
 ##       * unify with colorQuantiles()
-
+##
+##       * return closest-n colors to representative color
+##
+##       * add language in manual about representative color interpretation
 
 
 #' @title Quantitative Description of Color Variation
@@ -163,7 +166,7 @@ colorVariation <- function(m, method = c('frequency', 'centroid', 'L1', 'referen
     
     # convert back to Munsell notation for colorContrast()
     m.centroid <- col2Munsell(t(lab.centroid), space = 'CIELAB')
-    m.centroid <- sprintf("%s %s/%s", m.centroid$hue, m.centroid$value, m.centroid$chroma)
+    m.centroid <- formatMunsell(m.centroid$hue, m.centroid$value, m.centroid$chroma)
     
     # color contrast vs. centroid
     cc <- colorContrast(m1 = wt.m, m2 = rep(m.centroid, times = length(wt)))
@@ -191,7 +194,7 @@ colorVariation <- function(m, method = c('frequency', 'centroid', 'L1', 'referen
     
     # convert back to Munsell notation for colorContrast()
     m.centroid <- col2Munsell(lab.centroid, space = 'CIELAB')
-    m.centroid <- sprintf("%s %s/%s", m.centroid$hue, m.centroid$value, m.centroid$chroma)
+    m.centroid <- formatMunsell(m.centroid$hue, m.centroid$value, m.centroid$chroma)
     
     # color contrast vs. centroid
     cc <- colorContrast(m1 = wt.m, m2 = rep(m.centroid, times = length(wt)))
