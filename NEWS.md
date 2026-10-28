@@ -1,4 +1,8 @@
 # aqp 2.3.2 (2026-04-29)
+ * CRAN release
+ * `fixOverlap()` gains new method 'hybrid', useful for nudging sketches or labels to avoid overlap
+
+# aqp 2.3.2 (2026-04-29)
  * new function `formatMunsell()` for safely formatting Munsell colors from hue, value, and chroma
  * `launderMunsell()` gains additional formatting fixes / failures to NA
  * new option to enable function verbosity: `options(.aqp.verbose = TRUE)` default: `FALSE`
@@ -89,7 +93,7 @@
  * added Munsell values of 8.5 and 9.5 to Munsell look up table and (interpolated) reference spectra (#318)
  * `munsell2rgb()` now safely selects the closest Munsell value and chroma to those available in the package LUT 
  * new function `soilTextureColorPal()` for suggesting a color palette suitable for soil texture class
- * **Breaking Change**: `@sp` slot of the `SoilProfileCollection` object, and dependency on sp package, has been removed. 
+ * **Breaking Change**: `@sp` slot of the `SoilProfileCollection` object, and dependency on sp package, have been removed. 
    * Any `SoilProfileCollection` objects previously written to file (.rda, .rds) with aqp <2.1.x will need to be rebuilt using `rebuildSPC()` due to changes to S4 object structure
  * `estimatePSCS()` gains argument `"lieutex"` for in lieu textures which are used in the new routine for identification of the particle size control section of organic soils
  * new function `collapseHz()` combines and aggregates data for adjacent horizons matching a pattern or sharing a common ID

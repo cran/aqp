@@ -57,7 +57,7 @@ par(mar = c(0, 0, 0, 0))
 # select "Electrostatic" label placement method
 # adjust default charge density to 0.5
 plotSPC(s, fixOverlapArgs = list(method = 'E', q = 0.5))
-title('Label Adjustment by Electrostatic Simulation', line = -1.5)
+title('Label Adjustment by Electrostatic Simulation (q = 0.5)', line = -1.5)
 
 ## ----fig.width=8, fig.height=5, echo = FALSE------------------------------------------------------
 par(mar = c(0, 0, 0, 0))
@@ -65,6 +65,10 @@ plotSPC(s, fixOverlapArgs = list(method = 'S'))
 title('Label Adjustment by Simulated Annealing', line = -1.5)
 
 options(.aqp.plotSPC.args = NULL)
+
+## ----eval = FALSE---------------------------------------------------------------------------------
+# get('last_spc_plot', envir = aqp.env)$hz.depth.LAI
+# get('last_spc_plot', envir = aqp.env)$hz.depth.RO
 
 ## ----fig.width=8, fig.height=5--------------------------------------------------------------------
 x <- quickSPC(
@@ -102,13 +106,17 @@ testIt <- function(x, ...) {
   # make sketches
   plotSPC(x, ...)
   
-  # a normalized index of label adjustment
+  # normalized index of label adjustment
   .LAI <- get('last_spc_plot', envir = aqp.env)$hz.depth.LAI
   .LAI <- ifelse(is.na(.LAI), 0, .LAI)
   
+  # residual overlap
+  .RO <- get('last_spc_plot', envir = aqp.env)$hz.depth.RO
+  .RO <- ifelse(is.na(.RO), 0, .RO)
+  
   # annotate with label adjustment index
-  .txt <- sprintf("LAI: %0.3f", .LAI)
-  mtext(.txt, side = 1, at = 1, line = -1.5, cex = 0.8)
+  .txt <- sprintf("LAI: %0.3f\nRO: %0.3f", .LAI, .RO)
+  mtext(.txt, side = 1, at = 1, line = -0.5, cex = 0.8)
 }
 
 ## ----fig.width=8, fig.height=5--------------------------------------------------------------------
@@ -138,6 +146,33 @@ title('Electrostatic\nq = 0.5', line = -3.5, adj = 0.5)
 testIt(x, fixOverlapArgs = list(method = 'E', q = 0.25))
 title('Electrostatic\nq = 0.25', line = -3.5, adj = 0.5)
 
+## ----fig.width=8, fig.height=5--------------------------------------------------------------------
+par(mar = c(1, 0, 0, 0), mfcol = c(1, 8))
+
+testIt(x, fixLabelCollisions = FALSE)
+title('No\nAdjustment', line = -3.5, adj = 0.5)
+
+testIt(x, fixOverlapArgs = list(method = 'S'))
+title('SANN\nsim 1', line = -3.5, adj = 0.5)
+
+testIt(x, fixOverlapArgs = list(method = 'S'))
+title('SANN\nsim 2', line = -3.5, adj = 0.5)
+
+testIt(x, fixOverlapArgs = list(method = 'S'))
+title('SANN\nsim 3', line = -3.5, adj = 0.5)
+
+testIt(x, fixOverlapArgs = list(method = 'E', q = 0.25))
+title('Electrostatic\nq = 0.25', line = -3.5, adj = 0.5)
+
+testIt(x, fixOverlapArgs = list(method = 'H', q = 0.25))
+title('Hybrid\nq = 0.25 | sim 1', line = -3.5, adj = 0.5)
+
+testIt(x, fixOverlapArgs = list(method = 'H', q = 0.25))
+title('Hybrid\nq = 0.25 | sim 2', line = -3.5, adj = 0.5)
+
+testIt(x, fixOverlapArgs = list(method = 'H', q = 0.25))
+title('Hybrid\nq = 0.25 | sim 3', line = -3.5, adj = 0.5)
+
 ## ----eval=requireNamespace("soilDB", quietly=TRUE), fig.width=9, fig.height=5---------------------
 library(aqp)
 library(soilDB)
@@ -145,18 +180,24 @@ library(soilDB)
 s <- c('inks' , 'pardee', 'clarksville', 'palau', 'hao', 'inks', 'eheuiki', 'puaulu', 'zook', 'cecil')
 x <- fetchOSD(s)
 
-par(mar = c(0, 0, 0, 3))
+# trap issues with web service
+if(inherits(x, 'SoilProfileCollection')) {
+  par(mar = c(0, 0, 0, 3))
+  
+  .args <- list(width = 0.3, name.style = 'center-center', hz.depths = TRUE, cex.names = 0.8)
+  options(.aqp.plotSPC.args = .args)
+  
+  plotSPC(x, fixOverlapArgs = list(method = 'E', q = 1.25), max.depth = 151)
+  plotSPC(x, fixOverlapArgs = list(method = 'E', q = 1), max.depth = 151)
+  plotSPC(x, fixOverlapArgs = list(method = 'E', q = 0.75), max.depth = 151)
+  plotSPC(x, fixOverlapArgs = list(method = 'E', q = 0.5), max.depth = 151)
+  plotSPC(x, fixOverlapArgs = list(method = 'E', q = 0.25), max.depth = 151)
+  
+  plotSPC(x, fixOverlapArgs = list(method = 'S'), max.depth = 151)  
+  
+  plotSPC(x, fixOverlapArgs = list(method = 'H', q = 0.25), max.depth = 151)  
+}
 
-.args <- list(width = 0.3, name.style = 'center-center', hz.depths = TRUE, cex.names = 0.8)
-options(.aqp.plotSPC.args = .args)
-
-plotSPC(x, fixOverlapArgs = list(method = 'E', q = 1.25), max.depth = 151)
-plotSPC(x, fixOverlapArgs = list(method = 'E', q = 1), max.depth = 151)
-plotSPC(x, fixOverlapArgs = list(method = 'E', q = 0.75), max.depth = 151)
-plotSPC(x, fixOverlapArgs = list(method = 'E', q = 0.5), max.depth = 151)
-plotSPC(x, fixOverlapArgs = list(method = 'E', q = 0.25), max.depth = 151)
-
-plotSPC(x, fixOverlapArgs = list(method = 'S'), max.depth = 151)
 
 ## -------------------------------------------------------------------------------------------------
 x <- c(1, 2, 3, 3.4, 3.5, 5, 6, 10)
